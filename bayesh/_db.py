@@ -7,4 +7,4 @@ def upsert(
     previous_cmd: str,
     current_cmd: str
 ):
-    
+    pass

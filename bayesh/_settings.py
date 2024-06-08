@@ -11,9 +11,11 @@ class BayeshSettings(BaseSettings):
     bayesh_dir: Path = Field(alias=_BAYESH_DIR_ENV_VAR)
 
     @field_validator("bayesh_dir", mode="after")
-    def check_dir(v: Path):
+    def check_dir(cls, v: Path):
         if not v.is_dir():
             raise ValueError("v was not a directory")
 
 
-
+    @property
+    def db(self) -> Path:
+        return self.bayesh_dir / "bayesh.db"
