@@ -10,6 +10,7 @@ def test_bayesh_dir(tmp_bayesh_dir: Path, bayesh_dir_exists: bool):
     assert tmp_bayesh_dir.is_dir()
     if not bayesh_dir_exists:
         shutil.rmtree(tmp_bayesh_dir)
+        assert not tmp_bayesh_dir.is_dir()
     _ = BayeshSettings()
     assert tmp_bayesh_dir.is_dir()
 
