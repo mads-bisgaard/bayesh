@@ -13,7 +13,7 @@ class BayeshSettings(BaseSettings):
     @field_validator("bayesh_dir", mode="after")
     def check_dir(cls, v: Path):
         v.mkdir(parents=True, exist_ok=True)
-        return v
+        return v.resolve()
 
     @property
     def db(self) -> Path:
