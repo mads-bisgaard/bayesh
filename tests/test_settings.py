@@ -3,13 +3,15 @@ import pytest
 from bayesh._settings import _BAYESH_DIR_ENV_VAR, BayeshSettings
 from pathlib import Path
 import pydantic
+import shutil
 
-@pytest.mark.parametrize("tmp_bayesh_dir_exists", [True, False])
-def test_bayesh_dir(tmp_bayesh_dir: Path):
-    dir_exists = tmp_bayesh_dir.is_dir()
+@pytest.mark.parametrize("bayesh_dir_exists", [True, False])
+def test_bayesh_dir(tmp_bayesh_dir: Path, bayesh_dir_exists: bool):
+    assert tmp_bayesh_dir.is_dir()
+    if not bayesh_dir_exists:
+        shutil.rmtree(tmp_bayesh_dir)
     _ = BayeshSettings()
-    if not dir_exists:
-        assert tmp_bayesh_dir.is_dir()
+    assert tmp_bayesh_dir.is_dir()
 
 def test_bayesh_dir_file_path(monkeypatch, tmp_path: Path):
     tmp_file = tmp_path / "myfile.txt"
