@@ -3,7 +3,6 @@ import sqlite3
 from pathlib import Path
 from typing import Final
 from enum import StrEnum
-from ._settings import BayeshSettings
 
 _TABLE: Final[str] = "events"
 
@@ -34,9 +33,3 @@ def create_db(db_path: Path):
         cursor.execute(index_query)
         conn.commit()
 
-
-def upsert(cwd: Path, previous_cmd: str, current_cmd: str):
-    _db = BayeshSettings().db
-    if not _db.is_file():
-        create_db(_db)
-    
