@@ -3,6 +3,8 @@ import sqlite3
 from pathlib import Path
 from typing import Final
 from enum import StrEnum
+from pydantic import PositiveInt
+from datetime import datetime
 
 _TABLE: Final[str] = "events"
 
@@ -33,3 +35,15 @@ def create_db(db_path: Path):
         cursor.execute(index_query)
         conn.commit()
 
+
+def insert_row(db_path: Path, cwd: Path, previous_cmd:str, current_cmd:str, event_counter: PositiveInt):
+    assert db_path.is_file() # nosec
+    insert_statement = f'''
+    INSERT INTO {_TABLE}({Columns.cwd},{Columns.previous_cmd},{Columns.current_cmd},{Columns.event_counter},{Columns.last_modified})
+    VALUES(?,?,?,?,?) 
+    '''
+    values=(f"{cwd.resolve()}", previous_cmd, current_cmd, f"{event_counter}", f"{datetime.now()}")
+    with sqlite3.connect(f"{db_path}") as conn:
+        cursor = conn.cursor()
+        cursor.execute(insert_statement, values)
+        cursor.commit()

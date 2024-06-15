@@ -11,8 +11,9 @@ def test_bayesh_dir(tmp_bayesh_dir: Path, bayesh_dir_exists: bool):
     if not bayesh_dir_exists:
         shutil.rmtree(tmp_bayesh_dir)
         assert not tmp_bayesh_dir.is_dir()
-    _ = BayeshSettings()
+    settings = BayeshSettings()
     assert tmp_bayesh_dir.is_dir()
+    assert settings.db.is_file()
 
 def test_bayesh_dir_file_path(monkeypatch, tmp_path: Path):
     tmp_file = tmp_path / "myfile.txt"
