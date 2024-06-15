@@ -39,7 +39,7 @@ def test_insert_row(tmp_path: Path, db: Path, faker: Faker):
         row.current_cmd == current_cmd
         row.event_counter == event_counter
 
-def test_insert_unique_key(tmp_path: Path, db: Path, faker: Faker):
+def test_db_unique_key(tmp_path: Path, db: Path, faker: Faker):
     assert db.is_file()
     assert _get_n_rows(db) == 0
 
