@@ -46,4 +46,4 @@ def insert_row(db_path: Path, cwd: Path, previous_cmd:str, current_cmd:str, even
     with sqlite3.connect(f"{db_path}") as conn:
         cursor = conn.cursor()
         cursor.execute(insert_statement, values)
-        cursor.commit()
+        conn.commit()
