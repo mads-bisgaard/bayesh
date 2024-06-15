@@ -50,7 +50,11 @@ def insert_row(db_path: Path, cwd: Path, previous_cmd:str, current_cmd:str, even
     INSERT INTO {_TABLE}({Columns.cwd},{Columns.previous_cmd},{Columns.current_cmd},{Columns.event_counter},{Columns.last_modified})
     VALUES(?,?,?,?,?) 
     '''
-    values=(f"{cwd.resolve()}", previous_cmd, current_cmd, f"{event_counter}", f"{datetime.now()}")
+    values=Row(cwd=f"{cwd.resolve()}", 
+               previous_cmd=previous_cmd, 
+               current_cmd=current_cmd, 
+               event_counter=f"{event_counter}", 
+               last_modified=f"{datetime.now()}")
     with sqlite3.connect(f"{db_path}") as conn:
         cursor = conn.cursor()
         cursor.execute(insert_statement, values)
