@@ -5,6 +5,7 @@ from typing import Final
 from enum import StrEnum
 from pydantic import PositiveInt
 from datetime import datetime
+from typing import NamedTuple
 
 _TABLE: Final[str] = "events"
 
@@ -14,6 +15,13 @@ class Columns(StrEnum):
     current_cmd = "current_cmd"
     event_counter = "event_counter"
     last_modified = "last_modified"
+
+class Row(NamedTuple):
+    cwd: Path
+    previous_cmd: str
+    current_cmd: str
+    event_counter: PositiveInt
+    last_modified: datetime
 
 
 

@@ -1,6 +1,6 @@
 
 from bayesh._settings import BayeshSettings
-from bayesh._db import create_db, insert_row, _TABLE, Columns
+from bayesh._db import create_db, insert_row, _TABLE, Columns, Row
 import pytest
 from pathlib import Path
 import sqlite3
@@ -33,10 +33,10 @@ def test_insert_row(tmp_path: Path, db: Path, faker: Faker):
         cursor.execute(f"SELECT * FROM {_TABLE}")
         results = cursor.fetchall()
         assert len(results) == 1
-        row = results[0]
-        Path(row[0]) == tmp_path
-        row[1] == previous_cmd
-        row[2] == current_cmd
-        row[3] == event_counter
+        row = Row(*results[0])
+        row.cwd == tmp_path
+        row.previous_cmd == previous_cmd
+        row.current_cmd == current_cmd
+        row.event_counter == event_counter
 
 
