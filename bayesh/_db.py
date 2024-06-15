@@ -25,7 +25,7 @@ class Row(NamedTuple):
 
 
 
-def create_db(db_path: Path):
+def create_db(db: Path):
     create_query = f"""
     CREATE TABLE {_TABLE} (
         {Columns.cwd} TEXT,
@@ -37,15 +37,15 @@ def create_db(db_path: Path):
     )
     """
     index_query = f"CREATE INDEX idx_event_counter ON {_TABLE} ({Columns.event_counter})"
-    with sqlite3.connect(f"{db_path}") as conn:
+    with sqlite3.connect(f"{db}") as conn:
         cursor = conn.cursor()
         cursor.execute(create_query)
         cursor.execute(index_query)
         conn.commit()
 
 
-def insert_row(db_path: Path, cwd: Path, previous_cmd:str, current_cmd:str, event_counter: PositiveInt):
-    assert db_path.is_file() # nosec
+def insert_row(db: Path, cwd: Path, previous_cmd:str, current_cmd:str, event_counter: PositiveInt):
+    assert db.is_file() # nosec
     insert_statement = f'''
     INSERT INTO {_TABLE}({Columns.cwd},{Columns.previous_cmd},{Columns.current_cmd},{Columns.event_counter},{Columns.last_modified})
     VALUES(?,?,?,?,?) 
@@ -55,7 +55,7 @@ def insert_row(db_path: Path, cwd: Path, previous_cmd:str, current_cmd:str, even
                current_cmd=current_cmd, 
                event_counter=f"{event_counter}", 
                last_modified=f"{datetime.now()}")
-    with sqlite3.connect(f"{db_path}") as conn:
+    with sqlite3.connect(f"{db}") as conn:
         cursor = conn.cursor()
         cursor.execute(insert_statement, values)
         conn.commit()
