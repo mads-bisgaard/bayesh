@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 from typing import Final
 from enum import StrEnum
-from pydantic import PositiveInt
+from pydantic import PositiveInt, BaseModel
 from datetime import datetime
 from typing import NamedTuple
 
@@ -17,15 +17,14 @@ class Columns(StrEnum):
     last_modified = "last_modified"
 
 class Row(NamedTuple):
-    cwd: Path
+    cwd: Path | str
     previous_cmd: str
     current_cmd: str
     event_counter: PositiveInt
     last_modified: datetime
 
 
-
-def create_db(db: Path):
+def create_db(db: Path) -> None:
     create_query = f"""
     CREATE TABLE {_TABLE} (
         {Columns.cwd} TEXT,
@@ -44,7 +43,7 @@ def create_db(db: Path):
         conn.commit()
 
 
-def insert_row(db: Path, cwd: Path, previous_cmd:str, current_cmd:str, event_counter: PositiveInt):
+def insert_row(db: Path, cwd: Path, previous_cmd:str, current_cmd:str, event_counter: PositiveInt) -> None:
     assert db.is_file() # nosec
     insert_statement = f'''
     INSERT INTO {_TABLE}({Columns.cwd},{Columns.previous_cmd},{Columns.current_cmd},{Columns.event_counter},{Columns.last_modified})
@@ -59,3 +58,20 @@ def insert_row(db: Path, cwd: Path, previous_cmd:str, current_cmd:str, event_cou
         cursor = conn.cursor()
         cursor.execute(insert_statement, values)
         conn.commit()
+
+
+def get_row(db: Path, cwd: Path, previous_cmd: str, current_cmd) -> Row | None:
+    assert db.is_file() # nosec
+    get_statement = f"""
+    SELECT * FROM {_TABLE}
+    WHERE {Columns.cwd} = ? AND {Columns.previous_cmd} = ? AND {Columns.current_cmd} = ?
+    """
+    params = (f"{cwd}", previous_cmd, current_cmd)
+    with sqlite3.connect(f"{db}") as conn:
+        cursor = conn.cursor()
+        cursor.execute(get_statement, params)
+        result = cursor.fetchone()
+        if result is None:
+            return None
+        return Row(*result)
+    
