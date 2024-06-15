@@ -39,4 +39,14 @@ def test_insert_row(tmp_path: Path, db: Path, faker: Faker):
         row.current_cmd == current_cmd
         row.event_counter == event_counter
 
+def test_insert_unique_key(tmp_path: Path, db: Path, faker: Faker):
+    assert db.is_file()
+    assert _get_n_rows(db) == 0
 
+    previous_cmd = faker.text()
+    current_cmd = faker.text()
+    event_counter = faker.random_int(min=1, max=1000)
+    insert_row(db, tmp_path, previous_cmd, current_cmd, event_counter)
+    assert _get_n_rows(db) == 1
+    with pytest.raises(sqlite3.IntegrityError):
+        insert_row(db, tmp_path, previous_cmd, current_cmd, faker.random_int(min=1, max=1000))
