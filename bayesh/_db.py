@@ -43,20 +43,15 @@ def create_db(db: Path) -> None:
         conn.commit()
 
 
-def insert_row(db: Path, cwd: Path, previous_cmd:str, current_cmd:str, event_counter: PositiveInt) -> None:
+def insert_row(db: Path, row: Row) -> None:
     assert db.is_file() # nosec
     insert_statement = f'''
     INSERT INTO {_TABLE}({Columns.cwd},{Columns.previous_cmd},{Columns.current_cmd},{Columns.event_counter},{Columns.last_modified})
     VALUES(?,?,?,?,?) 
     '''
-    values=Row(cwd=f"{cwd.resolve()}", 
-               previous_cmd=previous_cmd, 
-               current_cmd=current_cmd, 
-               event_counter=f"{event_counter}", 
-               last_modified=f"{datetime.now()}")
     with sqlite3.connect(f"{db}") as conn:
         cursor = conn.cursor()
-        cursor.execute(insert_statement, values)
+        cursor.execute(insert_statement, row)
         conn.commit()
 
 

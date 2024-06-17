@@ -21,7 +21,7 @@ def db(tmp_bayesh_dir) -> Iterator[Path]:
 @pytest.fixture
 def row(tmp_path: Path, faker: Path) -> Iterator[Row]:
     yield Row(
-        cwd=tmp_path,
+        cwd=f"{tmp_path}",
         previous_cmd=faker.text(),
         current_cmd=faker.text(),
         event_counter=faker.random_int(min=1, max=10000),
