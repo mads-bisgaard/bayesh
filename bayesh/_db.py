@@ -68,14 +68,14 @@ def get_row(db: Path, cwd: Path, previous_cmd: str, current_cmd) -> Row | None:
         result = cursor.fetchone()
         return None if result is None else Row(*result)
     
-def update_row(db: Path, row: Row, event_counter: PositiveInt):
+def update_row(db: Path, row: Row, event_counter: PositiveInt, last_modified: datetime):
     assert db.is_file() # nosec
     update_statement = f"""
     UPDATE {_TABLE}
-    SET {Columns.event_counter} = ?
+    SET {Columns.event_counter} = ?, {Columns.last_modified} = ?
     WHERE {Columns.cwd} = ? AND {Columns.previous_cmd} = ? AND {Columns.current_cmd} = ?
     """
-    params = (event_counter, f"{row.cwd}", row.previous_cmd, row.current_cmd)
+    params = (event_counter, last_modified, f"{row.cwd}", row.previous_cmd, row.current_cmd)
     with sqlite3.connect(f"{db}") as conn:
         cursor = conn.cursor()
         cursor.execute(update_statement, params)

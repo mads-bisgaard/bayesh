@@ -2,5 +2,6 @@ pytest
 pydantic
 pydantic-settings
 faker
+typer
 
 #-e ./bayesh

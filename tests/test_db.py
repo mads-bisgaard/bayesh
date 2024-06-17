@@ -67,6 +67,8 @@ def test_update_row(db: Path, faker: Faker, row: Row):
     insert_row(db, row)
 
     _event_counter = faker.random_int(min=1, max=1000)
-    update_row(db, row, _event_counter)
+    _last_modified = datetime.now()
+    update_row(db, row, _event_counter, last_modified=_last_modified)
     _row = get_row(db, row.cwd, row.previous_cmd, row.current_cmd)  
-    assert _row.event_counter == _event_counter  
+    assert _row.event_counter == _event_counter
+    assert _row.last_modified == f"{_last_modified}"
