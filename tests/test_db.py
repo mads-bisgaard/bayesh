@@ -52,15 +52,8 @@ def test_db_unique_key(tmp_path: Path, db: Path, faker: Faker):
     with pytest.raises(sqlite3.IntegrityError):
         insert_row(db, tmp_path, previous_cmd, current_cmd, faker.random_int(min=1, max=1000))
 
-def test_get_row(db: Path, faker: Faker, tmp_path: Path):
+def test_get_row(db: Path, faker: Faker, tmp_path: Path, row: Row):
     assert get_row(db, tmp_path, faker.text(), faker.text()) == None
-    row = Row(
-        cwd=tmp_path,
-        previous_cmd=faker.text(),
-        current_cmd=faker.text(),
-        event_counter=faker.random_int(min=1, max=10000),
-        last_modified=datetime.now()
-    )
     insert_row(db, row.cwd, row.previous_cmd, row.current_cmd, row.event_counter)
     _row = get_row(db, row.cwd, row.previous_cmd, row.current_cmd)
     assert _row is not None
@@ -69,3 +62,4 @@ def test_get_row(db: Path, faker: Faker, tmp_path: Path):
     assert row.current_cmd == _row.current_cmd
     assert row.event_counter == _row.event_counter
 
+#def test_update_row(db: Path, faker: Faker, row: Row):
