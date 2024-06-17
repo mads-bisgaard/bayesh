@@ -66,9 +66,7 @@ def get_row(db: Path, cwd: Path, previous_cmd: str, current_cmd) -> Row | None:
         cursor = conn.cursor()
         cursor.execute(get_statement, params)
         result = cursor.fetchone()
-        if result is None:
-            return None
-        return Row(*result)
+        return None if result is None else Row(*result)
     
 def update_row(db: Path, row: Row, event_counter: PositiveInt):
     assert db.is_file() # nosec
