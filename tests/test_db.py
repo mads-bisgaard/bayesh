@@ -1,6 +1,6 @@
 
 from bayesh._settings import BayeshSettings
-from bayesh._db import create_db, insert_row, _TABLE, Columns, Row, get_row
+from bayesh._db import create_db, insert_row, _TABLE, Columns, Row, get_row, update_row
 import pytest
 from pathlib import Path
 import sqlite3
@@ -62,4 +62,11 @@ def test_get_row(db: Path, faker: Faker, tmp_path: Path, row: Row):
     assert row.current_cmd == _row.current_cmd
     assert row.event_counter == _row.event_counter
 
-#def test_update_row(db: Path, faker: Faker, row: Row):
+def test_update_row(db: Path, faker: Faker, row: Row):
+    assert _get_n_rows(db) == 0
+    insert_row(db, row.cwd, row.previous_cmd, row.current_cmd, row.event_counter)
+
+    _event_counter = faker.random_int(min=1, max=1000)
+    update_row(db, row, _event_counter)
+    _row = get_row(db, row.cwd, row.previous_cmd, row.current_cmd)  
+    assert _row.event_counter == _event_counter  

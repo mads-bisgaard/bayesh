@@ -82,7 +82,7 @@ def update_row(db: Path, row: Row, event_counter: PositiveInt):
     SET {Columns.event_counter} = ?
     WHERE {Columns.cwd} = ? AND {Columns.previous_cmd} = ? AND {Columns.current_cmd} = ?
     """
-    params = (event_counter, row.cwd, row.previous_cmd, row.current_cmd)
+    params = (event_counter, f"{row.cwd}", row.previous_cmd, row.current_cmd)
     with sqlite3.connect(f"{db}") as conn:
         cursor = conn.cursor()
         cursor.execute(update_statement, params)
