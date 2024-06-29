@@ -4,10 +4,10 @@ from datetime import datetime
 from ._db import get_row, update_row, insert_row, Row
 from ._settings import BayeshSettings
 
-app = Typer()
+cli = Typer()
 
 
-@app.command()
+@cli.command()
 def record_event(cwd: Path, previous_cmd: str, current_cmd):
     db = BayeshSettings().db
     if row := get_row(

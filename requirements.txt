@@ -1,8 +1,6 @@
+faker
 pre-commit
 pytest
-pydantic
-pydantic-settings
-faker
-typer
 
-#-e ./bayesh
+
+-e .
