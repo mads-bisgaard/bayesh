@@ -1,4 +1,3 @@
-
 from typer import Typer
 from pathlib import Path
 from datetime import datetime
@@ -7,10 +6,13 @@ from ._settings import BayeshSettings
 
 app = Typer()
 
+
 @app.command()
 def record_event(cwd: Path, previous_cmd: str, current_cmd):
     db = BayeshSettings().db
-    if row := get_row(db=db, cwd=cwd, previous_cmd=previous_cmd, current_cmd=current_cmd):
+    if row := get_row(
+        db=db, cwd=cwd, previous_cmd=previous_cmd, current_cmd=current_cmd
+    ):
         count = row.event_counter + 1
         last_modified = datetime.now()
         update_row(db=db, row=row, event_counter=count, last_modified=last_modified)
@@ -20,6 +22,6 @@ def record_event(cwd: Path, previous_cmd: str, current_cmd):
             previous_cmd=previous_cmd,
             current_cmd=current_cmd,
             event_counter=1,
-            last_modified=datetime.now()
+            last_modified=datetime.now(),
         )
         insert_row(db=db, row=row)
