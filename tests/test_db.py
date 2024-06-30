@@ -1,10 +1,20 @@
 from bayesh._settings import BayeshSettings
-from bayesh._db import create_db, insert_row, _TABLE, Columns, Row, get_row, update_row
+from bayesh._db import (
+    create_db,
+    insert_row,
+    _TABLE,
+    Columns,
+    Row,
+    get_row,
+    update_row,
+    infer_current_cmd,
+)
 import pytest
 from pathlib import Path
 import sqlite3
 from faker import Faker
 from datetime import datetime
+from random import shuffle
 
 
 def get_n_rows(db: Path) -> int:
@@ -90,3 +100,48 @@ def test_update_row(db: Path, faker: Faker, row: Row):
     _row = get_row(db, row.cwd, row.previous_cmd, row.current_cmd)
     assert _row.event_counter == _event_counter
     assert _row.last_modified == f"{_last_modified}"
+
+
+def test_infer_current_cmd(db: Path, faker: Faker, tmp_path: Path):
+    assert get_n_rows(db=db) == 0
+
+    # setup data in db
+    noise_rows = []
+    for _ in range(faker.random_int(min=1, max=500)):
+        noise_rows.append(
+            Row(
+                cwd=f"{Path(faker.file_path()).parent}",
+                previous_cmd=faker.text(),
+                current_cmd=faker.text(),
+                event_counter=faker.random_int(min=1, max=100),
+                last_modified=faker.date_time(),
+            )
+        )
+
+    _cwd = f"{Path(faker.file_path()).parent}"
+    _previous_cmd = faker.text()
+    state_rows = []
+    for _ in range(faker.random_int(min=1, max=50)):
+        state_rows.append(
+            Row(
+                cwd=_cwd,
+                previous_cmd=_previous_cmd,
+                current_cmd=faker.text(),
+                event_counter=faker.random_int(min=1, max=100),
+                last_modified=faker.date_time(),
+            )
+        )
+
+    all_rows = noise_rows + state_rows
+    shuffle(all_rows)
+    for row in all_rows:
+        insert_row(db, row)
+
+    # infer current_cmd
+    _inferred_current_cmd = [
+        row.current_cmd
+        for row in sorted(state_rows, key=lambda row: row.event_counter, reverse=True)
+    ]
+    commands_to_test = infer_current_cmd(db, _cwd, _previous_cmd)
+    assert len(commands_to_test) == len(_inferred_current_cmd)
+    assert all(a == b for a, b in zip(_inferred_current_cmd, commands_to_test))
