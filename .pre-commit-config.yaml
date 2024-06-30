@@ -8,3 +8,7 @@ repos:
         # pre-commit's default_language_version, see
         # https://pre-commit.com/#top_level-default_language_version
         language_version: python3.12
+  - repo: https://github.com/gruntwork-io/pre-commit
+    rev: v0.1.23 # Get the latest from: https://github.com/gruntwork-io/pre-commit/releases
+    hooks:
+      - id: shellcheck
