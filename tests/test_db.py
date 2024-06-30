@@ -102,7 +102,7 @@ def test_update_row(db: Path, faker: Faker, row: Row):
     assert _row.last_modified == f"{_last_modified}"
 
 
-def test_infer_current_cmd(db: Path, faker: Faker, tmp_path: Path):
+def test_infer_current_cmd(db: Path, faker: Faker):
     assert get_n_rows(db=db) == 0
 
     # setup data in db
@@ -121,13 +121,16 @@ def test_infer_current_cmd(db: Path, faker: Faker, tmp_path: Path):
     _cwd = f"{Path(faker.file_path()).parent}"
     _previous_cmd = faker.text()
     state_rows = []
-    for _ in range(faker.random_int(min=1, max=50)):
+    _event_counts = set(
+        faker.random_int(min=1, max=100) for _ in range(faker.random_int(min=1, max=50))
+    )  # ensure unique event counts so order is uniquely determined
+    for _ec in _event_counts:
         state_rows.append(
             Row(
                 cwd=_cwd,
                 previous_cmd=_previous_cmd,
                 current_cmd=faker.text(),
-                event_counter=faker.random_int(min=1, max=100),
+                event_counter=_ec,
                 last_modified=faker.date_time(),
             )
         )
@@ -138,10 +141,24 @@ def test_infer_current_cmd(db: Path, faker: Faker, tmp_path: Path):
         insert_row(db, row)
 
     # infer current_cmd
+    _inferred_rows = [
+        row for row in all_rows if row.cwd == _cwd and row.previous_cmd == _previous_cmd
+    ]
     _inferred_current_cmd = [
         row.current_cmd
-        for row in sorted(state_rows, key=lambda row: row.event_counter, reverse=True)
+        for row in sorted(
+            _inferred_rows, key=lambda row: row.event_counter, reverse=True
+        )
     ]
     commands_to_test = infer_current_cmd(db, _cwd, _previous_cmd)
-    assert len(commands_to_test) == len(_inferred_current_cmd)
-    assert all(a == b for a, b in zip(_inferred_current_cmd, commands_to_test))
+    assert set(commands_to_test) == set(_inferred_current_cmd)
+    for index, vals in enumerate(zip(_inferred_current_cmd, commands_to_test)):
+        print(f"{index=}")
+        assert vals[0] == vals[1]
+
+
+def test_infer_cmd_no_results(db: Path, faker: Faker):
+    assert get_n_rows(db=db) == 0
+    result = infer_current_cmd(db=db, cwd=faker.text(), previous_cmd=faker.text())
+    assert isinstance(result, list)
+    assert len(result) == 0

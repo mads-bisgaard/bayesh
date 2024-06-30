@@ -96,4 +96,15 @@ def update_row(
 
 def infer_current_cmd(db: Path, cwd: Path, previous_cmd: str) -> list[str]:
     assert db.is_file  # nosec
-    return []
+    query = f"""
+    SELECT {Columns.current_cmd}
+    FROM {_TABLE}
+    WHERE {Columns.cwd} = ? AND {Columns.previous_cmd} = ?
+    ORDER BY {Columns.event_counter} DESC
+    """
+    params = (f"{cwd}", previous_cmd)
+    with sqlite3.connect(f"{db}") as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        return [r[0] for r in rows] if rows is not None else []
