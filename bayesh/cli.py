@@ -1,10 +1,10 @@
-from typer import Typer
+import typer
 from pathlib import Path
 from datetime import datetime
-from ._db import get_row, update_row, insert_row, Row
+from ._db import get_row, update_row, insert_row, Row, infer_current_cmd
 from ._settings import BayeshSettings
 
-cli = Typer()
+cli = typer.Typer()
 
 
 @cli.command()
@@ -25,3 +25,10 @@ def record_event(cwd: Path, previous_cmd: str, current_cmd):
             last_modified=datetime.now(),
         )
         insert_row(db=db, row=row)
+
+
+@cli.command()
+def infer_cmd(cwd: Path, previous_cmd: str):
+    db = BayeshSettings().db
+    results = infer_current_cmd(db=db, cwd=cwd, previous_cmd=previous_cmd)
+    typer.echo("\n".join(results))
