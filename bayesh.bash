@@ -14,7 +14,7 @@ function bayesh_update() {
     if [[ "${histcmd}" -eq "${BAYESH_HISTCMD}" ]]; then
         return
     fi    
-    bayesh record-event "${BAYESH_PWD}" "${BAYESH_CMD}" "${cmd}"
+    ( bayesh record-event "${BAYESH_PWD}" "${BAYESH_CMD}" "${cmd}" ) & disown
 
 
     BAYESH_PWD=$(pwd)
