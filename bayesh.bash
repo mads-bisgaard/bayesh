@@ -29,7 +29,8 @@ function bayesh_infer_cmd() {
     local inferred_cmds
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     echo "${inferred_cmds}" | \
-        fzf --scheme=history --no-sort --bind='zero:reload(echo {q})'
+        fzf --scheme=history --no-sort \
+        --bind="zero:reload(echo -e '${inferred_cmds}\n{q}'),one:reload(echo -e '${inferred_cmds}\n{q}')"
 }
 
 
