@@ -3,9 +3,8 @@
 #set -e
 #set -u
 
-REPO_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
-alias bayesh='${REPO_DIR}/.venv/bin/python3 -m bayesh'
-export BAYESH_DIR="${REPO_DIR}/tmp"
+: "${BAYESH_DIR:=~/.bayesh}"
+export BAYESH_DIR
 
 function bayesh_update() {
     local cmd
