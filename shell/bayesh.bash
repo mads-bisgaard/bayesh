@@ -1,11 +1,5 @@
 #!/bin/bash
 
-#set -e
-#set -u
-
-: "${BAYESH_DIR:=~/.bayesh}"
-export BAYESH_DIR
-
 function bayesh_update() {
     local cmd
     local histcmd
