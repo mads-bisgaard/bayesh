@@ -3,7 +3,9 @@
 #set -e
 #set -u
 
-export BAYESH_DIR="${HOME}/Development/bayesh/tmp"
+REPO_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+alias bayesh='${REPO_DIR}/.venv/bin/python3 -m bayesh'
+export BAYESH_DIR="${REPO_DIR}/tmp"
 
 function bayesh_update() {
     local cmd
@@ -30,7 +32,7 @@ function bayesh_infer_cmd() {
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     echo "${inferred_cmds}" | \
         fzf --scheme=history --no-sort \
-        --bind="zero:reload(echo -e '${inferred_cmds}\n{q}'),one:reload(echo -e '${inferred_cmds}\n{q}')"
+        --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}'),one:reload(echo '${inferred_cmds}'; echo '{q}')"
 }
 
 
