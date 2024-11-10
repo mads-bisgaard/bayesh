@@ -11,6 +11,5 @@ xargs --help > /dev/null
 alias bayesh="${REPO_DIR}/.venv/bin/python3 -m bayesh"
 bayesh --help > /dev/null
 
-# shellcheck source="./shell/bayesh.bash"
 source "${REPO_DIR}/shell/bayesh.bash"
 
