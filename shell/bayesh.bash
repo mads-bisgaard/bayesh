@@ -28,13 +28,6 @@ function bayesh_infer_cmd() {
         --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}'),one:reload(echo '${inferred_cmds}'; echo '{q}')"
 }
 
-
-if [[ -n "$PROMPT_COMMAND" ]]; then
-    PROMPT_COMMAND="$PROMPT_COMMAND; bayesh_update"
-else
-    PROMPT_COMMAND='bayesh_update'
-fi
-
 BAYESH_PWD=$(pwd)
 export BAYESH_PWD
 BAYESH_CMD=""
