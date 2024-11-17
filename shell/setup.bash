@@ -26,3 +26,5 @@ if [[ -n "$PROMPT_COMMAND" ]]; then
 else
     PROMPT_COMMAND='bayesh_update'
 fi
+
+bind '"\C-e":"bayesh_infer_cmd\n"'
