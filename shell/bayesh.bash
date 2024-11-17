@@ -21,11 +21,15 @@ function bayesh_update() {
 }
 
 function bayesh_infer_cmd() {
+    ( 
     local inferred_cmds
+
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
-    echo "${inferred_cmds}" | \
-        fzf --scheme=history --no-sort \
-        --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}'),one:reload(echo '${inferred_cmds}'; echo '{q}')"
+    fzf --scheme=history --no-sort \
+    --bind="start:reload(echo '${inferred_cmds}')" \
+    --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')" \
+    --bind="one:reload(echo '${inferred_cmds}'; echo '{q}')"
+    )
 }
 
 BAYESH_PWD=$(pwd)

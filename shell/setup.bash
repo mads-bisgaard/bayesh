@@ -27,4 +27,12 @@ else
     PROMPT_COMMAND='bayesh_update'
 fi
 
-bind '"\C-e":"bayesh_infer_cmd\n"'
+__infer_cmd__() {
+    local result
+    result=$(bayesh_infer_cmd)
+    READLINE_LINE="${result}"
+    READLINE_POINT=${#result}
+}
+
+
+bind -x '"\C-e":"__infer_cmd__"'
