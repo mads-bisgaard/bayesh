@@ -21,7 +21,12 @@ xargs --help > /dev/null
 # shellcheck source=shell/bayesh.bash
 source "$(dirname "${BASH_SOURCE[0]}")/bayesh.bash"
 
-PROMPT_COMMAND="${PROMPT_COMMAND} bayesh_update;"
+
+if [[ -z "$PROMPT_COMMAND" ]]; then
+    PROMPT_COMMAND="bayesh_update;"
+else
+    PROMPT_COMMAND="${PROMPT_COMMAND%;}; bayesh_update;"
+fi
 export PROMPT_COMMAND
 export HISTCONTROL=""
 
