@@ -13,6 +13,7 @@ class BayeshSettings(BaseSettings):
 
     @model_validator(mode="after")
     def check_dir(self) -> Self:
+        self.bayesh_dir.resolve()
         self.bayesh_dir.mkdir(parents=True, exist_ok=True)
         self.bayesh_dir.resolve()
         if not self.db.is_file():
