@@ -2,13 +2,15 @@
 
 function bayesh_update() {
     local cmd
-    local histcmd
+    local last_hist
 
     cmd=$(fc -ln -1 | xargs)
-    histcmd="${HISTCMD}"
-    if [[ "${histcmd}" -eq "${BAYESH_HISTCMD}" ]]; then
+    last_hist=$(history | tail -1 | md5sum)
+
+    if [[ "${last_hist}" == "${BAYESH_LAST_HIST}" ]]; then
         return
     fi    
+
     ( bayesh record-event "${BAYESH_PWD}" "${BAYESH_CMD}" "${cmd}" ) & disown
 
 
@@ -16,8 +18,8 @@ function bayesh_update() {
     export BAYESH_PWD
     BAYESH_CMD=${cmd}
     export BAYESH_CMD
-    BAYESH_HISTCMD=${histcmd}
-    export BAYESH_HISTCMD
+    BAYESH_LAST_HIST=${last_hist}
+    export BAYESH_LAST_HIST
 }
 
 function bayesh_infer_cmd() {
@@ -36,5 +38,5 @@ BAYESH_PWD=$(pwd)
 export BAYESH_PWD
 BAYESH_CMD=""
 export BAYESH_CMD
-BAYESH_HISTCMD="-1"
-export BAYESH_HISTCMD
+BAYESH_LAST_HIST=""
+export BAYESH_LAST_HIST
