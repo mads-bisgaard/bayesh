@@ -4,7 +4,7 @@ function bayesh_update() {
     local cmd
     local last_hist
 
-    cmd=$(fc -ln -1 | xargs)
+    cmd=$(fc -ln -1 | awk '{$1=$1};1')
     last_hist=$(history | tail -1 | md5sum)
 
     if [[ "${last_hist}" == "${BAYESH_LAST_HIST}" ]]; then
@@ -27,10 +27,12 @@ function bayesh_infer_cmd() {
     local inferred_cmds
 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
-    fzf --scheme=history --no-sort \
-    --bind="start:reload(echo '${inferred_cmds}')" \
-    --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')" \
-    --bind="one:reload(echo '${inferred_cmds}'; echo '{q}')"
+    hist=$(fc -ln -200 | awk '{$1=$1};1')
+    fzf --scheme=history \
+        --exact \
+        --no-sort \
+        --bind="start:reload(echo '${inferred_cmds}')" \
+        --bind="zero:reload(echo '${hist}'; echo '{q}')"
     )
 }
 

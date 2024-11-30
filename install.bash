@@ -22,7 +22,7 @@ function _check_dependency() {
 echo "- checking dependencies are installed"
 _check_dependency "python3"
 _check_dependency "fzf"
-_check_dependency "xargs"
+_check_dependency "awk"
 _check_dependency "md5sum"
 
 echo "- setting up python venv"
