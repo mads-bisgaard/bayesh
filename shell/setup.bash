@@ -15,8 +15,6 @@ function bayesh() {
     "${BAYESH_SRC_DIR}"/.venv/bin/python3 -m bayesh "$@"
 }
 
-fzf --help > /dev/null
-xargs --help > /dev/null
 
 # shellcheck source=shell/bayesh.bash
 source "$(dirname "${BASH_SOURCE[0]}")/bayesh.bash"
