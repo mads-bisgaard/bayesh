@@ -28,13 +28,14 @@ fi
 export PROMPT_COMMAND
 export HISTCONTROL=""
 
+#####################################
 
-__infer_cmd__() {
-    local result
-    result=$(bayesh_infer_cmd)
-    READLINE_LINE="${result}"
-    READLINE_POINT=${#result}
-}
+# __infer_cmd__() {
+#     local result
+#     result=$(bayesh_infer_cmd)
+#     READLINE_LINE="${result}"
+#     READLINE_POINT=${#result}
+# }
 
 
-bind -x '"\C-e":"__infer_cmd__"'
+# bind -x '"\C-e":"__infer_cmd__"'
