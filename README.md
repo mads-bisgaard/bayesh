@@ -13,7 +13,7 @@ I have tested the following on Fedora and Ubuntu
 source "<bayesh root dir>/shell/bayesh.bash"
 bind -x '"\C-e":"bayesh_infer_cmd"'
 ```
-Now you should be able to generate bash predictions by pressing `Ctrl+e` in your bash terminal. It will not be too good at first, but after some time it will have collected enough data to (hopefully) generate great predictions.
+Now you should be able to generate bash predictions by pressing `Ctrl+e` in your bash terminal. Probably you don't see any predictions at first, but after some time it will have collected enough data to (hopefully) generate great predictions.
 
 ### Some inspirations for this project
 - [Peter Norvig](https://norvig.com/)'s excellent [blogpost](https://norvig.com/spell-correct.html) on how to build a spelling corrector.
