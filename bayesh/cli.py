@@ -1,6 +1,7 @@
 import typer
 from pathlib import Path
 from datetime import datetime
+from pprint import pprint
 from ._db import get_row, update_row, insert_row, Row, infer_current_cmd
 from ._settings import BayeshSettings
 
@@ -32,3 +33,8 @@ def infer_cmd(cwd: Path, previous_cmd: str):
     db = BayeshSettings().db
     results = infer_current_cmd(db=db, cwd=cwd, previous_cmd=previous_cmd)
     typer.echo("\n".join(results))
+
+
+@cli.command()
+def print_settings():
+    pprint(BayeshSettings().model_dump())
