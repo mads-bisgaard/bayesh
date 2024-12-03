@@ -32,7 +32,7 @@ echo "- installing bayesh into python venv"
 "${REPO_DIR}/.venv/bin/python3" -m pip install "${REPO_DIR}" &> /dev/null
 _check_exists "${REPO_DIR}/.venv/bin/bayesh"
 _check_exists "/usr/local/bin"
-echo "- exposing bayesh executable"
+echo "- exposing bayesh executable on PATH"
 sudo ln -s "${REPO_DIR}/.venv/bin/bayesh" "/usr/local/bin/bayesh"
 _check_dependency "bayesh"
 

@@ -29,12 +29,11 @@ function bayesh_infer_cmd() {
     local inferred_cmds
 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
-    hist=$(fc -ln -200 | awk '{$1=$1};1')
     fzf --scheme=history \
         --exact \
         --no-sort \
         --bind="start:reload(echo '${inferred_cmds}')" \
-        --bind="zero:reload(echo '${hist}'; echo '{q}')"
+        --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')"
     )
 
     READLINE_LINE="${result}"
