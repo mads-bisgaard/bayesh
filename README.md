@@ -8,4 +8,4 @@ Bash command prediction using fzf. Based on your bash history, bayesh gives you 
 - The exceptional [fzf](https://github.com/junegunn/fzf) and how to integrate it with bash's own [tab-completion](https://github.com/lincheney/fzf-tab-completion) framework
 
 ### Why "bayesh"? 👀
-**Bayes**ian statistics in **bash** 🤷‍♂️
+**Bayes**ian statistics on your **bash** history 🤷‍♂️. Currently this repo doesn't actually do any bayesian statistics, but it does compute conditional probabilities 🤓.
