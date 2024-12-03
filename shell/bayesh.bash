@@ -23,7 +23,9 @@ function bayesh_update() {
 }
 
 function bayesh_infer_cmd() {
-    ( 
+    local result
+    
+    result=$( 
     local inferred_cmds
 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
@@ -34,6 +36,9 @@ function bayesh_infer_cmd() {
         --bind="start:reload(echo '${inferred_cmds}')" \
         --bind="zero:reload(echo '${hist}'; echo '{q}')"
     )
+
+    READLINE_LINE="${result}"
+    READLINE_POINT=${#result}    
 }
 
 BAYESH_PWD=$(pwd)
@@ -42,3 +47,10 @@ BAYESH_CMD=""
 export BAYESH_CMD
 BAYESH_LAST_HIST=""
 export BAYESH_LAST_HIST
+
+if [[ -z "$PROMPT_COMMAND" ]]; then
+    PROMPT_COMMAND="bayesh_update;"
+else
+    PROMPT_COMMAND="${PROMPT_COMMAND%;}; bayesh_update;"
+fi
+export PROMPT_COMMAND
