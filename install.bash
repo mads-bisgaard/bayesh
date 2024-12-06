@@ -3,7 +3,6 @@
 set -euo pipefail
 
 REPO_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
-BASH_RC=$(realpath ~/.bashrc)
 
 function _check_exists() {
     local file_or_dir
@@ -32,10 +31,8 @@ echo "- installing bayesh into python venv"
 "${REPO_DIR}/.venv/bin/python3" -m pip install "${REPO_DIR}" &> /dev/null
 _check_exists "${REPO_DIR}/.venv/bin/bayesh"
 _check_exists "/usr/local/bin"
-echo "- exposing bayesh executable on PATH"
+echo "- creating symlink in /usr/local/bin to expose bayesh executable on PATH"
 sudo ln -s "${REPO_DIR}/.venv/bin/bayesh" "/usr/local/bin/bayesh"
 _check_dependency "bayesh"
 
 echo "- done installing bayesh"
-_check_exists "${BASH_RC}"
-echo "- Add 'source ${REPO_DIR}/shell/setup.bash' to ${BASH_RC} and source ${BASH_RC} to activate bayesh"
