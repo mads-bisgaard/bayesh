@@ -22,7 +22,7 @@ function _check_dependency() {
 echo "- checking dependencies are installed"
 _check_dependency "python3"
 _check_dependency "fzf"
-_check_dependency "xargs"
+_check_dependency "awk"
 _check_dependency "md5sum"
 
 echo "- setting up python venv"
@@ -32,7 +32,7 @@ echo "- installing bayesh into python venv"
 "${REPO_DIR}/.venv/bin/python3" -m pip install "${REPO_DIR}" &> /dev/null
 _check_exists "${REPO_DIR}/.venv/bin/bayesh"
 _check_exists "/usr/local/bin"
-echo "- exposing bayesh executable"
+echo "- exposing bayesh executable on PATH"
 sudo ln -s "${REPO_DIR}/.venv/bin/bayesh" "/usr/local/bin/bayesh"
 _check_dependency "bayesh"
 
