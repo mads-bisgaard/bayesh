@@ -21,7 +21,3 @@ def _get_sanitized_commands() -> list[tuple[str, str]]:
 )
 def test_sanitize_cmd(cmd_expectedcmd: tuple[str, str]):
     assert sanitize_cmd(cmd_expectedcmd[0]) == cmd_expectedcmd[1]
-
-
-if __name__ == "__main__":
-    print(_get_sanitized_commands())
