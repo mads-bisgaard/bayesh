@@ -9,7 +9,7 @@ cli = typer.Typer()
 
 
 @cli.command()
-def record_event(cwd: Path, previous_cmd: str, current_cmd):
+def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
     db = BayeshSettings().db
     if row := get_row(
         db=db, cwd=cwd, previous_cmd=previous_cmd, current_cmd=current_cmd
