@@ -21,6 +21,6 @@ def _get_sanitized_commands() -> list[tuple[str, str]]:
         return [CommandPair(*row) for row in csv_reader]
 
 
-@pytest.mark.parametrize("cmdpair", _get_sanitized_commands(), ids=lambda x: x[0])
+@pytest.mark.parametrize("cmdpair", _get_sanitized_commands(), ids=lambda x: x.raw_cmd)
 def test_sanitize_cmd(cmdpair: CommandPair):
     assert sanitize_cmd(cmdpair.raw_cmd) == cmdpair.sanitized_cmd
