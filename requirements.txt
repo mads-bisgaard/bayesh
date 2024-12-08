@@ -1,3 +1,4 @@
+bashlex
 faker
 pre-commit
 pytest
