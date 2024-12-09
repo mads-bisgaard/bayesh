@@ -1,6 +1,8 @@
 import re
 from typing import Final
 from bashlex import ast, parsesingle
+import shlex
+from pathlib import Path
 
 _PATH_REGEX: Final[str] = r"^(/[^/\0]+)+$"
 
@@ -38,10 +40,10 @@ def _reconstruct_cmd_from_ast(cmd_ast: ast.node) -> str:
         elif hasattr(node, "kind") and node.kind == "commandsubstitution":
             words = _walk_and_collect(node.command)
             if len(words) > 0:
-                words[0] = "$(" + words[0]
-                words[-1] = words[-1] + ")"
+                words[0] = '"$(' + words[0]
+                words[-1] = words[-1] + ')"'
             else:
-                words = ["$()"]
+                words = ['"$()"']
             parts += words
         elif hasattr(node, "kind") and node.kind == "assignment":
             words = _collect_parts(node)
@@ -56,5 +58,18 @@ def _reconstruct_cmd_from_ast(cmd_ast: ast.node) -> str:
 
 
 def sanitize_cmd(cmd: str) -> str:
-    parts = parsesingle(cmd)
+    parser = shlex.shlex(cmd, posix=True, punctuation_chars=True)
+    parser.whitespace_split = True
+    parts = list(parser)
+    for p in parts:
+        ii = parts.index(p)  # *first* index
+        if " " in p:
+            cmd = cmd.replace(f'"{p}"', "<MSG>")
+        elif (
+            Path(p).exists()
+            and ii > 0
+            and not parts[ii - 1].endswith(("|", "&", ")", ";"))
+        ):  # allow paths in 0th position: pointing to executable
+            cmd = cmd.replace(p, "<PATH>")
+
     return cmd

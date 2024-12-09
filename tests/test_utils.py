@@ -30,7 +30,7 @@ def _get_raw_commands() -> list[tuple[str, str]]:
     "cmd", _get_raw_commands(), ids=lambda x: _get_raw_commands().index(x)
 )
 def test_reconstruct_cmd_from_ast(cmd):
-    assert _reconstruct_cmd_from_ast(bashlex.parsesingle(cmd)) == cmd
+    assert _reconstruct_cmd_from_ast(bashlex.parsesingle(cmd, strictmode=False)) == cmd
 
 
 @pytest.mark.parametrize(
