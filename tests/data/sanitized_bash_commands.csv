@@ -17,6 +17,5 @@
 "git clone git@github.com:lincheney/fzf-tab-completion.git","git clone git@github.com:lincheney/fzf-tab-completion.git"
 "git branch -D improve-usability","git branch -D <NAME>"
 "env | sort","env | sort"
-"env | grep 'BAYESH'","env | grep 'BAYESH'"
 "export BAYESH_DIR=~/Development/bayesh/tmp/","export BAYESH_DIR=<PATH>"
-"push_log=$(git commit -m \"this is my commit message\"; git push)","push_log=$(git commit -m <MSG>; git push)"
+"push_log=$(git commit -m \"this is my commit message\" ; git push)","push_log=$(git commit -m <MSG> ; git push)"
