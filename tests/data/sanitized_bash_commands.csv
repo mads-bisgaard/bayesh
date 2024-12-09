@@ -50,7 +50,6 @@
 "docker container ls -aq","docker container ls -aq"
 "docker container rm $(docker container ls -aq)","docker container rm $(docker container ls -aq)"
 "docker container stop $(docker container ls -aq)","docker container stop $(docker container ls -aq)"
-"docker container rm $(docker container ls -aq)","docker container rm $(docker container ls -aq)"
 "git branch -D 6865-ensure-backwards-compatibility-of-api-server","git branch -D 6865-ensure-backwards-compatibility-of-api-server"
 "code .","code <PATH>"
 "fc -ln -500 | awk '{$1=$1};1'","fc -ln -500 | awk '{$1=$1};1'"
