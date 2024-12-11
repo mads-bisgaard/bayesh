@@ -1,0 +1,56 @@
+{"raw_cmd":"git add /tmp/myfavorite_file","sanitized_cmd":"git add <PATH>","required_paths":["/tmp/myfavorite_file"]}
+{"raw_cmd":"cd Development/bayesh","sanitized_cmd":"cd <PATH>","required_paths":["Development/bayesh"]}
+{"raw_cmd":"ssh-add","sanitized_cmd":"ssh-add","required_paths":[]}
+{"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
+{"raw_cmd":"git add install.bash shell/bayesh.bash","sanitized_cmd":"git add <PATH>","required_paths":["install.bash","shell/bayesh.bash"]}
+{"raw_cmd":"bashit restart","sanitized_cmd":"bashit restart","required_paths":[]}
+{"raw_cmd":"git commit","sanitized_cmd":"git commit","required_paths":[]}
+{"raw_cmd":"git push","sanitized_cmd":"git push","required_paths":[]}
+{"raw_cmd":"source .venv/bin/activate","sanitized_cmd":"source <PATH>","required_paths":[".venv/bin/activate"]}
+{"raw_cmd":"bayesh --help","sanitized_cmd":"bayesh --help","required_paths":[]}
+{"raw_cmd":"git add bayesh","sanitized_cmd":"git add <PATH>","required_paths":["bayesh"]}
+{"raw_cmd":"git commit -m \"improve BAYESH_DIR handling and add cli to print settings\"","sanitized_cmd":"git commit -m <MSG>","required_paths":[]}
+{"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
+{"raw_cmd":"q","sanitized_cmd":"q","required_paths":[]}
+{"raw_cmd":"compgen -A command git","sanitized_cmd":"compgen -A command git","required_paths":[]}
+{"raw_cmd":"shopt -q no_empty_cmd_completion","sanitized_cmd":"shopt -q no_empty_cmd_completion","required_paths":[]}
+{"raw_cmd":"git clone git@github.com:lincheney/fzf-tab-completion.git","sanitized_cmd":"git clone git@github.com:lincheney/fzf-tab-completion.git","required_paths":[]}
+{"raw_cmd":"git branch -D improve-usability","sanitized_cmd":"git branch -D improve-usability","required_paths":[]}
+{"raw_cmd":"env | sort","sanitized_cmd":"env | sort","required_paths":[]}
+{"raw_cmd":"export BAYESH_DIR=~/Development/bayesh/tmp/","sanitized_cmd":"export BAYESH_DIR=~/Development/bayesh/tmp/","required_paths":[]}
+{"raw_cmd":"push_log=$(git commit -m \"this is my commit message\" ; git push)","sanitized_cmd":"push_log=$(git commit -m <MSG> ; git push)","required_paths":[]}
+{"raw_cmd":"bash diff.bash; echo $?","sanitized_cmd":"bash diff.bash; echo $?","required_paths":[]}
+{"raw_cmd":"git add ci/github/helpers/openapi-specs-backwards-compatibility.bash","sanitized_cmd":"git add <PATH>","required_paths":["ci/github/helpers/openapi-specs-backwards-compatibility.bash"]}
+{"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
+{"raw_cmd":"cat scripts/openapi-specs.bash","sanitized_cmd":"cat scripts/openapi-specs.bash","required_paths":[]}
+{"raw_cmd":"cd services/api-server","sanitized_cmd":"cd services/api-server","required_paths":[]}
+{"raw_cmd":"make install-dev","sanitized_cmd":"make install-dev","required_paths":[]}
+{"raw_cmd":"...","sanitized_cmd":"...","required_paths":[]}
+{"raw_cmd":"make openapi-specs","sanitized_cmd":"make openapi-specs","required_paths":[]}
+{"raw_cmd":"make openapi.json","sanitized_cmd":"make openapi.json","required_paths":[]}
+{"raw_cmd":"make openapi-diff.md OPENAPI_JSON_BASE_URL=https://raw.githubusercontent.com/ITISFoundation/osparc-simcore/c72f500ccfd813b2c5d5b3850db0b591b978b3ed/services/api-server/openapi.json","sanitized_cmd":"make openapi-diff.md OPENAPI_JSON_BASE_URL=https://raw.githubusercontent.com/ITISFoundation/osparc-simcore/c72f500ccfd813b2c5d5b3850db0b591b978b3ed/services/api-server/openapi.json","required_paths":[]}
+{"raw_cmd":"rm openapi-diff.md","sanitized_cmd":"rm openapi-diff.md","required_paths":[]}
+{"raw_cmd":"make openapi-diff.md OPENAPI_JSON_BASE_URL=https://raw.githubusercontent.com/ITISFoundation/osparc-simcore/c72f500ccfd813b2c5d5b3850db0b591b978b3ed/services/api-server/openapi.json","sanitized_cmd":"make openapi-diff.md OPENAPI_JSON_BASE_URL=https://raw.githubusercontent.com/ITISFoundation/osparc-simcore/c72f500ccfd813b2c5d5b3850db0b591b978b3ed/services/api-server/openapi.json","required_paths":[]}
+{"raw_cmd":"ls | fzf","sanitized_cmd":"ls | fzf","required_paths":[]}
+{"raw_cmd":"rm $(find -type f -name .env)","sanitized_cmd":"rm $(find -type f -name .env)","required_paths":[]}
+{"raw_cmd":"find -type f -name .env","sanitized_cmd":"find -type f -name .env","required_paths":[]}
+{"raw_cmd":"python -m pytest -k test_product_webserver","sanitized_cmd":"python -m pytest -k test_product_webserver","required_paths":[]}
+{"raw_cmd":"python -m pytest .","sanitized_cmd":"python -m pytest <PATH>","required_paths":["."]}
+{"raw_cmd":"....","sanitized_cmd":"....","required_paths":[]}
+{"raw_cmd":"ping github.com","sanitized_cmd":"ping github.com","required_paths":[]}
+{"raw_cmd":"git checkout tryout-fzf-tab-completion-plugin","sanitized_cmd":"git checkout tryout-fzf-tab-completion-plugin","required_paths":[]}
+{"raw_cmd":"git push --set-upstream origin tryout-fzf-tab-completion-plugin","sanitized_cmd":"git push --set-upstream origin tryout-fzf-tab-completion-plugin","required_paths":[]}
+{"raw_cmd":"precommit","sanitized_cmd":"precommit","required_paths":[]}
+{"raw_cmd":"bayesh record-event --help","sanitized_cmd":"bayesh record-event --help","required_paths":[]}
+{"raw_cmd":"bayesh --help infer-command","sanitized_cmd":"bayesh --help infer-command","required_paths":[]}
+{"raw_cmd":"bayesh --help infer-cmd","sanitized_cmd":"bayesh --help infer-cmd","required_paths":[]}
+{"raw_cmd":"bayesh infer-cmd --help","sanitized_cmd":"bayesh infer-cmd --help","required_paths":[]}
+{"raw_cmd":"make shell","sanitized_cmd":"make shell","required_paths":[]}
+{"raw_cmd":"docker container ls","sanitized_cmd":"docker container ls","required_paths":[]}
+{"raw_cmd":"docker container ls -aq","sanitized_cmd":"docker container ls -aq","required_paths":[]}
+{"raw_cmd":"docker container rm $(docker container ls -aq)","sanitized_cmd":"docker container rm $(docker container ls -aq)","required_paths":[]}
+{"raw_cmd":"docker container stop $(docker container ls -aq)","sanitized_cmd":"docker container stop $(docker container ls -aq)","required_paths":[]}
+{"raw_cmd":"git branch -D 6865-ensure-backwards-compatibility-of-api-server","sanitized_cmd":"git branch -D 6865-ensure-backwards-compatibility-of-api-server","required_paths":[]}
+{"raw_cmd":"code .","sanitized_cmd":"code <PATH>","required_paths":["."]}
+{"raw_cmd":"fc -ln -500 | awk '{$1=$1};1'","sanitized_cmd":"fc -ln -500 | awk '{$1=$1};1'","required_paths":[]}
+{"raw_cmd":"myfunction \"some message\" \"some other message\"","sanitized_cmd":"myfunction <MSG>","required_paths":[]}
