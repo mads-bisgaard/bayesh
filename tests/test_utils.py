@@ -4,6 +4,8 @@ from typing import Final, NamedTuple
 import csv
 import pytest
 import bashlex
+from parse import parse
+import os
 
 _COMMANDS_FILE: Final[Path] = (
     Path(__file__).parent / "data" / "sanitized_bash_commands.csv"
@@ -36,5 +38,13 @@ def test_reconstruct_cmd_from_ast(cmd):
 @pytest.mark.parametrize(
     "cmdpair", _get_commands(), ids=lambda x: _get_commands().index(x)
 )
-def test_sanitize_cmd(cmdpair: CommandPair):
+def test_sanitize_cmd(tmp_path: Path, cmdpair: CommandPair):
+    sanitized_cmd = cmdpair.sanitized_cmd
+    if "<PATH>" in sanitized_cmd:
+        sanitized_cmd = sanitized_cmd.replace("<PATH>", "{}")
+        parsed_path = parse(sanitized_cmd, cmdpair.raw_cmd)
+        if parsed_path is not None:
+            os.chdir(tmp_path)
+            for p in parsed_path:
+                Path(p).mkdir(parents=True, exist_ok=True)
     assert sanitize_cmd(cmdpair.raw_cmd) == cmdpair.sanitized_cmd

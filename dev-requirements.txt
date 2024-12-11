@@ -1,5 +1,6 @@
 bashlex
 faker
+parse
 pre-commit
 pytest
 

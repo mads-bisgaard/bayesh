@@ -68,7 +68,9 @@ def sanitize_cmd(cmd: str) -> str:
         elif (
             Path(p).exists()
             and ii > 0
-            and not parts[ii - 1].endswith(("|", "&", ")", ";"))
+            and not parts[ii - 1].endswith(
+                ("(", ")", ";", "<", ">", "|", "&")
+            )  # https://docs.python.org/3/library/shlex.html#improved-compatibility-with-shells
         ):  # allow paths in 0th position: pointing to executable
             cmd = cmd.replace(p, "<PATH>")
 
