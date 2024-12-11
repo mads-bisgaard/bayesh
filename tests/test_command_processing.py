@@ -7,7 +7,7 @@ from parse import parse
 import os
 
 _COMMANDS_FILE: Final[Path] = (
-    Path(__file__).parent / "data" / "sanitized_bash_commands.csv"
+    Path(__file__).parent / "data" / "processed_bash_commands.csv"
 )
 assert _COMMANDS_FILE.is_file()
 
