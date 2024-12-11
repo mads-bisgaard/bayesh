@@ -1,6 +1,6 @@
-from bayesh._command_processing import sanitize_cmd
+from bayesh._command_processing import process_cmd
 from pathlib import Path
-from typing import Final, NamedTuple
+from typing import Final, NamedTuple, Iterable
 import csv
 import pytest
 from parse import parse
@@ -23,16 +23,26 @@ def _get_commands() -> list[tuple[str, str]]:
         return [CommandPair(*row) for row in csv_reader]
 
 
+@pytest.fixture
+def commands(tmp_path: Path, cmdpair: CommandPair) -> Iterable[CommandPair]:
+    sanitized_cmd = cmdpair.sanitized_cmd
+    created_dirs = []
+    if "<PATH>" in sanitized_cmd:
+        sanitized_cmd = sanitized_cmd.replace("<PATH>", "{}")
+        parsed_paths = parse(sanitized_cmd, cmdpair.raw_cmd)
+        if parsed_paths is not None:
+            os.chdir(tmp_path)
+            for p in parsed_paths:
+                if not Path(p).exists():
+                    Path(p).mkdir(parents=True)
+                    created_dirs.append(Path(p))
+    yield cmdpair
+    for d in created_dirs:
+        d.rmdir()
+
+
 @pytest.mark.parametrize(
     "cmdpair", _get_commands(), ids=lambda x: _get_commands().index(x)
 )
-def test_sanitize_cmd(tmp_path: Path, cmdpair: CommandPair):
-    sanitized_cmd = cmdpair.sanitized_cmd
-    if "<PATH>" in sanitized_cmd:
-        sanitized_cmd = sanitized_cmd.replace("<PATH>", "{}")
-        parsed_path = parse(sanitized_cmd, cmdpair.raw_cmd)
-        if parsed_path is not None:
-            os.chdir(tmp_path)
-            for p in parsed_path:
-                Path(p).mkdir(parents=True, exist_ok=True)
-    assert sanitize_cmd(cmdpair.raw_cmd) == cmdpair.sanitized_cmd
+def test_sanitize_cmd(commands: CommandPair):
+    assert process_cmd(commands.raw_cmd) == commands.sanitized_cmd
