@@ -1,4 +1,3 @@
-bashlex
 faker
 parse
 pre-commit

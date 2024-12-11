@@ -1,9 +1,8 @@
-from bayesh._utils import sanitize_cmd, _reconstruct_cmd_from_ast
+from bayesh._command_processing import sanitize_cmd
 from pathlib import Path
 from typing import Final, NamedTuple
 import csv
 import pytest
-import bashlex
 from parse import parse
 import os
 
@@ -22,17 +21,6 @@ def _get_commands() -> list[tuple[str, str]]:
     with open(_COMMANDS_FILE, mode="r") as f:
         csv_reader = csv.reader(f, escapechar="\\")
         return [CommandPair(*row) for row in csv_reader]
-
-
-def _get_raw_commands() -> list[tuple[str, str]]:
-    return [cmdpair.raw_cmd for cmdpair in _get_commands()]
-
-
-@pytest.mark.parametrize(
-    "cmd", _get_raw_commands(), ids=lambda x: _get_raw_commands().index(x)
-)
-def test_reconstruct_cmd_from_ast(cmd):
-    assert _reconstruct_cmd_from_ast(bashlex.parsesingle(cmd, strictmode=False)) == cmd
 
 
 @pytest.mark.parametrize(
