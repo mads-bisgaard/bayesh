@@ -63,4 +63,8 @@ if __name__ == "__main__":
     assert Path(args.filename).is_file(), f"{args.filename=} is not a file"
     with open(args.filename, mode="r") as f:
         for line in f:
-            print(CommandPairTestData(raw_cmd=line, sanitized_cmd="").model_dump_json())
+            print(
+                CommandPairTestData(
+                    raw_cmd=line.removesuffix("\n"), sanitized_cmd=""
+                ).model_dump_json()
+            )
