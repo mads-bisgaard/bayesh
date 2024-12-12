@@ -55,3 +55,49 @@
 {"raw_cmd":"fc -ln -500 | awk '{$1=$1};1'","sanitized_cmd":"fc -ln -500 | awk '{$1=$1};1'","required_paths":[]}
 {"raw_cmd":"myfunction \"some message\" \"some other message\"","sanitized_cmd":"myfunction <MSG>","required_paths":[]}
 {"raw_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","sanitized_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","required_paths":["./scripts/myscript.bash"]}
+------------------
+{"raw_cmd":"set -x\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"history | less\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"docker service ps jaeger_jaeger\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"curl -kv https://myfavoriteurl.com\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"ip a\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"../../scripts/docker-stack-config.bash -e .env docker-compose.simcore.yml docker-compose.deploy.yml > ../../stack.yml\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"terraform init\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"bash -c find /home/something/deployments/shared/assets/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \\;\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"set -o allexport && . .env && set +o allexport && ../../scripts/create-something.bash\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"docker logs $(docker service ps monitoring | grep oss | cut -d \" \" -f1)\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"docker logs $(docker ps | grep monitoring_grafana | cut -d \" \" -f1) | less\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"terraform apply -auto-approve\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"docker volume rm monitoring_grafana_data\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"terraform apply -auto-approve\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"gb | tail -3\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"gpt\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"pipx install pandasai\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"ollshow\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"ollama show\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"docker run -it --rm -v $(pwd):/mounted --network host local/pandasai:dev bash\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"screenshot.sh\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"cat /usr/local/bin/screenshot.sh \n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"pacman -Syyu zenity\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"sudo pacman -Syyu zenity grim wl-copy\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"yay wl-clipboard\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"set -o allexport && . ../../.gitlab/pipelines/1_configurations/sim4life.io/ci.env && set +o allexport && make repo.config DOCKER_IMAGE_TAG=DUMMY && set -o allexport && . repo.config && set +o allexport && ../../.venv/bin/poetry --directory ../../e2e-ops run python3 ../../e2e-ops/tests/task_new_aws_cost_report.py \"$TF_AWS_ACCESS_KEY_ID\" \"$TF_AWS_SECRET_ACCESS_KEY\" \"$TF_AWS_REGION\" ZMT sim4life.io --db-username $POSTGRES_READONLY_USER --db-password $POSTGRES_READONLY_PASSWORD --db-name $POSTGRES_DB --db-endpoint $POSTGRES_PUBLIC_HOST\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"ssh -i ./sshkey.pem ubuntu@52.34.42.177\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"chmod 600 sshkey\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"chmod 600 sshkey.pem \n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"sudo pacman -S grim slurp tesseract tesseract-data-eng wl-clipboard\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"sudo pacman -S tesseract tesseract-data-eng tesseract-data-de\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"sudo pacman -S tesseract tesseract-data-eng\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"nano ~/.config/sway/config \n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"code ~/.config/sway/config \n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"sudo nvim /usr/local/bin/tesseract.sh\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"git commit -m \"Enhance www redirect regex @hrytsuk\"\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"gb | tail\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"lsblk\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"sudo cp ~/Downloads/bwo_anlage-2_ausfuellbar.pdf /mnt/\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"ls /mnt/\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"rm -r .venv/\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"gfa\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"git revert 8ea92d7dd3d742e7a9c9997f2c96e3fe0cb18357\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"rm -r ../../.venv/\n","sanitized_cmd":"","required_paths":[]}
+{"raw_cmd":"history | tail -1500 > ~/unwrap_me_gently.txt","sanitized_cmd":"","required_paths":[]}

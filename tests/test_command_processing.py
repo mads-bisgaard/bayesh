@@ -55,12 +55,12 @@ def test_sanitize_cmd(commands_with_mocked_paths: CommandPairTestData):
 
 if __name__ == "__main__":
     # function for generating ndjson test data
-    with open(_COMMANDS_FILE, mode="r") as f:
-        csv_reader = csv.reader(f, escapechar="\\")
-        # print([CommandPair(*row) for row in csv_reader]
-        for row in csv_reader:
-            print(
-                CommandPairTestData(
-                    raw_cmd=row[0], sanitized_cmd=row[1]
-                ).model_dump_json()
-            )
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename")
+    args = parser.parse_args()
+    assert Path(args.filename).is_file(), f"{args.filename=} is not a file"
+    with open(args.filename, mode="r") as f:
+        for line in f:
+            print(CommandPairTestData(raw_cmd=line, sanitized_cmd="").model_dump_json())
