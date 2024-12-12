@@ -54,3 +54,4 @@
 {"raw_cmd":"code .","sanitized_cmd":"code <PATH>","required_paths":["."]}
 {"raw_cmd":"fc -ln -500 | awk '{$1=$1};1'","sanitized_cmd":"fc -ln -500 | awk '{$1=$1};1'","required_paths":[]}
 {"raw_cmd":"myfunction \"some message\" \"some other message\"","sanitized_cmd":"myfunction <MSG>","required_paths":[]}
+{"raw_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","sanitized_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","required_paths":["./scripts/myscript.bash"]}
