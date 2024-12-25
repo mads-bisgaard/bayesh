@@ -2,12 +2,21 @@
 
 function bayesh_post_process_command() {
     local processed_cmd
+    local tokens
+    local read_point
     local -n result_array
     result_array="$1"
     processed_cmd="$2"
 
-    result_array+=("${processed_cmd}")
+    tokens=$(echo "${processed_cmd}" | grep -o '<[A-Z]*>')
 
+    read_point="${processed_cmd%%"$(echo "${tokens}" | head -n 1)"*}"
+    for substr in ${tokens}; do
+        processed_cmd="${processed_cmd//${substr}/}"
+    done
+
+    result_array+=(${#read_point})
+    result_array+=("${processed_cmd}")
 }
 
 
