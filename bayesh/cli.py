@@ -1,9 +1,9 @@
 import typer
 from pathlib import Path
 from datetime import datetime
-from pprint import pprint
 from ._db import get_row, update_row, insert_row, Row, infer_current_cmd
 from ._settings import BayeshSettings
+from ._command_processing import process_cmd
 
 cli = typer.Typer()
 
@@ -37,4 +37,10 @@ def infer_cmd(cwd: Path, previous_cmd: str):
 
 @cli.command()
 def print_settings():
-    pprint(BayeshSettings().model_dump())
+    typer.echo(BayeshSettings().model_dump())
+
+
+@cli.command()
+def process_commands(cmds: str):
+    lines = [process_cmd(c) for c in cmds.splitlines()]
+    typer.echo("\n".join(lines))
