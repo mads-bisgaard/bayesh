@@ -10,6 +10,8 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v1
       - name: Debug
-        run: ls
+        run: |
+          ls
+          bats -v
       - name: Test
-        run: bats -r .
+        run: bats tests
