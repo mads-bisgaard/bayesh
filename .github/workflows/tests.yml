@@ -2,12 +2,14 @@ name: "CI"
 on: [push, pull_request]
 jobs:
   bats-tests:
-    name: build
+    name: Bats
     runs-on: ubuntu-latest
     steps:
       - name: Setup BATS
         uses: mig4/setup-bats@v1
       - name: Check out code
         uses: actions/checkout@v1
+      - name: Debug
+        run: ls
       - name: Test
         run: bats -r .
