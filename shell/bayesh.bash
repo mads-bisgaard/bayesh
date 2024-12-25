@@ -51,9 +51,11 @@ function bayesh_infer_cmd() {
     local chosen_cmd
     local result
     
+    pwd
+    echo "${BAYESH_CMD}"
+
     chosen_cmd=$( 
     local inferred_cmds
-
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     fzf --scheme=history \
         --exact \
