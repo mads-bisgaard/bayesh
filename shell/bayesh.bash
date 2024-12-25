@@ -64,8 +64,8 @@ function bayesh_infer_cmd() {
 
     result=()
     bayesh_post_process_command result "${chosen_cmd}"
+    READLINE_LINE="${READLINE_LINE:0:${READLINE_POINT}}${result[1]}${READLINE_LINE:${READLINE_POINT}}"
     READLINE_POINT=$(("${READLINE_POINT}" + result[0]))
-    READLINE_LINE="${READLINE_LINE}${result[1]}"
 }
 
 BAYESH_PWD=$(pwd)
