@@ -43,9 +43,10 @@ function bayesh_update() {
 }
 
 function bayesh_infer_cmd() {
+    local chosen_cmd
     local result
     
-    result=$( 
+    chosen_cmd=$( 
     local inferred_cmds
 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
@@ -56,8 +57,10 @@ function bayesh_infer_cmd() {
         --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')"
     )
 
-    READLINE_LINE="${result}"
-    READLINE_POINT=${#result}    
+    result=()
+    bayesh_post_process_command result "${chosen_cmd}"
+    READLINE_POINT=${result[0]}    
+    READLINE_LINE=${result[1]}
 }
 
 BAYESH_PWD=$(pwd)
