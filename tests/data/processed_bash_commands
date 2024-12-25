@@ -2,14 +2,14 @@
 {"raw_cmd":"cd Development/bayesh","sanitized_cmd":"cd <PATH>","required_paths":["Development/bayesh"]}
 {"raw_cmd":"ssh-add","sanitized_cmd":"ssh-add","required_paths":[]}
 {"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
-{"raw_cmd":"git add install.bash shell/bayesh.bash","sanitized_cmd":"git add <PATH>","required_paths":["install.bash","shell/bayesh.bash"]}
+{"raw_cmd":"git add install.bash shell/bayesh.bash","sanitized_cmd":"git add <PATH> <PATH>","required_paths":["install.bash","shell/bayesh.bash"]}
 {"raw_cmd":"bashit restart","sanitized_cmd":"bashit restart","required_paths":[]}
 {"raw_cmd":"git commit","sanitized_cmd":"git commit","required_paths":[]}
 {"raw_cmd":"git push","sanitized_cmd":"git push","required_paths":[]}
 {"raw_cmd":"source .venv/bin/activate","sanitized_cmd":"source <PATH>","required_paths":[".venv/bin/activate"]}
 {"raw_cmd":"bayesh --help","sanitized_cmd":"bayesh --help","required_paths":[]}
 {"raw_cmd":"git add bayesh","sanitized_cmd":"git add <PATH>","required_paths":["bayesh"]}
-{"raw_cmd":"git commit -m \"improve BAYESH_DIR handling and add cli to print settings\"","sanitized_cmd":"git commit -m <MSG>","required_paths":[]}
+{"raw_cmd":"git commit -m \"improve BAYESH_DIR handling and add cli to print settings\"","sanitized_cmd":"git commit -m \"<MSG>\"","required_paths":[]}
 {"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
 {"raw_cmd":"q","sanitized_cmd":"q","required_paths":[]}
 {"raw_cmd":"compgen -A command git","sanitized_cmd":"compgen -A command git","required_paths":[]}
@@ -18,7 +18,7 @@
 {"raw_cmd":"git branch -D improve-usability","sanitized_cmd":"git branch -D improve-usability","required_paths":[]}
 {"raw_cmd":"env | sort","sanitized_cmd":"env | sort","required_paths":[]}
 {"raw_cmd":"export BAYESH_DIR=~/Development/bayesh/tmp/","sanitized_cmd":"export BAYESH_DIR=~/Development/bayesh/tmp/","required_paths":[]}
-{"raw_cmd":"push_log=$(git commit -m \"this is my commit message\" ; git push)","sanitized_cmd":"push_log=$(git commit -m <MSG> ; git push)","required_paths":[]}
+{"raw_cmd":"push_log=$(git commit -m \"this is my commit message\" ; git push)","sanitized_cmd":"push_log=$(git commit -m \"<MSG>\" ; git push)","required_paths":[]}
 {"raw_cmd":"bash diff.bash; echo $?","sanitized_cmd":"bash diff.bash; echo $?","required_paths":[]}
 {"raw_cmd":"git add ci/github/helpers/openapi-specs-backwards-compatibility.bash","sanitized_cmd":"git add <PATH>","required_paths":["ci/github/helpers/openapi-specs-backwards-compatibility.bash"]}
 {"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
@@ -35,7 +35,7 @@
 {"raw_cmd":"rm $(find -type f -name .env)","sanitized_cmd":"rm $(find -type f -name .env)","required_paths":[]}
 {"raw_cmd":"find -type f -name .env","sanitized_cmd":"find -type f -name .env","required_paths":[]}
 {"raw_cmd":"python -m pytest -k test_product_webserver","sanitized_cmd":"python -m pytest -k test_product_webserver","required_paths":[]}
-{"raw_cmd":"python -m pytest .","sanitized_cmd":"python -m pytest <PATH>","required_paths":["."]}
+{"raw_cmd":"python -m pytest .","sanitized_cmd":"python -m pytest .","required_paths":["."]}
 {"raw_cmd":"....","sanitized_cmd":"....","required_paths":[]}
 {"raw_cmd":"ping github.com","sanitized_cmd":"ping github.com","required_paths":[]}
 {"raw_cmd":"git checkout tryout-fzf-tab-completion-plugin","sanitized_cmd":"git checkout tryout-fzf-tab-completion-plugin","required_paths":[]}
@@ -51,16 +51,16 @@
 {"raw_cmd":"docker container rm $(docker container ls -aq)","sanitized_cmd":"docker container rm $(docker container ls -aq)","required_paths":[]}
 {"raw_cmd":"docker container stop $(docker container ls -aq)","sanitized_cmd":"docker container stop $(docker container ls -aq)","required_paths":[]}
 {"raw_cmd":"git branch -D 6865-ensure-backwards-compatibility-of-api-server","sanitized_cmd":"git branch -D 6865-ensure-backwards-compatibility-of-api-server","required_paths":[]}
-{"raw_cmd":"code .","sanitized_cmd":"code <PATH>","required_paths":["."]}
+{"raw_cmd":"code .","sanitized_cmd":"code .","required_paths":["."]}
 {"raw_cmd":"fc -ln -500 | awk '{$1=$1};1'","sanitized_cmd":"fc -ln -500 | awk '{$1=$1};1'","required_paths":[]}
-{"raw_cmd":"myfunction \"some message\" \"some other message\"","sanitized_cmd":"myfunction <MSG>","required_paths":[]}
+{"raw_cmd":"myfunction \"some message\" \"some other message\"","sanitized_cmd":"myfunction \"<MSG>\" \"<MSG>\"","required_paths":[]}
 {"raw_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","sanitized_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","required_paths":["./scripts/myscript.bash"]}
 {"raw_cmd":"set -x","sanitized_cmd":"set -x","required_paths":[]}
 {"raw_cmd":"history | less","sanitized_cmd":"history | less","required_paths":[]}
 {"raw_cmd":"docker service ps jaeger_jaeger","sanitized_cmd":"docker service ps jaeger_jaeger","required_paths":[]}
 {"raw_cmd":"curl -kv https://myfavoriteurl.com","sanitized_cmd":"curl -kv https://myfavoriteurl.com","required_paths":[]}
 {"raw_cmd":"ip a","sanitized_cmd":"ip a","required_paths":[]}
-{"raw_cmd":"../../scripts/docker-stack-config.bash -e .env docker-compose.simcore.yml docker-compose.deploy.yml > ../../stack.yml","sanitized_cmd":"../../scripts/docker-stack-config.bash -e <PATH> <PATH> <PATH> ../../stack.yml","required_paths":[".env","docker-compose.simcore.yml","docker-compose.deploy.yml"]}
+{"raw_cmd":"../../scripts/docker-stack-config.bash -e .env docker-compose.simcore.yml docker-compose.deploy.yml > ../../stack.yml","sanitized_cmd":"../../scripts/docker-stack-config.bash -e <PATH> <PATH> <PATH> > ../../stack.yml","required_paths":[".env","docker-compose.simcore.yml","docker-compose.deploy.yml"]}
 {"raw_cmd":"terraform init","sanitized_cmd":"terraform init","required_paths":[]}
 {"raw_cmd":"bash -c find /home/something/deployments/shared/assets/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \\;","sanitized_cmd":"bash -c find <PATH> -mindepth 1 -maxdepth 1 -type d -exec basename {} \\;","required_paths":["/home/something/deployments/shared/assets/"]}
 {"raw_cmd":"set -o allexport && . .env && set +o allexport && ../../scripts/create-something.bash","sanitized_cmd":"set -o allexport && . <PATH> && set +o allexport && ../../scripts/create-something.bash","required_paths":[".",".env","../../scripts/create-something.bash"]}
@@ -80,7 +80,7 @@
 {"raw_cmd":"pacman -Syyu zenity","sanitized_cmd":"pacman -Syyu zenity","required_paths":[]}
 {"raw_cmd":"sudo pacman -Syyu zenity grim wl-copy","sanitized_cmd":"sudo pacman -Syyu zenity grim wl-copy","required_paths":[]}
 {"raw_cmd":"yay wl-clipboard","sanitized_cmd":"yay wl-clipboard","required_paths":[]}
-{"raw_cmd":"set -o allexport && . ../../.gitlab/pipelines/1_configurations/sim4life.io/ci.env && set +o allexport && make repo.config DOCKER_IMAGE_TAG=DUMMY && set -o allexport && . repo.config && set +o allexport && ../../.venv/bin/poetry --directory ../../e2e-ops run python3 ../../e2e-ops/tests/task_new_aws_cost_report.py \"$TF_AWS_ACCESS_KEY_ID\" \"$TF_AWS_SECRET_ACCESS_KEY\" \"$TF_AWS_REGION\" ZMT sim4life.io --db-username $POSTGRES_READONLY_USER --db-password $POSTGRES_READONLY_PASSWORD --db-name $POSTGRES_DB --db-endpoint $POSTGRES_PUBLIC_HOST","sanitized_cmd":"set -o allexport && . <PATH> && set +o allexport && make repo.config DOCKER_IMAGE_TAG=DUMMY && set -o allexport && . <PATH> && set +o allexport && <PATH> --directory <PATH> run python3 <PATH> \"$TF_AWS_ACCESS_KEY_ID\" \"$TF_AWS_SECRET_ACCESS_KEY\" \"$TF_AWS_REGION\" ZMT sim4life.io --db-username $POSTGRES_READONLY_USER --db-password $POSTGRES_READONLY_PASSWORD --db-name $POSTGRES_DB --db-endpoint $POSTGRES_PUBLIC_HOST","required_paths":[".","../../.gitlab/pipelines/1_configurations/sim4life.io/ci.env","repo.config","../../.venv/bin/poetry","../../e2e-ops","../../e2e-ops/tests/task_new_aws_cost_report.py"]}
+{"raw_cmd":"set -o allexport && . ../../.gitlab/pipelines/1_configurations/sim4life.io/ci.env && set +o allexport && make repo.config DOCKER_IMAGE_TAG=DUMMY && set -o allexport && . repo.config && set +o allexport && ../../.venv/bin/poetry --directory ../../e2e-ops run python3 ../../e2e-ops/tests/task_new_aws_cost_report.py \"$TF_AWS_ACCESS_KEY_ID\" \"$TF_AWS_SECRET_ACCESS_KEY\" \"$TF_AWS_REGION\" ZMT sim4life.io --db-username $POSTGRES_READONLY_USER --db-password $POSTGRES_READONLY_PASSWORD --db-name $POSTGRES_DB --db-endpoint $POSTGRES_PUBLIC_HOST","sanitized_cmd":"set -o allexport && . <PATH> && set +o allexport && make repo.config DOCKER_IMAGE_TAG=DUMMY && set -o allexport && . repo.config && set +o allexport && ../../.venv/bin/poetry --directory ../../e2e-ops run python3 <PATH> \"$TF_AWS_ACCESS_KEY_ID\" \"$TF_AWS_SECRET_ACCESS_KEY\" \"$TF_AWS_REGION\" ZMT sim4life.io --db-username $POSTGRES_READONLY_USER --db-password $POSTGRES_READONLY_PASSWORD --db-name $POSTGRES_DB --db-endpoint $POSTGRES_PUBLIC_HOST","required_paths":[".","../../.gitlab/pipelines/1_configurations/sim4life.io/ci.env","repo.config", "../../.venv/bin/poetry","../../e2e-ops","../../e2e-ops/tests/task_new_aws_cost_report.py"]}
 {"raw_cmd":"ssh -i ./sshkey.pem ubuntu@52.34.42.177","sanitized_cmd":"ssh -i <PATH> ubuntu@52.34.42.177","required_paths":["./sshkey.pem"]}
 {"raw_cmd":"chmod 600 sshkey","sanitized_cmd":"chmod 600 sshkey","required_paths":[]}
 {"raw_cmd":"chmod 600 sshkey.pem ","sanitized_cmd":"chmod 600 <PATH> ","required_paths":["sshkey.pem"]}
@@ -89,7 +89,7 @@
 {"raw_cmd":"sudo pacman -S tesseract tesseract-data-eng","sanitized_cmd":"sudo pacman -S tesseract tesseract-data-eng","required_paths":[]}
 {"raw_cmd":"nano ~/.config/sway/config ","sanitized_cmd":"nano <PATH> ","required_paths":["~/.config/sway/config"]}
 {"raw_cmd":"sudo nvim /usr/local/bin/tesseract.sh","sanitized_cmd":"sudo nvim <PATH>","required_paths":["/usr/local/bin/tesseract.sh"]}
-{"raw_cmd":"git commit -m \"Enhance www redirect regex\"","sanitized_cmd":"git commit -m \"Enhance www redirect regex\"","required_paths":[]}
+{"raw_cmd":"git commit -m \"Enhance www redirect regex\"","sanitized_cmd":"git commit -m \"<MSG>\"","required_paths":[]}
 {"raw_cmd":"gb | tail","sanitized_cmd":"gb | tail","required_paths":[]}
 {"raw_cmd":"lsblk","sanitized_cmd":"lsblk","required_paths":[]}
 {"raw_cmd":"sudo cp ~/Downloads/bwo_anlage-2_ausfuellbar.pdf /mnt/","sanitized_cmd":"sudo cp <PATH> <PATH>","required_paths":["~/Downloads/bwo_anlage-2_ausfuellbar.pdf", "/mnt/"]}
@@ -98,4 +98,4 @@
 {"raw_cmd":"gfa","sanitized_cmd":"gfa","required_paths":[]}
 {"raw_cmd":"git revert 8ea92d7dd3d742e7a9c9997f2c96e3fe0cb18357","sanitized_cmd":"git revert 8ea92d7dd3d742e7a9c9997f2c96e3fe0cb18357","required_paths":[]}
 {"raw_cmd":"rm -r ../../.venv/","sanitized_cmd":"rm -r <PATH>","required_paths":["../../.venv/"]}
-{"raw_cmd":"history | tail -1500 > ~/unwrap_me_gently.txt","sanitized_cmd":"history | tail -1500 > <PATH>","required_paths":["~/unwrap_me_gently.txt"]}
+{"raw_cmd":"history | tail -1500 > ~/unwrap_me_gently.txt","sanitized_cmd":"history | tail -1500 > ~/unwrap_me_gently.txt","required_paths":["~/unwrap_me_gently.txt"]}
