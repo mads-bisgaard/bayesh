@@ -7,6 +7,6 @@ setup() {
 
 
 @test "source script and check env vars" {
-    run bash -c "source bayesh.bash && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_PWD ]] && [[ -v BAYESH_HISTCMD ]]"
+    run bash -c "source shell/bayesh.bash && [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]"
     [ "$status" -eq 0 ]
 }
