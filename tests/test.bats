@@ -11,11 +11,14 @@ setup() {
 
 
 @test "source script and check env vars" {
-    run bash -c "[[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]"
+    run bash -c \
+    '
+    [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]
+    '
     [ "$status" -eq 0 ]
 }
 
-@test "test_bayesh_post_process_command" {
+@test "test bayesh_post_process_command" {
     run bash -c \
     '
     source shell/bayesh.bash
