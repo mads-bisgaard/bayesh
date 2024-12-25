@@ -15,10 +15,6 @@ def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
         previous_cmd = process_cmd(previous_cmd)
         current_cmd = process_cmd(current_cmd)
 
-    typer.echo(f"{cwd=}")
-    typer.echo(f"{previous_cmd=}")
-    typer.echo(f"{current_cmd=}")
-
     if row := get_row(
         db=settings.db, cwd=cwd, previous_cmd=previous_cmd, current_cmd=current_cmd
     ):
