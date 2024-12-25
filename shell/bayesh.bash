@@ -1,5 +1,16 @@
 #!/bin/bash
 
+function bayesh_post_process_command() {
+    local processed_cmd
+    local -n result_array
+    result_array="$1"
+    processed_cmd="$2"
+
+    result_array+=("${processed_cmd}")
+
+}
+
+
 function bayesh_update() {
     local cmd
     local last_hist
