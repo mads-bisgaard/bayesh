@@ -19,6 +19,6 @@ def process_cmd(cmd: str) -> str:
         ):  # allow paths in 0th position: pointing to executable
             cmd = cmd.replace(p, "<PATH>")
         elif " " in p:
-            cmd = cmd.replace(f"{p}", "<MSG>")
+            cmd = cmd.replace(p, "<MSG>")
 
     return cmd
