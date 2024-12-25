@@ -37,7 +37,7 @@ def infer_cmd(cwd: Path, previous_cmd: str):
 
 @cli.command()
 def print_settings():
-    typer.echo(BayeshSettings().model_dump())
+    typer.echo(BayeshSettings().model_dump_json())
 
 
 @cli.command()
