@@ -39,7 +39,10 @@ def infer_cmd(cwd: Path, previous_cmd: str):
     settings = BayeshSettings()
     if settings.process_commands:
         previous_cmd = process_cmd(previous_cmd)
+    typer.echo(f"{previous_cmd=}", err=True)
     results = infer_current_cmd(db=settings.db, cwd=cwd, previous_cmd=previous_cmd)
+    typer.echo(f"{previous_cmd=}", err=True)
+
     typer.echo("\n".join(results))
 
 
