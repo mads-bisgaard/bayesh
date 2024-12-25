@@ -1,14 +1,5 @@
 import shlex
 from pathlib import Path
-import re
-from typing import Final
-
-_PATH_REGEX_PATTERN: Final[str] = (
-    r"(\<PATH\>)\s+(\1)+"  # Matches <PATH> followed by one or more copies of itself
-)
-_MSG_REGEX_PATTERN: Final[str] = (
-    r"(\<MSG\>)\s+(\1)+"  # Matches <MSG> followed by one or more copies of itself
-)
 
 
 def process_cmd(cmd: str) -> str:
