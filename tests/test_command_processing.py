@@ -65,6 +65,7 @@ if __name__ == "__main__":
         for line in f:
             print(
                 CommandPairTestData(
-                    raw_cmd=line.removesuffix("\n"), sanitized_cmd=""
+                    raw_cmd=line.removesuffix("\n"),
+                    sanitized_cmd=line.removesuffix("\n"),
                 ).model_dump_json()
             )
