@@ -3,7 +3,6 @@
 setup() {
     DIR="$( cd "$( dirname "$BATS_TEST_FILENAME" )" >/dev/null 2>&1 && pwd )"
     PATH="$DIR/..:$PATH"
-    source shell/bayesh.bash
 
     bats_load_library bats-support
     bats_load_library bats-assert
@@ -13,6 +12,7 @@ setup() {
 @test "source script and check env vars" {
     run bash -c \
     '
+    source shell/bayesh.bash
     [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]
     '
     [ "$status" -eq 0 ]
