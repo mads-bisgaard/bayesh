@@ -2,7 +2,7 @@ name: "CI"
 on: [push, pull_request]
 jobs:
   bats-tests:
-    name: Bats
+    name: Bats tests
     runs-on: ubuntu-latest
     steps:
       - name: Setup Bats and bats libs
@@ -10,10 +10,6 @@ jobs:
         uses: bats-core/bats-action@3.0.0     
       - name: Check out code
         uses: actions/checkout@v1
-      - name: Debug
-        run: |
-          ls
-          bats -v
       - name: Test
         shell: bash
         env:
