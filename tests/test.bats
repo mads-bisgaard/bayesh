@@ -18,7 +18,7 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "test bayesh_post_process_command" {
+@test "test bayesh_post_process_command 3 tokens" {
     run bash -c \
     '
     source shell/bayesh.bash
@@ -27,5 +27,17 @@ setup() {
     echo "${my_array[@]}"
     '
     assert_output '15 This is a test  string with  multiple  entries.'
+    [ "$status" -eq 0 ]
+}
+
+@test "test bayesh_post_process_command 0 tokens" {
+    run bash -c \
+    '
+    source shell/bayesh.bash
+    my_array=()
+    bayesh_post_process_command my_array "This is a test"
+    echo "${my_array[@]}"
+    '
+    assert_output '14 This is a test'
     [ "$status" -eq 0 ]
 }

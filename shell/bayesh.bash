@@ -8,8 +8,13 @@ function bayesh_post_process_command() {
     result_array="$1"
     processed_cmd="$2"
 
-    tokens=$(echo "${processed_cmd}" | grep -o '<[A-Z]*>')
+    if ! echo "${processed_cmd}" | grep -q '<[A-Z]*>' ;then
+        result_array+=(${#processed_cmd})
+        result_array+=("${processed_cmd}")
+        return
+    fi
 
+    tokens=$(echo "${processed_cmd}" | grep -o '<[A-Z]*>')
     read_point_str="${processed_cmd%%"$(echo "${tokens}" | head -n 1)"*}"
     for substr in ${tokens}; do
         processed_cmd="${processed_cmd//${substr}/}"
