@@ -18,7 +18,7 @@ def process_cmd(cmd: str) -> str:
             )  # https://docs.python.org/3/library/shlex.html#improved-compatibility-with-shells
         ):  # allow paths in 0th position: pointing to executable
             cmd = cmd.replace(p, "<PATH>")
-        elif " " in p:
+        elif " " in p and not Path(p).exists():
             cmd = cmd.replace(p, "<MSG>")
 
     return cmd

@@ -99,3 +99,4 @@
 {"raw_cmd":"git revert 8ea92d7dd3d742e7a9c9997f2c96e3fe0cb18357","sanitized_cmd":"git revert 8ea92d7dd3d742e7a9c9997f2c96e3fe0cb18357","required_paths":[]}
 {"raw_cmd":"rm -r ../../.venv/","sanitized_cmd":"rm -r <PATH>","required_paths":["../../.venv/"]}
 {"raw_cmd":"history | tail -1500 > ~/unwrap_me_gently.txt","sanitized_cmd":"history | tail -1500 > ~/unwrap_me_gently.txt","required_paths":["~/unwrap_me_gently.txt"]}
+{"raw_cmd":"\"/home/myself/my projects/myexecutable\" run","sanitized_cmd":"\"/home/myself/my projects/myexecutable\" run","required_paths":["/home/myself/my projects/myexecutable"]}
