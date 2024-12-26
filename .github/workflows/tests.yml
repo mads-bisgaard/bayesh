@@ -26,10 +26,8 @@ jobs:
           version: "latest"    
       - name: Check out code
         uses: actions/checkout@v1
-      - name: Install bayesh
+      - name: Run tests
         run: |
           uv venv create
           uv pip install -r dev-requirements.txt
-          source .venv/bin/activate
-      - name: Test
-        run: uv run pytest tests
+          uv run pytest tests
