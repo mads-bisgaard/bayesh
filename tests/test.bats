@@ -1,8 +1,7 @@
 #!/bin/bash
-# run `docker run -it -v "$PWD:/code" bats/bats:latest /code/tests/test.bats`
+# From the repo root, run
+# docker run -it -v "$PWD:/code" bats/bats:latest tests
 setup() {
-    DIR="$( cd "$( dirname "$BATS_TEST_FILENAME" )" >/dev/null 2>&1 && pwd )"
-    PATH="$DIR/..:$PATH"
 
     bats_load_library bats-support
     bats_load_library bats-assert
