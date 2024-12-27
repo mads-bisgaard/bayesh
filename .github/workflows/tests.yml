@@ -1,0 +1,37 @@
+name: "CI"
+on: 
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  bats-tests:
+    name: Bats tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Bats and bats libs
+        id: setup-bats
+        uses: bats-core/bats-action@3.0.0     
+      - name: Check out code
+        uses: actions/checkout@v1
+      - name: Test
+        shell: bash
+        env:
+          BATS_LIB_PATH: ${{ steps.setup-bats.outputs.lib-path }}
+          TERM: xterm
+        run: bats tests
+  pytest-tests:
+    name: Pytest tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install the latest version of uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"    
+      - name: Check out code
+        uses: actions/checkout@v1
+      - name: Run tests
+        run: |
+          uv venv .venv
+          source .venv/bin/activate
+          uv pip install -r dev-requirements.txt
+          uv run pytest tests

@@ -10,6 +10,7 @@ _BAYESH_DIR_ENV_VAR: Final[str] = "BAYESH_DIR"
 
 class BayeshSettings(BaseSettings):
     bayesh_dir: Path = Field(Path.home() / ".bayesh", alias=_BAYESH_DIR_ENV_VAR)
+    process_commands: bool = Field(True, alias="BAYESH_PROCESS_COMMANDS")
 
     @model_validator(mode="after")
     def check_dir(self) -> Self:
