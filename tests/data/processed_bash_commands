@@ -9,7 +9,7 @@
 {"raw_cmd":"source .venv/bin/activate","sanitized_cmd":"source <PATH>","required_paths":[".venv/bin/activate"]}
 {"raw_cmd":"bayesh --help","sanitized_cmd":"bayesh --help","required_paths":[]}
 {"raw_cmd":"git add bayesh","sanitized_cmd":"git add <PATH>","required_paths":["bayesh"]}
-{"raw_cmd":"git commit -m \"improve BAYESH_DIR handling and add cli to print settings\"","sanitized_cmd":"git commit -m \"<MSG>\"","required_paths":[]}
+{"raw_cmd":"git commit -m \"improve BAYESH_DIR handling and add cli to print settings\"","sanitized_cmd":"git commit -m \"<STRING>\"","required_paths":[]}
 {"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
 {"raw_cmd":"q","sanitized_cmd":"q","required_paths":[]}
 {"raw_cmd":"compgen -A command git","sanitized_cmd":"compgen -A command git","required_paths":[]}
@@ -18,7 +18,7 @@
 {"raw_cmd":"git branch -D improve-usability","sanitized_cmd":"git branch -D improve-usability","required_paths":[]}
 {"raw_cmd":"env | sort","sanitized_cmd":"env | sort","required_paths":[]}
 {"raw_cmd":"export BAYESH_DIR=~/Development/bayesh/tmp/","sanitized_cmd":"export BAYESH_DIR=~/Development/bayesh/tmp/","required_paths":[]}
-{"raw_cmd":"push_log=$(git commit -m \"this is my commit message\" ; git push)","sanitized_cmd":"push_log=$(git commit -m \"<MSG>\" ; git push)","required_paths":[]}
+{"raw_cmd":"push_log=$(git commit -m \"this is my commit message\" ; git push)","sanitized_cmd":"push_log=$(git commit -m \"<STRING>\" ; git push)","required_paths":[]}
 {"raw_cmd":"bash diff.bash; echo $?","sanitized_cmd":"bash diff.bash; echo $?","required_paths":[]}
 {"raw_cmd":"git add ci/github/helpers/openapi-specs-backwards-compatibility.bash","sanitized_cmd":"git add <PATH>","required_paths":["ci/github/helpers/openapi-specs-backwards-compatibility.bash"]}
 {"raw_cmd":"git status","sanitized_cmd":"git status","required_paths":[]}
@@ -53,7 +53,7 @@
 {"raw_cmd":"git branch -D 6865-ensure-backwards-compatibility-of-api-server","sanitized_cmd":"git branch -D 6865-ensure-backwards-compatibility-of-api-server","required_paths":[]}
 {"raw_cmd":"code .","sanitized_cmd":"code .","required_paths":["."]}
 {"raw_cmd":"fc -ln -500 | awk '{$1=$1};1'","sanitized_cmd":"fc -ln -500 | awk '{$1=$1};1'","required_paths":[]}
-{"raw_cmd":"myfunction \"some message\" \"some other message\"","sanitized_cmd":"myfunction \"<MSG>\" \"<MSG>\"","required_paths":[]}
+{"raw_cmd":"myfunction \"some message\" \"some other message\"","sanitized_cmd":"myfunction \"<STRING>\" \"<STRING>\"","required_paths":[]}
 {"raw_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","sanitized_cmd":"./scripts/myscript.bash \"$(echo \"something\" && ./scripts/myscript.bash this command)\"","required_paths":["./scripts/myscript.bash"]}
 {"raw_cmd":"set -x","sanitized_cmd":"set -x","required_paths":[]}
 {"raw_cmd":"history | less","sanitized_cmd":"history | less","required_paths":[]}
@@ -89,7 +89,7 @@
 {"raw_cmd":"sudo pacman -S tesseract tesseract-data-eng","sanitized_cmd":"sudo pacman -S tesseract tesseract-data-eng","required_paths":[]}
 {"raw_cmd":"nano ~/.config/sway/config ","sanitized_cmd":"nano <PATH> ","required_paths":["~/.config/sway/config"]}
 {"raw_cmd":"sudo nvim /usr/local/bin/tesseract.sh","sanitized_cmd":"sudo nvim <PATH>","required_paths":["/usr/local/bin/tesseract.sh"]}
-{"raw_cmd":"git commit -m \"Enhance www redirect regex\"","sanitized_cmd":"git commit -m \"<MSG>\"","required_paths":[]}
+{"raw_cmd":"git commit -m \"Enhance www redirect regex\"","sanitized_cmd":"git commit -m \"<STRING>\"","required_paths":[]}
 {"raw_cmd":"gb | tail","sanitized_cmd":"gb | tail","required_paths":[]}
 {"raw_cmd":"lsblk","sanitized_cmd":"lsblk","required_paths":[]}
 {"raw_cmd":"sudo cp ~/Downloads/bwo_anlage-2_ausfuellbar.pdf /mnt/","sanitized_cmd":"sudo cp <PATH> <PATH>","required_paths":["~/Downloads/bwo_anlage-2_ausfuellbar.pdf", "/mnt/"]}
