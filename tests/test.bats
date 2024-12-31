@@ -21,11 +21,10 @@ setup() {
     run bash -c \
     '
     source shell/bayesh.bash
-    my_array=()
-    bayesh_post_process_command my_array "This is a test <ABC> string with <DEF> multiple <XYZ> entries."
-    echo "${my_array[@]}"
+    bayesh_post_process_command "This is a test <ABC> string with <DEF> multiple <XYZ> entries."
     '
-    assert_output '15 This is a test  string with  multiple  entries.'
+    assert_output '15
+This is a test  string with  multiple  entries.'
     [ "$status" -eq 0 ]
 }
 
@@ -33,10 +32,9 @@ setup() {
     run bash -c \
     '
     source shell/bayesh.bash
-    my_array=()
-    bayesh_post_process_command my_array "This is a test"
-    echo "${my_array[@]}"
+    bayesh_post_process_command "This is a test"
     '
-    assert_output '14 This is a test'
+    assert_output '14
+This is a test'
     [ "$status" -eq 0 ]
 }
