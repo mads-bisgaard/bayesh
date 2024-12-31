@@ -64,8 +64,9 @@ function bayesh_infer_cmd() {
         --bind="start:reload(echo '${inferred_cmds}')" \
         --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')" \
         --ansi \
-        --preview='bayesh_post_process_command {} | tail -n 1'
-    )
+        --preview='bayesh_post_process_command {} | tail -n 1' \
+        --border=none
+    ) || return
 
     result=$(bayesh_post_process_command "${chosen_cmd}")
     line=$(echo "${result}" | tail -n 1);point=$(echo "${result}" | head -n 1)
