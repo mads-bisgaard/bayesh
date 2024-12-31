@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 from ._db import get_row, update_row, insert_row, Row, infer_current_cmd
 from ._settings import BayeshSettings
-from ._command_processing import process_cmd
+from ._command_processing import process_cmd, ansi_color_tokens
 
 cli = typer.Typer()
 
@@ -41,7 +41,7 @@ def infer_cmd(cwd: Path, previous_cmd: str):
         previous_cmd = process_cmd(previous_cmd)
 
     results = infer_current_cmd(db=settings.db, cwd=cwd, previous_cmd=previous_cmd)
-    typer.echo("\n".join(results))
+    typer.echo("\n".join([ansi_color_tokens(r) for r in results]), color=True)
 
 
 @cli.command()

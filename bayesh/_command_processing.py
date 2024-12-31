@@ -1,5 +1,17 @@
 import shlex
 from pathlib import Path
+from enum import StrEnum
+
+
+class Tokens(StrEnum):
+    PATH = "<PATH>"
+    STRING = "<STRING>"
+
+
+def ansi_color_tokens(cmd: str) -> str:
+    cmd = cmd.replace(Tokens.PATH, f"\033[94m{Tokens.PATH}\033[0m")
+    cmd = cmd.replace(Tokens.STRING, f"\033[94m{Tokens.STRING}\033[0m")
+    return cmd
 
 
 def process_cmd(cmd: str) -> str:
@@ -17,8 +29,8 @@ def process_cmd(cmd: str) -> str:
                 ("(", ")", ";", "<", ">", "|", "&")
             )  # https://docs.python.org/3/library/shlex.html#improved-compatibility-with-shells
         ):  # allow paths in 0th position: pointing to executable
-            cmd = cmd.replace(p, "<PATH>")
+            cmd = cmd.replace(p, Tokens.PATH)
         elif " " in p and not Path(p).exists():
-            cmd = cmd.replace(p, "<STRING>")
+            cmd = cmd.replace(p, Tokens.STRING)
 
     return cmd
