@@ -62,7 +62,11 @@ function bayesh_infer_cmd() {
         --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')" \
         --ansi \
         --preview='bayesh_post_process_command {} | tail -n 1' \
-        --border=none
+        --border=none \
+        --preview-window=border-none,right:20% \
+        --info=inline-right \
+        --margin=0 \
+        --padding=0
     ) || return
 
     result=$(bayesh_post_process_command "${chosen_cmd}")
