@@ -55,9 +55,6 @@ function bayesh_infer_cmd() {
     local inferred_cmds
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
 
-    if [ -z "${inferred_cmds}" ] && [ -n "${BAYESH_RUN_IF_PREDICTION}" ]; then
-        return
-    fi
     fzf --scheme=history \
         --exact \
         --no-sort \
