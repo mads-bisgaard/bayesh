@@ -61,12 +61,14 @@ function bayesh_infer_cmd() {
         --bind="start:reload(echo '${inferred_cmds}')" \
         --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')" \
         --ansi \
-        --preview='bayesh_post_process_command {} | tail -n 1' \
+        --preview='echo -ne "\033[94mCommand>\033[0m ";bayesh_post_process_command {} | tail -n 1' \
         --border=none \
-        --preview-window=border-none,right:20% \
+        --preview-window=down:1:wrap \
         --info=inline-right \
+        --layout=reverse \
         --margin=0 \
-        --padding=0
+        --padding=0 \
+        --height=30%
     ) || return
 
     result=$(bayesh_post_process_command "${chosen_cmd}")
