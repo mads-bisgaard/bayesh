@@ -56,10 +56,9 @@ function bayesh_infer_cmd() {
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
 
     fzf --scheme=history \
-        --exact \
         --no-sort \
         --bind="start:reload(echo '${inferred_cmds}')" \
-        --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')" \
+        --bind="zero:print-query" \
         --ansi \
         --preview='bayesh_post_process_command {} | tail -n 1' \
         --border=none \
