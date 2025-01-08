@@ -57,6 +57,7 @@ function bayesh_infer_cmd() {
 
     fzf --scheme=history \
         --no-sort \
+        --exact \
         --bind="start:reload(echo '${inferred_cmds}')" \
         --bind="zero:print-query" \
         --ansi \
