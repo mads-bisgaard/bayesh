@@ -11,9 +11,8 @@ cli = typer.Typer()
 @cli.command()
 def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
     settings = BayeshSettings()
-    if settings.process_commands:
-        previous_cmd = process_cmd(previous_cmd)
-        current_cmd = process_cmd(current_cmd)
+    previous_cmd = process_cmd(previous_cmd)
+    current_cmd = process_cmd(current_cmd)
 
     if row := get_row(
         db=settings.db, cwd=cwd, previous_cmd=previous_cmd, current_cmd=current_cmd
@@ -37,11 +36,10 @@ def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
 @cli.command()
 def infer_cmd(cwd: Path, previous_cmd: str):
     settings = BayeshSettings()
-    if settings.process_commands:
-        previous_cmd = process_cmd(previous_cmd)
+    previous_cmd = process_cmd(previous_cmd)
 
     results = infer_current_cmd(db=settings.db, cwd=cwd, previous_cmd=previous_cmd)
-    typer.echo("\n".join([ansi_color_tokens(r) for r in results]), color=True)
+    typer.echo(ansi_color_tokens("\n".join(results)), color=True)
 
 
 @cli.command()

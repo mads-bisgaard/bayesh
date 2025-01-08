@@ -8,10 +8,10 @@ class Tokens(StrEnum):
     STRING = "<STRING>"
 
 
-def ansi_color_tokens(cmd: str) -> str:
-    cmd = cmd.replace(Tokens.PATH, f"\033[94m{Tokens.PATH}\033[0m")
-    cmd = cmd.replace(Tokens.STRING, f"\033[94m{Tokens.STRING}\033[0m")
-    return cmd
+def ansi_color_tokens(cmds: str) -> str:
+    cmds = cmds.replace(Tokens.PATH, f"\033[94m{Tokens.PATH}\033[0m")
+    cmds = cmds.replace(Tokens.STRING, f"\033[94m{Tokens.STRING}\033[0m")
+    return cmds
 
 
 def process_cmd(cmd: str) -> str:
