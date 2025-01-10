@@ -2,7 +2,6 @@ import sqlite3
 from pathlib import Path
 from typing import Final
 from enum import StrEnum
-from pydantic import PositiveInt, BaseModel
 from datetime import datetime
 from typing import NamedTuple
 
@@ -21,7 +20,7 @@ class Row(NamedTuple):
     cwd: Path | str
     previous_cmd: str
     current_cmd: str
-    event_counter: PositiveInt
+    event_counter: int
     last_modified: datetime
 
 
@@ -72,9 +71,7 @@ def get_row(db: Path, cwd: Path, previous_cmd: str, current_cmd) -> Row | None:
         return None if result is None else Row(*result)
 
 
-def update_row(
-    db: Path, row: Row, event_counter: PositiveInt, last_modified: datetime
-) -> None:
+def update_row(db: Path, row: Row, event_counter: int, last_modified: datetime) -> None:
     assert db.is_file()  # nosec
     update_statement = f"""
     UPDATE {_TABLE}

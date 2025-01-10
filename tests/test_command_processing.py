@@ -1,10 +1,9 @@
 from bayesh._command_processing import process_cmd
 from pathlib import Path
 from typing import Final, Iterable
-import csv
 import pytest
 from pydantic import BaseModel
-from pytest_mock import mocker, MockerFixture
+from pytest_mock import MockerFixture
 
 _COMMANDS_FILE: Final[Path] = Path(__file__).parent / "data" / "processed_bash_commands"
 assert _COMMANDS_FILE.is_file()
