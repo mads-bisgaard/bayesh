@@ -1,6 +1,7 @@
 import click
 from pathlib import Path
 from datetime import datetime
+import json
 from ._db import get_row, update_row, insert_row, Row, infer_current_cmd
 from ._settings import BayeshSettings
 from ._command_processing import process_cmd
@@ -54,4 +55,4 @@ def infer_cmd(cwd: Path, previous_cmd: str):
 
 @cli.command()
 def print_settings():
-    click.echo(BayeshSettings().model_dump_json())
+    click.echo(json.dumps(BayeshSettings()))
