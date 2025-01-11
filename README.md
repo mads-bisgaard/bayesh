@@ -1,5 +1,5 @@
 # bayesh
-An efficient way to use your shell history.
+A faster and more efficient way to use your shell history.
 
 ## Description
 Bayesh suggests commands to you in your Bash shell. This is done by maintaining a database of your shell history and suggesting you relevant commands based on a [statistical model](https://github.com/mads-bisgaard/bayesh/wiki/The-statistical-model).
