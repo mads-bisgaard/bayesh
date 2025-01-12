@@ -65,7 +65,7 @@ function bayesh_infer_cmd() {
         --preview='bayesh_post_process_command {} | tail -n 1' \
         --border=none \
         --preview-window=border-rounded,up:1:wrap \
-        --header="Ctrl+q: Select query" \
+        --header="Press Ctrl+q to select query" \
         --header-first \
         --info=inline-right \
         --layout=reverse \
