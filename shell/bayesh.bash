@@ -60,10 +60,13 @@ function bayesh_infer_cmd() {
         --exact \
         --bind="start:reload(echo '${inferred_cmds}')" \
         --bind="zero:print-query" \
+        --bind="ctrl-q:print-query" \
         --ansi \
         --preview='bayesh_post_process_command {} | tail -n 1' \
         --border=none \
         --preview-window=border-rounded,up:1:wrap \
+        --header="Ctrl+q: Select query" \
+        --header-first \
         --info=inline-right \
         --layout=reverse \
         --margin=0 \
