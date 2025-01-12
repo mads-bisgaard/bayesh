@@ -1,6 +1,7 @@
 faker
 parse
 pre-commit
+pydantic
 pytest
 pytest-mock
 

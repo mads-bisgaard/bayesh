@@ -2,9 +2,7 @@
 name = "bayesh"
 version = "0.0.0"
 dependencies = [
-    "pydantic",
-    "pydantic-settings",
-    "typer"
+    "click"
 ]
 
 [tool.setuptools.packages.find]

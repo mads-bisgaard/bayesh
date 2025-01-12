@@ -1,14 +1,21 @@
-import typer
+import click
 from pathlib import Path
 from datetime import datetime
+import json
 from ._db import get_row, update_row, insert_row, Row, infer_current_cmd
 from ._settings import BayeshSettings
 from ._command_processing import process_cmd, ansi_color_tokens
 
-cli = typer.Typer()
+
+@click.group()
+def cli():
+    pass
 
 
 @cli.command()
+@click.argument("cwd", type=click.Path(path_type=Path))
+@click.argument("previous_cmd")
+@click.argument("current_cmd")
 def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
     settings = BayeshSettings()
     previous_cmd = process_cmd(previous_cmd)
@@ -34,14 +41,16 @@ def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
 
 
 @cli.command()
+@click.argument("cwd", type=click.Path(path_type=Path))
+@click.argument("previous_cmd")
 def infer_cmd(cwd: Path, previous_cmd: str):
     settings = BayeshSettings()
     previous_cmd = process_cmd(previous_cmd)
 
     results = infer_current_cmd(db=settings.db, cwd=cwd, previous_cmd=previous_cmd)
-    typer.echo(ansi_color_tokens("\n".join(results)), color=True)
+    click.echo(ansi_color_tokens("\n".join(results)), color=True)
 
 
 @cli.command()
 def print_settings():
-    typer.echo(BayeshSettings().model_dump_json())
+    click.echo(json.dumps(BayeshSettings()))

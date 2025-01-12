@@ -1,25 +1,29 @@
-from pydantic_settings import BaseSettings
 from pathlib import Path
-from pydantic import model_validator, Field
 from typing import Final
-from typing_extensions import Self
+import os
 from ._db import create_db
 
 _BAYESH_DIR_ENV_VAR: Final[str] = "BAYESH_DIR"
 
 
-class BayeshSettings(BaseSettings):
-    bayesh_dir: Path = Field(Path.home() / ".bayesh", alias=_BAYESH_DIR_ENV_VAR)
+class BayeshSettings(dict):
+    def __init__(self):
+        super().__init__()
+        _bayesh_dir = Path(
+            os.environ.get(_BAYESH_DIR_ENV_VAR, f"{Path.home() / '.bayesh'}")
+        )
+        _bayesh_dir.resolve()
+        _bayesh_dir.mkdir(parents=True, exist_ok=True)
+        self[_BAYESH_DIR_ENV_VAR] = f"{_bayesh_dir}"
 
-    @model_validator(mode="after")
-    def check_dir(self) -> Self:
-        self.bayesh_dir.resolve()
-        self.bayesh_dir.mkdir(parents=True, exist_ok=True)
-        self.bayesh_dir.resolve()
+        self["db"] = f"{self.bayesh_dir / 'bayesh.db'}"
         if not self.db.is_file():
             create_db(self.db)
-        return self
+
+    @property
+    def bayesh_dir(self) -> Path:
+        return Path(self[_BAYESH_DIR_ENV_VAR])
 
     @property
     def db(self) -> Path:
-        return self.bayesh_dir / "bayesh.db"
+        return Path(self["db"])
