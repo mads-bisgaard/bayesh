@@ -3,7 +3,7 @@ from pathlib import Path
 from datetime import datetime
 from ._db import get_row, update_row, insert_row, Row, infer_current_cmd
 from ._settings import BayeshSettings
-from ._command_processing import process_cmd
+from ._command_processing import process_cmd, ansi_color_tokens
 
 cli = typer.Typer()
 
@@ -11,9 +11,8 @@ cli = typer.Typer()
 @cli.command()
 def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
     settings = BayeshSettings()
-    if settings.process_commands:
-        previous_cmd = process_cmd(previous_cmd)
-        current_cmd = process_cmd(current_cmd)
+    previous_cmd = process_cmd(previous_cmd)
+    current_cmd = process_cmd(current_cmd)
 
     if row := get_row(
         db=settings.db, cwd=cwd, previous_cmd=previous_cmd, current_cmd=current_cmd
@@ -37,11 +36,10 @@ def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
 @cli.command()
 def infer_cmd(cwd: Path, previous_cmd: str):
     settings = BayeshSettings()
-    if settings.process_commands:
-        previous_cmd = process_cmd(previous_cmd)
+    previous_cmd = process_cmd(previous_cmd)
 
     results = infer_current_cmd(db=settings.db, cwd=cwd, previous_cmd=previous_cmd)
-    typer.echo("\n".join(results))
+    typer.echo(ansi_color_tokens("\n".join(results)), color=True)
 
 
 @cli.command()

@@ -4,13 +4,11 @@ function bayesh_post_process_command() {
     local processed_cmd
     local tokens
     local read_point_str
-    local -n result_array
-    result_array="$1"
-    processed_cmd="$2"
+    processed_cmd="$1"
 
     if ! echo "${processed_cmd}" | grep -q '<[A-Z]*>' ;then
-        result_array+=(${#processed_cmd})
-        result_array+=("${processed_cmd}")
+        echo ${#processed_cmd}
+        echo "${processed_cmd}"
         return
     fi
 
@@ -20,8 +18,8 @@ function bayesh_post_process_command() {
         processed_cmd="${processed_cmd//${substr}/}"
     done
 
-    result_array+=(${#read_point_str})
-    result_array+=("${processed_cmd}")
+    echo ${#read_point_str}
+    echo "${processed_cmd}"
 }
 
 
@@ -50,28 +48,39 @@ function bayesh_update() {
 function bayesh_infer_cmd() {
     local chosen_cmd
     local result
+    local line
+    local point
     
     chosen_cmd=$( 
     local inferred_cmds
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
 
-    if [ -z "${inferred_cmds}" ] && [ -n "${BAYESH_RUN_IF_PREDICTION}" ]; then
-        return
-    fi
-
     fzf --scheme=history \
-        --exact \
         --no-sort \
+        --exact \
         --bind="start:reload(echo '${inferred_cmds}')" \
-        --bind="zero:reload(echo '${inferred_cmds}'; echo '{q}')"
-    )
+        --bind="zero:print-query" \
+        --bind="ctrl-q:print-query" \
+        --ansi \
+        --preview='bayesh_post_process_command {} | tail -n 1' \
+        --border=none \
+        --preview-window=border-rounded,up:1:wrap \
+        --header="Press Ctrl+q to select query" \
+        --header-first \
+        --info=inline-right \
+        --layout=reverse \
+        --margin=0 \
+        --padding=0 \
+        --height=30%
+    ) || return
 
-    result=()
-    bayesh_post_process_command result "${chosen_cmd}"
-    READLINE_LINE="${READLINE_LINE:0:${READLINE_POINT}}${result[1]}${READLINE_LINE:${READLINE_POINT}}"
-    READLINE_POINT=$(("${READLINE_POINT}" + result[0]))
+    result=$(bayesh_post_process_command "${chosen_cmd}")
+    line=$(echo "${result}" | tail -n 1);point=$(echo "${result}" | head -n 1)
+    READLINE_LINE="${READLINE_LINE:0:${READLINE_POINT}}${line}${READLINE_LINE:${READLINE_POINT}}"
+    READLINE_POINT=$(("${READLINE_POINT}" + point))
 }
 
+export -f bayesh_post_process_command
 BAYESH_PWD=$(pwd)
 export BAYESH_PWD
 BAYESH_CMD=""
