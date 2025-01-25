@@ -8,7 +8,7 @@ setup_file() {
     # shellcheck source=/dev/null
     python -m venv "${venv}" && source "${venv}/bin/activate"
     python -m pip install .
-    ln -s "./.venv/bin/bayesh" "/usr/local/bin/bayesh"
+    ln -s "${venv}/bin/bayesh" "/usr/local/bin/bayesh"
     bayesh --help
 }
 
