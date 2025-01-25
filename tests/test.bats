@@ -17,22 +17,22 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "test bayesh_post_process_command 3 tokens" {
+@test "test _bayesh_post_process_command 3 tokens" {
     run bash -c \
     '
     source shell/bayesh.bash
-    bayesh_post_process_command "This is a test <ABC> string with <DEF> multiple <XYZ> entries."
+    _bayesh_post_process_command "This is a test <ABC> string with <DEF> multiple <XYZ> entries."
     '
     assert_output '15
 This is a test  string with  multiple  entries.'
     [ "$status" -eq 0 ]
 }
 
-@test "test bayesh_post_process_command 0 tokens" {
+@test "test _bayesh_post_process_command 0 tokens" {
     run bash -c \
     '
     source shell/bayesh.bash
-    bayesh_post_process_command "This is a test"
+    _bayesh_post_process_command "This is a test"
     '
     assert_output '14
 This is a test'
