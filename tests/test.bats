@@ -1,12 +1,27 @@
 #!/bin/bash
-# From the repo root, run
-# docker run -it -v "$PWD:/code" bats/bats:latest tests
-setup() {
+# tests must be run from the root directory of the repo
 
-    bats_load_library bats-support
-    bats_load_library bats-assert
+setup_file() {
+
+    # install and expose bayesh on PATH
+    venv="$(mktemp -d)/.venv"
+    # shellcheck source=/dev/null
+    python -m venv "${venv}" && source "${venv}/bin/activate"
+    python -m pip install .
+    ln -s "./.venv/bin/bayesh" "/usr/local/bin/bayesh"
+    bayesh --help
 }
 
+setup() {
+    bats_load_library bats-support
+    bats_load_library bats-assert
+    BAYESH_DIR=$(mktemp -d)
+    export BAYESH_DIR
+}
+
+teardown() {
+    rm -rf "${BAYESH_DIR}"
+}
 
 @test "source script and check env vars" {
     run bash -c \
