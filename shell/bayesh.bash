@@ -3,10 +3,6 @@
 # shellcheck source=shell/bayesh.sh
 source "$(dirname "${BASH_SOURCE[0]}")"/bayesh.sh
 
-function bayesh_update() {
-    _bayesh_update 
-}
-
 function bayesh_infer_cmd() {
 
     result=$(_bayesh_infer_cmd)
@@ -18,8 +14,8 @@ function bayesh_infer_cmd() {
 export -f _bayesh_post_process_command
 
 if [[ -z "$PROMPT_COMMAND" ]]; then
-    PROMPT_COMMAND="bayesh_update;"
+    PROMPT_COMMAND="_bayesh_update;"
 else
-    PROMPT_COMMAND="${PROMPT_COMMAND%;}; bayesh_update;"
+    PROMPT_COMMAND="${PROMPT_COMMAND%;}; _bayesh_update;"
 fi
 export PROMPT_COMMAND
