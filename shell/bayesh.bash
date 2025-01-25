@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # shellcheck source=shell/bayesh.sh
-source ./bayesh.sh
+source "$(dirname "${BASH_SOURCE[0]}")"/bayesh.sh
 
 function bayesh_update() {
     _bayesh_update 
