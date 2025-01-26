@@ -33,7 +33,7 @@ teardown() {
     [ "$status" -eq 0 ]
     assert_output '0'
     
-    # allow time for insertion into db
+    # allow time for insertion into db. why doesn't 'wait' work?
     _bayesh_update && sleep 1
     
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
