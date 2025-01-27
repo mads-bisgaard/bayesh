@@ -26,13 +26,14 @@ teardown() {
 @test "check only record new commands" {
     source shell/bayesh.bash
     command="random command ${RANDOM}"
-    history -s "${command}"
     db=$(bayesh print-settings | jq -r .db)
     
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
     assert_output '0'
     
+    # simulate run command
+    history -s "${command}"
     # wait for insertion into db (https://linux.die.net/man/1/inotifywait)
     _bayesh_update && inotifywait --event modify --timeout 1 "${db}"
     
@@ -43,7 +44,7 @@ teardown() {
     [ "$status" -eq 0 ]
     assert_output '1'
 
-    # wait a bit to see if any updates to db
+    # simulate simply pressing 'enter' with no command
     _bayesh_update && sleep 1
 
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
@@ -52,4 +53,16 @@ teardown() {
     run bash -c "sqlite3 ${db} 'select event_counter from events'"
     [ "$status" -eq 0 ]
     assert_output '1'    
+
+    # simulate running new command
+    history -s "${command} ${RANDOM}"
+    _bayesh_update && inotifywait --event modify --timeout 1 "${db}"
+
+    run bash -c "sqlite3 ${db} 'select count(*) from events'"
+    [ "$status" -eq 0 ]
+    assert_output '2'
+    run bash -c "sqlite3 ${db} 'select event_counter from events'"
+    [ "$status" -eq 0 ]
+    assert_output '1
+1'
 }
