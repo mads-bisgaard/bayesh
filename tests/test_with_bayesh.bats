@@ -33,8 +33,8 @@ teardown() {
     [ "$status" -eq 0 ]
     assert_output '0'
     
-    # allow time for insertion into db. why doesn't 'wait' work?
-    _bayesh_update && sleep 1
+    # wait for insertion into db (https://linux.die.net/man/1/inotifywait)
+    _bayesh_update && inotifywait --event modify --timeout 1 "${db}"
     
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
@@ -43,8 +43,9 @@ teardown() {
     [ "$status" -eq 0 ]
     assert_output '1'
 
+    # wait a bit to see if any updates to db
     _bayesh_update && sleep 1
-    
+
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
     assert_output '1'

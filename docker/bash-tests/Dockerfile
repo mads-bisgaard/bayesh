@@ -4,4 +4,5 @@ RUN apk update; \
     apk add \
     python3 \
     sqlite \
-    jq
+    jq \
+    inotify-tools
