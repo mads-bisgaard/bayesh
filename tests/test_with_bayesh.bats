@@ -23,7 +23,7 @@ teardown() {
     rm -rf "${BAYESH_DIR}"
 }
 
-@test "check only record new commands" {
+@test "test only record new command" {
     source shell/bayesh.bash
     command="random command ${RANDOM}"
     db=$(bayesh print-settings | jq -r .db)

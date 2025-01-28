@@ -7,7 +7,7 @@ setup() {
     bats_load_library bats-assert
 }
 
-@test "source script and check env vars" {
+@test "test source script" {
     run bash -c \
     '
     source shell/bayesh.bash
@@ -16,7 +16,7 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "test _bayesh_post_process_command 3 tokens" {
+@test "test _bayesh_post_process_command with 3 tokens" {
     run bash -c \
     '
     source shell/bayesh.bash
@@ -27,7 +27,7 @@ This is a test  string with  multiple  entries.'
     [ "$status" -eq 0 ]
 }
 
-@test "test _bayesh_post_process_command 0 tokens" {
+@test "test _bayesh_post_process_command with 0 tokens" {
     run bash -c \
     '
     source shell/bayesh.bash
