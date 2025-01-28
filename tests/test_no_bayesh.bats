@@ -1,14 +1,13 @@
 #!/bin/bash
-# From the repo root, run
-# docker run -it -v "$PWD:/code" bats/bats:latest tests
-setup() {
+# tests must be run from the root directory of the repo
 
+
+setup() {
     bats_load_library bats-support
     bats_load_library bats-assert
 }
 
-
-@test "source script and check env vars" {
+@test "test source script" {
     run bash -c \
     '
     source shell/bayesh.bash
@@ -17,22 +16,22 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "test bayesh_post_process_command 3 tokens" {
+@test "test _bayesh_post_process_command with 3 tokens" {
     run bash -c \
     '
     source shell/bayesh.bash
-    bayesh_post_process_command "This is a test <ABC> string with <DEF> multiple <XYZ> entries."
+    _bayesh_post_process_command "This is a test <ABC> string with <DEF> multiple <XYZ> entries."
     '
     assert_output '15
 This is a test  string with  multiple  entries.'
     [ "$status" -eq 0 ]
 }
 
-@test "test bayesh_post_process_command 0 tokens" {
+@test "test _bayesh_post_process_command with 0 tokens" {
     run bash -c \
     '
     source shell/bayesh.bash
-    bayesh_post_process_command "This is a test"
+    _bayesh_post_process_command "This is a test"
     '
     assert_output '14
 This is a test'
