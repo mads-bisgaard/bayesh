@@ -18,7 +18,7 @@ setup_file() {
 teardown_file() {
     rm -rf "${_venv}" || exit 1
     rm -f "${_bayesh_bin}" || exit 1
-    run -127 bayesh --version
+    run -127 bayesh --help
     [ "$status" -eq 127 ]
 }
 

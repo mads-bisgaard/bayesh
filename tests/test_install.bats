@@ -17,7 +17,7 @@ teardown() {
     cd "${_repo}" || exit 1
     rm -rf "${_repo_copy}"
     rm -f /usr/local/bin/bayesh
-    run -127 bayesh --version
+    run -127 bayesh --help
     [ "$status" -eq 127 ]    
 }
 
@@ -25,6 +25,6 @@ teardown() {
 @test "test install bayesh" {
     run ./install.bash
     [ "$status" -eq 0 ]
-    run bayesh --version
+    run bayesh --help
     [ "$status" -eq 0 ]
 }
