@@ -1,25 +1,23 @@
 #!/bin/bash
 # tests must be run from the root directory of the repo
 bats_require_minimum_version 1.5.0
-_bayesh_bin=/usr/local/bin/bayesh
-_venv="$(mktemp -d)/.venv"
+_repo=$(pwd)
+_repo_copy=$(mktemp -d)
 
 setup_file() {
-
-    # install and expose bayesh on PATH
-    
-    # shellcheck source=/dev/null
-    python -m venv "${_venv}" && source "${_venv}/bin/activate"
-    python -m pip install .
-    ln -s "${_venv}/bin/bayesh" "${_bayesh_bin}"
-    bayesh --help
+    cp -r "${_repo}" "${_repo_copy}" || exit 1
+    cd "${_repo_copy}" || exit 1
+    cd "$(ls)" || exit 1
+    run ./install.bash
+    [ "$status" -eq 0 ] 
 }
 
 teardown_file() {
-    rm -rf "${_venv}" || exit 1
-    rm -f "${_bayesh_bin}" || exit 1
+    cd "${_repo}" || exit 1
+    rm -rf "${_repo_copy}"
+    rm -f /usr/local/bin/bayesh
     run -127 bayesh --help
-    [ "$status" -eq 127 ]
+    [ "$status" -eq 127 ] 
 }
 
 setup() {
@@ -32,6 +30,12 @@ setup() {
 teardown() {
     rm -rf "${BAYESH_DIR}"
 }
+
+@test "test bayesh installed succcessfully" {
+    run bayesh --help
+    [ "$status" -eq 0 ]
+}
+
 
 @test "test only record new command" {
     source shell/bayesh.bash
