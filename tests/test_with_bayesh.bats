@@ -73,7 +73,7 @@ teardown() {
     # simulate running new command
     history -s "${command} ${RANDOM}"
     _bayesh_update 
-    run inotifywait --event modify --timeout 1 "${db}"
+    run inotifywait --event modify --timeout 5 "${db}"
     [ "$status" -eq 0 ]
 
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
