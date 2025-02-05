@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # shellcheck source=shell/bayesh.sh
 source "$(dirname "${BASH_SOURCE[0]}")"/bayesh.sh

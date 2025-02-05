@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # tests must be run from the root directory of the repo
 
 
