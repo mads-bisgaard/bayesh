@@ -45,7 +45,7 @@ _bayesh_infer_cmd() {
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     
     if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "$inferred_cmds" | awk '{$1=$1};1')" ]; then
-        return
+        exit 1
     fi
 
     echo "${inferred_cmds}" | fzf \
