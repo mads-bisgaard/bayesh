@@ -43,11 +43,15 @@ _bayesh_infer_cmd() {
     
     chosen_cmd=$( 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
+    
+    if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "$inferred_cmds" | awk '{$1=$1};1')" ]; then
+        return
+    fi
 
-    fzf --scheme=history \
+    echo "${inferred_cmds}" | fzf \
+        --scheme=history \
         --no-sort \
         --exact \
-        --bind="start:reload(echo '${inferred_cmds}')" \
         --bind="zero:print-query" \
         --bind="ctrl-q:print-query" \
         --ansi \
