@@ -7,8 +7,8 @@ function bayesh_infer_cmd() {
     result=$(_bayesh_infer_cmd)
     line=$(echo "${result}" | tail -n 1);point=$(echo "${result}" | head -n 1)
     LBUFFER="${LBUFFER}${line}${RBUFFER}"
-    CURSOR=$(("${CURSOR}" + point))
-    CURSOR=$(("${CURSOR}" - "1")) # CURSOR is 1-based in zsh
+    point=$(( "${point}" - "1" )) # CURSOR is 1-based in zsh
+    CURSOR=$(("${CURSOR}" + "${point}"))
     zle reset-prompt
 }
 
