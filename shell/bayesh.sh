@@ -41,13 +41,13 @@ _bayesh_update() {
 
 _bayesh_infer_cmd() {
     
+    token_regex="<STRING>|<PATH>"
     chosen_cmd=$( 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     
-    if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "$inferred_cmds" | awk '{$1=$1};1')" ]; then
+    if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "${inferred_cmds}" | awk '{$1=$1};1')" ]; then
         exit 1
     fi
-
     echo "${inferred_cmds}" | fzf \
         --scheme=history \
         --no-sort \
@@ -55,7 +55,7 @@ _bayesh_infer_cmd() {
         --bind="zero:print-query" \
         --bind="ctrl-q:print-query" \
         --ansi \
-        --preview='_bayesh_post_process_command {} | tail -n 1' \
+        --preview="echo {} | sed -E 's/(${token_regex})//g'" \
         --border=none \
         --preview-window=border-rounded,up:1:wrap \
         --header="Press Ctrl+q to select query" \
@@ -67,7 +67,12 @@ _bayesh_infer_cmd() {
         --height=30%
     ) || return
 
-    _bayesh_post_process_command "${chosen_cmd}"
+    position="${#chosen_cmd}"
+    if echo "${chosen_cmd}" | grep -bo -E "${token_regex}" > /dev/null; then
+        position=$(echo "${chosen_cmd}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
+    fi
+    echo "${position}"
+    echo "${chosen_cmd}" | sed -E "s/(${token_regex})//g"
 }
 
 BAYESH_PWD=$(pwd)
