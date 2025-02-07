@@ -92,3 +92,20 @@ teardown() {
     assert_output '1
 1'
 }
+
+@test "test inference function" {
+    source shell/bayesh.bash
+    command="random command ${RANDOM}"
+    db=$(bayesh print-settings | jq -r .db)
+
+    cwd=$(mktemp -d)
+    previous_cmd="random command ${RANDOM}"
+    current_cmd="random command ${RANDOM}"
+
+    run bash -c "sqlite3 ${db} \"insert into events (cwd, previous_cmd, current_cmd, event_counter, last_modified) values ('${cwd}', '${previous_cmd}', '${current_cmd}', 1, '$(date)')\""
+    [ "$status" -eq 0 ]
+
+    run bash -c "sqlite3 ${db} 'select count(*) from events'"
+    [ "$status" -eq 0 ]
+    assert_output '1'
+}
