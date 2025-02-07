@@ -1,25 +1,5 @@
 #!/bin/sh
 
-_bayesh_post_process_command() {
-    processed_cmd="$1"
-
-    if ! echo "${processed_cmd}" | grep -q '<[A-Z]*>' ;then
-        echo ${#processed_cmd}
-        echo "${processed_cmd}"
-        return
-    fi
-
-    tokens=$(echo "${processed_cmd}" | grep -o '<[A-Z]*>')
-    read_point_str="${processed_cmd%%"$(echo "${tokens}" | head -n 1)"*}"
-    for substr in ${tokens}; do
-        processed_cmd=$(echo "${processed_cmd}" | sed "s/${substr}//g")
-    done
-
-    echo ${#read_point_str}
-    echo "${processed_cmd}"
-}
-
-
 _bayesh_update() {
 
     cmd=$(fc -ln -1 | awk '{$1=$1};1')
