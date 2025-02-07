@@ -8,9 +8,8 @@ function bayesh_infer_cmd() {
     result=$(_bayesh_infer_cmd)
     line=$(echo "${result}" | tail -n 1);point=$(echo "${result}" | head -n 1)
     LBUFFER="${LBUFFER}${line}${RBUFFER}"
-    cur=$(( cur + point ))
     zle reset-prompt
-    CURSOR="${cur}"
+    CURSOR=$(( cur + point ))
 }
 
 add-zsh-hook precmd _bayesh_update
