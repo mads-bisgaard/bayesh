@@ -8,7 +8,7 @@ setup_file() {
     cp -r "${_repo}" "${_repo_copy}" || exit 1
     cd "${_repo_copy}" || exit 1
     cd "$(ls)" || exit 1
-    run ./install.bash
+    run ./install.sh
     [ "$status" -eq 0 ] 
 }
 
@@ -36,6 +36,14 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
+@test "test source script" {
+    run bash -c \
+    '
+    source shell/bayesh.bash
+    [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]
+    '
+    [ "$status" -eq 0 ]
+}
 
 @test "test only record new command" {
     source shell/bayesh.bash
