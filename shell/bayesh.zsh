@@ -4,12 +4,13 @@
 source "$(dirname $0)"/bayesh.sh
 
 function bayesh_infer_cmd() {
+    cur="${CURSOR}"
     result=$(_bayesh_infer_cmd)
     line=$(echo "${result}" | tail -n 1);point=$(echo "${result}" | head -n 1)
     LBUFFER="${LBUFFER}${line}${RBUFFER}"
-    point=$(( "${point}" - "1" )) # CURSOR is 1-based in zsh
-    CURSOR=$(("${CURSOR}" + "${point}"))
+    cur=$(( cur + point ))
     zle reset-prompt
+    CURSOR="${cur}"
 }
 
 add-zsh-hook precmd _bayesh_update
