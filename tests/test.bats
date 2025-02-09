@@ -93,14 +93,14 @@ teardown() {
 1'
 }
 
-@test "test inference function" {
+@test "test inference function (no tokens)" {
     source shell/bayesh.bash
-    command="random command ${RANDOM}"
+
     db=$(bayesh print-settings | jq -r .db)
 
     cwd=$(mktemp -d)
-    previous_cmd="random command ${RANDOM}"
-    current_cmd="random command ${RANDOM}"
+    previous_cmd="previous command ${RANDOM}"
+    current_cmd="current command ${RANDOM}"
 
     run bash -c "sqlite3 ${db} \"insert into events (cwd, previous_cmd, current_cmd, event_counter, last_modified) values ('${cwd}', '${previous_cmd}', '${current_cmd}', 1, '$(date)')\""
     [ "$status" -eq 0 ]
@@ -108,4 +108,14 @@ teardown() {
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
     assert_output '1'
+
+    # setup
+    cd "${cwd}" 
+    export BAYESH_CMD="${previous_cmd}"
+    export FZF_DEFAULT_OPTS='--select-1' 
+    run _bayesh_infer_cmd
+    [ "$status" -eq 0 ]
+    assert_output "${#current_cmd}
+${current_cmd}"
+
 }
