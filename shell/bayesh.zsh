@@ -17,5 +17,4 @@ function bayesh_infer_cmd() {
 }
 
 add-zsh-hook precmd _bayesh_update
-add-zle-hook-widget zle-line-init bayesh_infer_cmd
 export BAYESH_AVOID_IF_EMPTY
