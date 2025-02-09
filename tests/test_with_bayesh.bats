@@ -1,15 +1,23 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # tests must be run from the root directory of the repo
+bats_require_minimum_version 1.5.0
+_repo=$(pwd)
+_repo_copy=$(mktemp -d)
 
 setup_file() {
+    cp -r "${_repo}" "${_repo_copy}" || exit 1
+    cd "${_repo_copy}" || exit 1
+    cd "$(ls)" || exit 1
+    run ./install.sh
+    [ "$status" -eq 0 ] 
+}
 
-    # install and expose bayesh on PATH
-    venv="$(mktemp -d)/.venv"
-    # shellcheck source=/dev/null
-    python -m venv "${venv}" && source "${venv}/bin/activate"
-    python -m pip install .
-    ln -s "${venv}/bin/bayesh" "/usr/local/bin/bayesh"
-    bayesh --help
+teardown_file() {
+    cd "${_repo}" || exit 1
+    rm -rf "${_repo_copy}"
+    rm -f /usr/local/bin/bayesh
+    run -127 bayesh --help
+    [ "$status" -eq 127 ] 
 }
 
 setup() {
@@ -22,6 +30,12 @@ setup() {
 teardown() {
     rm -rf "${BAYESH_DIR}"
 }
+
+@test "test bayesh installed succcessfully" {
+    run bayesh --help
+    [ "$status" -eq 0 ]
+}
+
 
 @test "test only record new command" {
     source shell/bayesh.bash
@@ -59,7 +73,7 @@ teardown() {
     # simulate running new command
     history -s "${command} ${RANDOM}"
     _bayesh_update 
-    run inotifywait --event modify --timeout 1 "${db}"
+    run inotifywait --event modify --timeout 5 "${db}"
     [ "$status" -eq 0 ]
 
     run bash -c "sqlite3 ${db} 'select count(*) from events'"

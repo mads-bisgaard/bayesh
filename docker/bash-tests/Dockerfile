@@ -5,4 +5,6 @@ RUN apk update; \
     python3 \
     sqlite \
     jq \
-    inotify-tools
+    inotify-tools \
+    fzf \
+    sudo
