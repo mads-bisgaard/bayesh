@@ -8,7 +8,7 @@ setup_file() {
     cp -r "${_repo}" "${_repo_copy}" || exit 1
     cd "${_repo_copy}" || exit 1
     cd "$(ls)" || exit 1
-    run ./install.bash
+    run ./install.sh
     [ "$status" -eq 0 ] 
 }
 
