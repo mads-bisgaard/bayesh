@@ -31,7 +31,7 @@ autoload -Uz add-zle-hook-widget
 source "<bayesh root dir>/shell/bayesh.zsh"
 add-zle-hook-widget zle-line-init bayesh_infer_cmd
 ```
-To disable the automatic trigger, remove `add-zle-hook-widget zle-line-init bayesh_infer_cmd` from your `~/.zshrc`:
+If at some later point you want to disable the automatic trigger again, remove `add-zle-hook-widget zle-line-init bayesh_infer_cmd` from your `~/.zshrc`:
 
 ## Remarks
 The purpose of Bayesh is to detect your repetitive shell workflows and (via a great UI (=[fzf](https://github.com/junegunn/fzf))) allow you to quickly reuse commands. In that sense its purpose is similar to the auto suggestion/complete feature smartphones offer. A key difference however, is that Bayesh is not "trained" on any external data. That means it will only ever suggest commands you have previously used. In particular it will only start generating useful suggestions after a short learning phase.
