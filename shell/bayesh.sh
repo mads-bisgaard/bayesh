@@ -48,7 +48,7 @@ _bayesh_infer_cmd() {
     ) || return
 
     position="${#chosen_cmd}"
-    if echo "${chosen_cmd}" | grep -bo -E "${token_regex}" > /dev/null; then
+    if echo "${chosen_cmd}" | grep -boq -E "${token_regex}"; then
         position=$(echo "${chosen_cmd}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
     fi
     echo "${position}"
