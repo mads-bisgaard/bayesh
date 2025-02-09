@@ -27,6 +27,7 @@ _check_dependency "cut"
 _check_dependency "head"
 _check_dependency "tail"
 _check_dependency "echo"
+_check_dependency "grep"
 
 echo "- setting up python venv"
 python3 -m venv "${REPO_DIR}/.venv"
