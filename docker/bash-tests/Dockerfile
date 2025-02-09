@@ -7,4 +7,5 @@ RUN apk update; \
     jq \
     inotify-tools \
     fzf \
-    sudo
+    sudo \
+    grep

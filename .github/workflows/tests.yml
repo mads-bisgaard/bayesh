@@ -12,7 +12,7 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v1
       - name: Test
-        run: bats tests
+        run: bats --print-output-on-failure tests
   pytest-tests:
     name: Pytest tests
     runs-on: ubuntu-latest
