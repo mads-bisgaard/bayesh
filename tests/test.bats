@@ -113,7 +113,7 @@ teardown() {
     cd "${cwd}" 
     export BAYESH_CMD="${previous_cmd}"
     export FZF_DEFAULT_OPTS='--select-1' 
-    run _bayesh_infer_cmd
+    run _bayesh_infer_cmd </dev/null
     [ "$status" -eq 0 ]
     assert_output "${#current_cmd}
 ${current_cmd}"
