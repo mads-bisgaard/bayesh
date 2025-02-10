@@ -44,7 +44,8 @@ _bayesh_infer_cmd() {
         --layout=reverse \
         --margin=0 \
         --padding=0 \
-        --height=30%
+        --height=30% \
+        --no-mouse
     ) || return
 
     position="${#chosen_cmd}"
