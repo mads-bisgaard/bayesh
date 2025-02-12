@@ -30,7 +30,6 @@ _bayesh_infer_cmd() {
     
     fifo=$(mktemp -u)
     mkfifo "$fifo"
-    echo "fifo: $fifo" >> /home/madsbisgaard/Development/bayesh/tmp_file
     (
     echo "${inferred_cmds}" | fzf \
         --scheme=history \
@@ -51,12 +50,10 @@ _bayesh_infer_cmd() {
         --no-mouse &
     )
 
-    echo "reached here" >> /home/madsbisgaard/Development/bayesh/tmp_file
-
+    echo "$fifo"
 
     while true; do
         line=$(tail -1 < "$fifo")
-        [ "$line" = "<EXIT>" ] && break
         position="${#line}"
         if echo "${line}" | grep -boq -E "${token_regex}"; then
             position=$(echo "${line}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
@@ -64,7 +61,7 @@ _bayesh_infer_cmd() {
         prompt=$(echo "${line}" | sed -E "s/(${token_regex})//g")
 
         LBUFFER="${LBUFFER}${prompt}"
-        zle -R
+        zle reset-prompt
         export CURSOR="${position}"
     done
 
