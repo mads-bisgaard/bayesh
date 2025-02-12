@@ -21,7 +21,6 @@ _bayesh_update() {
 
 _bayesh_infer_cmd() {
     
-    token_regex="<STRING>|<PATH>"
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     
     if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "${inferred_cmds}" | awk '{$1=$1};1')" ]; then
@@ -51,19 +50,6 @@ _bayesh_infer_cmd() {
     )
 
     echo "$fifo"
-
-    while true; do
-        line=$(tail -1 < "$fifo")
-        position="${#line}"
-        if echo "${line}" | grep -boq -E "${token_regex}"; then
-            position=$(echo "${line}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
-        fi
-        prompt=$(echo "${line}" | sed -E "s/(${token_regex})//g")
-
-        LBUFFER="${LBUFFER}${prompt}"
-        zle reset-prompt
-        export CURSOR="${position}"
-    done
 
 }
 
