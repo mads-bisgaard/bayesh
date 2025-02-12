@@ -22,38 +22,52 @@ _bayesh_update() {
 _bayesh_infer_cmd() {
     
     token_regex="<STRING>|<PATH>"
-    chosen_cmd=$( 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     
     if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "${inferred_cmds}" | awk '{$1=$1};1')" ]; then
         exit 1
     fi
+    
+    fifo=$(mktemp -u)
+    mkfifo "$fifo"
+    echo "fifo: $fifo" >> /home/madsbisgaard/Development/bayesh/tmp_file
+    (
     echo "${inferred_cmds}" | fzf \
         --scheme=history \
         --no-sort \
         --exact \
-        --bind="zero:print-query" \
-        --bind="ctrl-q:print-query" \
+        --bind="zero:abort" \
+        --bind="tab:execute-silent(echo {} > ${fifo})" \
+        --bind="focus:execute-silent(echo {} > ${fifo})" \
         --ansi \
-        --preview="echo {} | sed -E 's/(${token_regex})//g'" \
         --border=none \
         --preview-window=border-rounded,up:1:wrap \
-        --header="Press Ctrl+q to select query" \
         --header-first \
         --info=inline-right \
         --layout=reverse \
         --margin=0 \
         --padding=0 \
         --height=30% \
-        --no-mouse
-    ) || return
+        --no-mouse &
+    )
 
-    position="${#chosen_cmd}"
-    if echo "${chosen_cmd}" | grep -boq -E "${token_regex}"; then
-        position=$(echo "${chosen_cmd}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
-    fi
-    echo "${position}"
-    echo "${chosen_cmd}" | sed -E "s/(${token_regex})//g"
+    echo "reached here" >> /home/madsbisgaard/Development/bayesh/tmp_file
+
+
+    while true; do
+        line=$(tail -1 < "$fifo")
+        [ "$line" = "<EXIT>" ] && break
+        position="${#line}"
+        if echo "${line}" | grep -boq -E "${token_regex}"; then
+            position=$(echo "${line}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
+        fi
+        prompt=$(echo "${line}" | sed -E "s/(${token_regex})//g")
+
+        LBUFFER="${LBUFFER}${prompt}"
+        zle -R
+        export CURSOR="${position}"
+    done
+
 }
 
 BAYESH_PWD=$(pwd)
