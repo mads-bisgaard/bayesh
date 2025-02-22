@@ -1,0 +1,125 @@
+#!/usr/bin/env bash
+
+if [ -z "$TMUX" ]; then
+    echo "Error: This script must be run inside a tmux session." >&2
+    exit 1
+fi
+
+
+start_help() {
+    echo "Usage: $0 start"
+    echo "Starts fzf-tmux server and prints server config (url and tmux_id) to stdout."
+}
+
+# Function to start a process or service
+start() {
+    if [[ "$1" == "--help" ]]; then
+        start_help
+        return
+    fi
+    local fifo
+    fifo=$(mktemp -u)
+    mkfifo "$fifo"
+    # shellcheck disable=SC2016
+    script=(
+        "fzf "
+        "--listen "
+        '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
+        "--scheme=history "
+        "--no-sort "
+        "--exact "
+        "--ansi "
+        "--border=none "
+        "--info=inline-right "
+        "--layout=reverse "
+        "--margin=0 "
+        "--padding=0 "
+        "--no-mouse "
+        "--no-info "
+    )
+
+    tmux split-window -l 5 -d "${script[*]}"
+
+    jq -c . < "$fifo"
+    rm "$fifo"
+}
+
+kill_help() {
+    echo "Usage: $0 kill <server config>"
+    echo "Kills the server specified by the config."
+}
+
+kill() {
+    if [[ "$1" == "--help" ]]; then
+        kill_help
+        return
+    fi
+    local url
+    url=$(echo "$1" | jq -r .url)
+    if ! curl -XPOST "$url" -d 'abort'; then
+        echo "Could not kill fzf-tmux server" >&2
+        exit 1
+    fi
+}
+
+# Function to display help for get
+get_help() {
+    echo "Usage: $0 get [additional args]"
+    echo "Gets information based on the specified parameters."
+    echo "Additional args: Specify any parameters needed for getting information."
+}
+
+# Function to get information
+get() {
+    if [[ "$1" == "--help" ]]; then
+        get_help
+        return
+    fi
+    echo "Getting with arguments: $*"
+    # Add your get logic here
+}
+
+# Function to display help for post
+post_help() {
+    echo "Usage: $0 post [additional args]"
+    echo "Posts data based on the specified parameters."
+    echo "Additional args: Specify any data needed for posting."
+}
+
+# Function to post data
+post() {
+    if [[ "$1" == "--help" ]]; then
+        post_help
+        return
+    fi
+    echo "Posting with arguments: $*"
+    # Add your post logic here
+}
+
+case "$1" in
+    start)
+        shift
+        start "$@"
+        ;;
+    kill)
+        shift
+        kill "$@"
+        ;;
+    get)
+        shift
+        get "$@"
+        ;;
+    post)
+        shift
+        post "$@"
+        ;;
+    *)
+        echo "Usage: $0 {start|kill|get|post} [additional args]"
+        echo "Options:"
+        echo "  start   Start fzf-tmux server"
+        echo "  kill    Kill fzf-tmux server"
+        echo "  get     Do GET request"
+        echo "  post    Do POST request"
+        exit 0
+        ;;
+esac
