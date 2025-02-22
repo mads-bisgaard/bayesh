@@ -11,7 +11,6 @@ start_help() {
     echo "Starts fzf-tmux server and prints server config (url and tmux_id) to stdout."
 }
 
-# Function to start a process or service
 start() {
     if [[ "$1" == "--help" ]]; then
         start_help
@@ -22,7 +21,7 @@ start() {
     mkfifo "$fifo"
     # shellcheck disable=SC2016
     script=(
-        "fzf "
+        'echo "" | fzf '
         "--listen "
         '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
         "--scheme=history "
@@ -62,21 +61,22 @@ kill() {
     fi
 }
 
-# Function to display help for get
 get_help() {
-    echo "Usage: $0 get [additional args]"
-    echo "Gets information based on the specified parameters."
-    echo "Additional args: Specify any parameters needed for getting information."
+    echo "Usage: $0 get <server config>"
+    echo "Perform GET request to get the state of the fzf server."
 }
 
-# Function to get information
 get() {
     if [[ "$1" == "--help" ]]; then
         get_help
         return
     fi
-    echo "Getting with arguments: $*"
-    # Add your get logic here
+    local url
+    url=$(echo "$1" | jq -r .url)
+    if ! curl -XGET "$url"; then
+        echo "GET request failed" >&2
+        exit 1
+    fi
 }
 
 # Function to display help for post
