@@ -4,9 +4,10 @@
 if ! command -v jq > /dev/null; then echo "Error: fzf-tmux-server requires jq." >&2; exit 1; fi
 if ! command -v curl > /dev/null; then echo "Error: fzf-tmux-server requires curl." >&2; exit 1; fi
 
+_exe_name=$(basename "$0")
 
 start_help() {
-    echo "Usage: $0 start"
+    echo "Usage: $_exe_name start"
     echo "Starts fzf-tmux server and prints server config to stdout."
     echo "Capture the config and pass it to other methods in order to access the server."
 }
@@ -73,7 +74,7 @@ parse_config() {
 
 
 kill_help() {
-    echo "Usage: $0 kill -c <server config>"
+    echo "Usage: $_exe_name kill -c <server config>"
     echo "Kills the server specified by the config."
 }
 
@@ -98,8 +99,8 @@ kill() {
 }
 
 get_help() {
-    echo "Usage: $0 get -c <server config>"
-    echo "Perform GET request to get the state of the fzf server."
+    echo "Usage: $_exe_name get -c <server config>"
+    echo "Get the state of the fzf-tmux server."
 }
 
 get() {
@@ -118,7 +119,7 @@ get() {
 }
 
 post_help() {
-    echo "Usage: $0 post -c <server config>"
+    echo "Usage: $_exe_name post -c <server config>"
     echo "Post an action to the fzf-tmux-server by piping the request body to stdin"
     # shellcheck disable=SC2016
     echo 'Example: echo "reload(find $(pwd))" | fzf-tmux-server post -c "$config"'
@@ -157,7 +158,7 @@ case "$1" in
         post "$@"
         ;;
     *)
-        echo "Usage: $0 {start|kill|get|post} [additional args]"
+        echo "Usage: $_exe_name {start|kill|get|post} [additional args]"
         echo "Options:"
         echo "  start   Start fzf-tmux server"
         echo "  kill    Kill fzf-tmux server"
