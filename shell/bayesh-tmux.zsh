@@ -36,9 +36,12 @@ bindkey '^s' start_or_kill_server
 
 function zle-line-init() {
     if _bayesh_config; then
-        ( 
-            echo "change-query("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
-            echo "reload(bayesh infer-cmd \""$(pwd)"\" \""${BAYESH_CMD}"\")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
+        fifo=$(mktemp -u)
+        mkfifo "$fifo"
+        (
+            bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}" > "$fifo" &
+            echo "change-query()" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
+            echo "reload(cat $fifo; rm $fifo)" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
         )
     fi
 }
