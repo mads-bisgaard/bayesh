@@ -37,12 +37,22 @@ bindkey '^s' start_or_kill_server
 function zle-line-init() {
     if _bayesh_config; then
         ( 
+            echo "change-query("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
             echo "reload(bayesh infer-cmd \""$(pwd)"\" \""${BAYESH_CMD}"\")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
         )
     fi
 }
 zle -N zle-line-init
 
+
+function zle-line-pre-redraw() {
+    if _bayesh_config; then
+        ( 
+            echo "change-query("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
+        )
+    fi
+}
+zle -N zle-line-pre-redraw
 
 # TODO: this trap still doesn't work as expected
 trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM
