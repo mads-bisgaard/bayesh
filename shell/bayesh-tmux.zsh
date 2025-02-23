@@ -54,5 +54,17 @@ function zle-line-pre-redraw() {
 }
 zle -N zle-line-pre-redraw
 
+
+function bayesh_select() {
+    if _bayesh_config; then
+        BUFFER=$(fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" | jq .current.text)
+        zle -R
+    fi    
+}
+zle -N select bayesh_select
+# missing good keybinding for selection
+# bindkey '^[Right' select
+
+
 # TODO: this trap still doesn't work as expected
 trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM
