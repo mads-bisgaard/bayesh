@@ -43,8 +43,37 @@ start() {
     rm "$fifo"
 }
 
+
+parse_config() {
+    local input=""
+    
+    while getopts ":c:" opt; do
+        case $opt in
+            c)
+                input="$OPTARG"
+                ;;
+            \?)
+                echo "Invalid option: -$OPTARG" >&2
+                return 1
+                ;;
+            :)
+                echo "Option -$OPTARG requires an argument." >&2
+                return 1
+                ;;
+        esac
+    done
+
+    if [[ -z "$input" ]]; then
+        echo "Error: config option (-c) is required." >&2
+        return 1
+    fi
+
+    echo "$input"
+}
+
+
 kill_help() {
-    echo "Usage: $0 kill <server config>"
+    echo "Usage: $0 kill -c <server config>"
     echo "Kills the server specified by the config."
 }
 
@@ -53,10 +82,12 @@ kill() {
         kill_help
         return
     fi
+    local config
     local url
     local pane_id
-    url=$(echo "$1" | jq -r .url)
-    pane_id=$(echo "$1" | jq -r .tmux_pane_id)
+    config=$(parse_config "$@") || { kill_help; exit 1; }
+    url=$(echo "$config" | jq -r .url)
+    pane_id=$(echo "$config" | jq -r .tmux_pane_id)
     
     if curl -XGET "$url" &> /dev/null; then
         if ! tmux kill-pane -t "$pane_id"; then
@@ -76,8 +107,10 @@ get() {
         get_help
         return
     fi
+    local config
     local url
-    url=$(echo "$1" | jq -r .url)
+    config=$(parse_config "$@") || { get_help; exit 1; }
+    url=$(echo "$config" | jq -r .url)
     if ! curl -XGET "$url"; then
         echo "GET request failed" >&2
         exit 1
@@ -86,9 +119,10 @@ get() {
 
 # Function to display help for post
 post_help() {
-    echo "Usage: $0 post [additional args]"
-    echo "Posts data based on the specified parameters."
-    echo "Additional args: Specify any data needed for posting."
+    echo "Usage: $0 post <server config>"
+    echo "Post an action to the fzf-tmux-server by piping the request body to stdin"
+    # shellcheck disable=SC2016
+    echo 'Example: echo "reload(find $(pwd))" | fzf-tmux-server post "$config"'
 }
 
 # Function to post data
@@ -97,7 +131,10 @@ post() {
         post_help
         return
     fi
-    echo "Posting with arguments: $*"
+    local config
+    local url
+    config=$(parse_config "$@") || { post_help; exit 1; }
+    url=$(echo "$config" | jq -r .url)
     # Add your post logic here
 }
 
@@ -125,6 +162,15 @@ case "$1" in
         echo "  kill    Kill fzf-tmux server"
         echo "  get     Make GET request"
         echo "  post    Make POST request"
+        echo "Example:"
+        # shellcheck disable=SC2016
+        echo '  config=$(fzf-tmux-server start)'
+        # shellcheck disable=SC2016
+        echo '  fzf-tmux-server get "$config"'
+        # shellcheck disable=SC2016
+        echo '  echo "reload(find $(pwd))" | fzf-tmux-server post "$config"'
+        # shellcheck disable=SC2016
+        echo '  fzf-tmux-server kill "$config"'
         exit 0
         ;;
 esac
