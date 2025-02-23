@@ -98,4 +98,4 @@ zle -N down bayesh_down
 bindkey '^[[1;5B' down # Ctrl-downarrow
 
 # TODO: this trap still doesn't work as expected
-# trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM
+trap 'fzf-tmux-server kill -c "$BAYESH_SERVER_CONFIG" &> /dev/null' EXIT
