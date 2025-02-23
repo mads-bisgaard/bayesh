@@ -1,21 +1,16 @@
+#!/usr/bin/env zsh
 
+if ! fzf-tmux-server 1> /dev/null; then echo "Error: fzf-tmux-server doesn't seem to be functional." >&2; exit 1; fi
 
+function bayesh_start_or_kill_server() {
 
-function run_fzf_server() {
-
-    set -x # debug
-    local fifo
-    fifo=$(mktemp -u)
-    mkfifo "$fifo"
-
-    tmux split-window -l 4 -d -c "$(realpath $(dirname $0))" "./bayesh-tmux-server.bash $fifo"
-
-    while IFS= read -r line; do
-        export "$line"
-    done < "$fifo"
-
-    rm "$fifo"
+    if [[ -n "$BAYESH_SERVER_CONFIG" ]] && fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" > /dev/null; then
+        fzf-tmux-server kill -c "$BAYESH_SERVER_CONFIG"
+    else
+        BAYESH_SERVER_CONFIG=$(fzf-tmux-server start)
+        export BAYESH_SERVER_CONFIG
+    fi
 }
  
 
-trap "tmux kill-pane -t \"${BAYESH_PANE_ID}\"" EXIT HUP INT QUIT TERM
+trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM

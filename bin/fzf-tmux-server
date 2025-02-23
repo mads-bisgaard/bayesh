@@ -3,6 +3,7 @@
 [ -z "$TMUX" ] && { echo "Error: fzf-tmux-server must be run inside a tmux session." >&2; exit 1; }
 if ! command -v jq > /dev/null; then echo "Error: fzf-tmux-server requires jq." >&2; exit 1; fi
 if ! command -v curl > /dev/null; then echo "Error: fzf-tmux-server requires curl." >&2; exit 1; fi
+if ! command -v fzf > /dev/null; then echo "Error: fzf-tmux-server requires fzf." >&2; exit 1; fi
 
 _exe_name=$(basename "$0")
 
