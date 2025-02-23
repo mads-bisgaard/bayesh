@@ -56,15 +56,23 @@ zle -N zle-line-pre-redraw
 
 
 function bayesh_select() {
+    local token_regex
+    token_regex="<STRING>|<PATH>"
+
     if _bayesh_config; then
-        BUFFER=$(fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" | jq .current.text)
+        cmd=$(fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" 2> /dev/null | jq -r .current.text)
+        p="${#cmd}"
+        if echo "${cmd}" | grep -boq -E "${token_regex}"; then
+            p=$(echo "${cmd}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
+        fi
+        BUFFER=$(echo "${cmd}" | sed -E "s/(${token_regex})//g")
         zle -R
+        CURSOR="$p"
     fi    
 }
 zle -N select bayesh_select
-# missing good keybinding for selection
-# bindkey '^[Right' select
+bindkey '^[[1;5C' select # Ctrl-rightarrow
 
 
 # TODO: this trap still doesn't work as expected
-trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM
+# trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM
