@@ -73,6 +73,25 @@ function bayesh_select() {
 zle -N select bayesh_select
 bindkey '^[[1;5C' select # Ctrl-rightarrow
 
+function bayesh_up() {
+    if _bayesh_config; then
+        (
+            echo "up" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+        )
+    fi    
+}
+zle -N up bayesh_up
+bindkey '^[[1;5A' up # Ctrl-uparrow
+
+function bayesh_down() {
+    if _bayesh_config; then
+        (
+            echo "down" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+        )
+    fi    
+}
+zle -N down bayesh_down
+bindkey '^[[1;5B' down # Ctrl-downarrow
 
 # TODO: this trap still doesn't work as expected
 # trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM
