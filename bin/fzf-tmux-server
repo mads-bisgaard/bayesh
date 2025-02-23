@@ -98,7 +98,7 @@ kill() {
 }
 
 get_help() {
-    echo "Usage: $0 get <server config>"
+    echo "Usage: $0 get -c <server config>"
     echo "Perform GET request to get the state of the fzf server."
 }
 
@@ -117,15 +117,13 @@ get() {
     fi
 }
 
-# Function to display help for post
 post_help() {
-    echo "Usage: $0 post <server config>"
+    echo "Usage: $0 post -c <server config>"
     echo "Post an action to the fzf-tmux-server by piping the request body to stdin"
     # shellcheck disable=SC2016
-    echo 'Example: echo "reload(find $(pwd))" | fzf-tmux-server post "$config"'
+    echo 'Example: echo "reload(find $(pwd))" | fzf-tmux-server post -c "$config"'
 }
 
-# Function to post data
 post() {
     if [[ "$1" == "--help" ]]; then
         post_help
@@ -135,7 +133,10 @@ post() {
     local url
     config=$(parse_config "$@") || { post_help; exit 1; }
     url=$(echo "$config" | jq -r .url)
-    # Add your post logic here
+    if ! curl -XPOST "$url" -d "$(cat)"; then
+        echo "POST request failed" >&2
+        exit 1
+    fi
 }
 
 case "$1" in
@@ -166,11 +167,11 @@ case "$1" in
         # shellcheck disable=SC2016
         echo '  config=$(fzf-tmux-server start)'
         # shellcheck disable=SC2016
-        echo '  fzf-tmux-server get "$config"'
+        echo '  fzf-tmux-server get -c "$config"'
         # shellcheck disable=SC2016
-        echo '  echo "reload(find $(pwd))" | fzf-tmux-server post "$config"'
+        echo '  echo "reload(find $(pwd))" | fzf-tmux-server post -c "$config"'
         # shellcheck disable=SC2016
-        echo '  fzf-tmux-server kill "$config"'
+        echo '  fzf-tmux-server kill -c "$config"'
         exit 0
         ;;
 esac
