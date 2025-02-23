@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-if [ -z "$TMUX" ]; then
-    echo "Error: This script must be run inside a tmux session." >&2
-    exit 1
-fi
+[ -z "$TMUX" ] && { echo "Error: fzf-tmux-server must be run inside a tmux session." >&2; exit 1; }
+if ! command -v jq > /dev/null; then echo "Error: fzf-tmux-server requires jq." >&2; exit 1; fi
+if ! command -v curl > /dev/null; then echo "Error: fzf-tmux-server requires curl." >&2; exit 1; fi
 
 
 start_help() {
     echo "Usage: $0 start"
-    echo "Starts fzf-tmux server and prints server config (url and tmux_id) to stdout."
+    echo "Starts fzf-tmux server and prints server config to stdout."
+    echo "Capture the config and pass it to other methods in order to access the server."
 }
 
 start() {
@@ -54,10 +54,15 @@ kill() {
         return
     fi
     local url
+    local pane_id
     url=$(echo "$1" | jq -r .url)
-    if ! curl -XPOST "$url" -d 'abort'; then
-        echo "Could not kill fzf-tmux server" >&2
-        exit 1
+    pane_id=$(echo "$1" | jq -r .tmux_pane_id)
+    
+    if curl -XGET "$url" &> /dev/null; then
+        if ! tmux kill-pane -t "$pane_id"; then
+            echo "Could not kill fzf-tmux server" >&2
+            exit 1
+        fi
     fi
 }
 
@@ -118,8 +123,8 @@ case "$1" in
         echo "Options:"
         echo "  start   Start fzf-tmux server"
         echo "  kill    Kill fzf-tmux server"
-        echo "  get     Do GET request"
-        echo "  post    Do POST request"
+        echo "  get     Make GET request"
+        echo "  post    Make POST request"
         exit 0
         ;;
 esac
