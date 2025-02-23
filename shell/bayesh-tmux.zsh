@@ -29,6 +29,7 @@ function bayesh_start_or_kill_server() {
     fi
     BAYESH_SERVER_CONFIG=$(fzf-tmux-server start)
     export BAYESH_SERVER_CONFIG
+    zle-line-init
 }
 zle -N start_or_kill_server bayesh_start_or_kill_server
 bindkey '^s' start_or_kill_server
