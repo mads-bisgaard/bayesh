@@ -23,26 +23,26 @@ function bayesh_start_or_kill_server() {
     if _bayesh_config; then
         if fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" &> /dev/null; then
             fzf-tmux-server kill -c "$BAYESH_SERVER_CONFIG"
+            unset BAYESH_SERVER_CONFIG
             return 
         fi
     fi
     BAYESH_SERVER_CONFIG=$(fzf-tmux-server start)
     export BAYESH_SERVER_CONFIG
 }
+zle -N start_or_kill_server bayesh_start_or_kill_server
+bindkey '^s' start_or_kill_server
+
 
 function zle-line-init() {
     if _bayesh_config; then
         ( 
-            if fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" &> /dev/null; then echo "reload(bayesh infer-cmd \""$(pwd)"\" \""${BAYESH_CMD}"\")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG"; fi &
+            echo "reload(bayesh infer-cmd \""$(pwd)"\" \""${BAYESH_CMD}"\")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
         )
     fi
 }
+zle -N zle-line-init
 
 
 # TODO: this trap still doesn't work as expected
 trap "fzf-tmux-server kill -c \"${BAYESH_SERVER_CONFIG}\"" EXIT HUP INT QUIT TERM
-
-zle -N start_or_kill_server bayesh_start_or_kill_server
-zle -N zle-line-init
-
-bindkey '^s' start_or_kill_server
