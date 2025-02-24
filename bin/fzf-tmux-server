@@ -39,7 +39,7 @@ start() {
         "--no-info "
     )
 
-    tmux split-window -l 5 -d "${script[*]}"
+    tmux split-window -l 4 -d "${script[*]}"
 
     jq -c . < "$fifo"
     rm "$fifo"
