@@ -11,10 +11,7 @@ add-zsh-hook precmd _bayesh_update
 #functions for communicating with server
 
 function _bayesh_config() {
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then 
-        return 0
-    fi
-    return 1
+    [[ -n "$BAYESH_SERVER_CONFIG" ]] && return 0 || return 1
 }
 
 
