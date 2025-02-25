@@ -37,7 +37,7 @@ echo "- installing bayesh into python venv"
 _check_exists "${REPO_DIR}/.venv/bin/bayesh"
 _check_exists "/usr/local/bin"
 echo "- creating symlink in /usr/local/bin to expose bayesh executable on PATH"
-sudo ln -s "${REPO_DIR}/.venv/bin/bayesh" "/usr/local/bin/bayesh"
+sudo ln -s "${REPO_DIR}/.venv/bin/bayesh" "${REPO_DIR}/bin/bayesh"
 _check_dependency "bayesh"
 
 echo "- done installing bayesh"
