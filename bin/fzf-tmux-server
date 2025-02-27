@@ -37,9 +37,10 @@ start() {
         "--padding=0 "
         "--no-mouse "
         "--no-info "
+        "--border=rounded"
     )
 
-    tmux split-window -l 4 -d "${script[*]}"
+    tmux split-window -l 7 -d "${script[*]}"
 
     jq -c . < "$fifo"
     rm "$fifo"
