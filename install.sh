@@ -5,7 +5,7 @@ set -uo pipefail
 REPO_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 
 function _check_exists() {
-    [[ -e "$1" ]] || { echo "- $1 does not exist"; exit 1; }
+    [[ -e "$1" ]] || { echo "- Error: Something unexpected happened. $1 does not exist"; exit 1; }
 }
 
 function _check_dependency() {
