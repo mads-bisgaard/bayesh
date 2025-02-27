@@ -50,12 +50,12 @@ _shell=$(basename "$SHELL")
 [[ "$_shell" = "bash" ]] || [[ "$_shell" = "zsh" ]] || { echo "Currently Bayesh is only compatible with zsh and bash" >&2; exit 1; }
 _rcfile="$HOME/.${_shell}rc"
 
-if allow "- Add Bayesh to PATH (required for Bayesh to be functional)?"; then
+if allow "Add Bayesh to PATH (required for Bayesh to be functional)?"; then
     # shellcheck disable=SC2016
     echo 'export PATH="$PATH:'"${REPO_DIR}/bin"'"' >> "$_rcfile"
 fi
 
-if allow "- Add $_shell integration (required for Bayesh to be functional)?"; then
+if allow "Add $_shell integration (required for Bayesh to be functional)?"; then
     echo "source ${REPO_DIR}/shell/bayesh.${_shell}" >> "$_rcfile"
 fi
 
