@@ -40,7 +40,7 @@ start() {
         "--border=rounded"
     )
 
-    tmux split-window -l 7 -d "${script[*]}"
+    tmux split-window -l 6 -d "${script[*]}"
 
     jq -c . < "$fifo"
     rm "$fifo"
