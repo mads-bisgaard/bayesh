@@ -1,7 +1,7 @@
 
 repo 		:= madsbis
 imagename	:= bayesh-bats-testing
-version 	:= v1
+version 	:= v2
 
 .PHONY: build push
 

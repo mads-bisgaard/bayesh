@@ -1,8 +1,33 @@
 #!/usr/bin/env bash
 
-set -uo pipefail
+set -o pipefail
 
 REPO_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
+
+# Function to display usage
+usage() {
+    echo "Usage: $(basename "$0") [-y]"
+    echo "Install Bayesh. Add -y argument to automatically answer 'yes' for automatic confirmation."
+    exit 1
+}
+
+# Default value for the confirmation flag
+automatic_confirm=false
+
+# Parse command line arguments
+while getopts ":y" opt; do
+    case ${opt} in
+        y )
+            automatic_confirm=true
+            ;;
+        \? )
+            usage
+            ;;
+    esac
+done
+
+# Shift the parsed options away
+shift $((OPTIND -1))
 
 function _check_exists() {
     [[ -e "$1" ]] || { echo "- Error: Something unexpected happened. $1 does not exist"; exit 1; }
@@ -14,7 +39,8 @@ function _check_dependency() {
 
 function allow() {
   while true; do
-    read -rp "$1 ([y]/n) " answer
+    echo "$1 ([y]/n) "
+    read -r answer
     if [[ $answer = y ]]; then
       return 0
     elif [[ $answer = n ]]; then
@@ -44,20 +70,27 @@ echo "- installing bayesh cli"
 _check_exists "${REPO_DIR}/.venv/bin/bayesh"
 echo "- adding bayesh executable to bin directory"
 [[ -e "${REPO_DIR}/bin/bayesh" ]] && rm "${REPO_DIR}/bin/bayesh"
-ln -s "${REPO_DIR}/.venv/bin/bayesh" "${REPO_DIR}/bin/bayesh"
+rm -f "${REPO_DIR}/bin/bayesh" && ln -s "${REPO_DIR}/.venv/bin/bayesh" "${REPO_DIR}/bin/bayesh"
 
-_shell=$(basename "$SHELL")
-[[ "$_shell" = "bash" ]] || [[ "$_shell" = "zsh" ]] || { echo "Currently Bayesh is only compatible with zsh and bash" >&2; exit 1; }
+_shell=""
+if [[ -n "$BASH" ]]; then
+  _shell="bash"
+fi
+if [[ -n "$ZSH" ]]; then
+  _shell="zsh"
+fi
+[[ -n "$_shell" ]] || { echo "Currently Bayesh is only compatible with zsh and bash" >&2; exit 1; }
 _rcfile="$HOME/.${_shell}rc"
 
-if allow "Add Bayesh to PATH (required for Bayesh to be functional)?"; then
+if "$automatic_confirm" || allow "Add Bayesh to PATH (required for Bayesh to be functional)?"; then
+    echo "- exporting PATH"
     # shellcheck disable=SC2016
     echo 'export PATH="$PATH:'"${REPO_DIR}/bin"'"' >> "$_rcfile"
 fi
 
-if allow "Add $_shell integration (required for Bayesh to be functional)?"; then
+if "$automatic_confirm" || allow "Add $_shell integration (required for Bayesh to be functional)?"; then
+    echo "- sourcing bayesh.${_shell}"
     echo "source ${REPO_DIR}/shell/bayesh.${_shell}" >> "$_rcfile"
 fi
 
 echo "- done installing Bayesh. See https://github.com/mads-bisgaard/bayesh for documentation"
-exec "$_shell"

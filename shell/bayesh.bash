@@ -20,4 +20,7 @@ else
     PROMPT_COMMAND="${PROMPT_COMMAND%;}; _bayesh_update;"
 fi
 export PROMPT_COMMAND
-bind -x '"\C-e":"bayesh_infer_cmd"'
+
+if [[ $- == *i* ]]; then
+    bind -x '"\C-e":"bayesh_infer_cmd"'
+fi

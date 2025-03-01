@@ -8,8 +8,11 @@ setup_file() {
     cp -r "${_repo}" "${_repo_copy}" || exit 1
     cd "${_repo_copy}" || exit 1
     cd "$(ls)" || exit 1
-    run ./install.sh
-    [ "$status" -eq 0 ] 
+    set -o vi
+    bash ./install.sh -y
+    # shellcheck disable=SC1090
+    source ~/.bashrc
+    #[ "$status" -eq 0 ] 
 }
 
 teardown_file() {
@@ -31,7 +34,7 @@ teardown() {
     rm -rf "${BAYESH_DIR}"
 }
 
-@test "test bayesh installed succcessfully" {
+@test "test bayesh installed" {
     run bayesh --help
     [ "$status" -eq 0 ]
 }

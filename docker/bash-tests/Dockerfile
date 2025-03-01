@@ -8,4 +8,6 @@ RUN apk update; \
     inotify-tools \
     fzf \
     sudo \
-    grep
+    grep \
+    curl \
+    jq
