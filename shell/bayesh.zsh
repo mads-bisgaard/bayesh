@@ -53,8 +53,8 @@ function zle-line-init() {
         mkfifo "$fifo"
         (
             bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}" > "$fifo" &
-            echo "change-query()" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
-            echo "reload(cat $fifo; rm $fifo)" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" &
+            echo "change-query()" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+            echo "reload(cat $fifo; rm $fifo)" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
         )
     fi
 }
@@ -63,7 +63,7 @@ zle -N zle-line-init
 
 function zle-line-pre-redraw() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
-        ( echo "change-query("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" & )
+        ( echo "change-query("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi
 }
 zle -N zle-line-pre-redraw
@@ -87,7 +87,7 @@ function bayesh_select() {
     fi    
 }
 zle -N select bayesh_select
-bindkey '^[[1;5C' select # Ctrl-rightarrow
+bindkey '^[^M' select # Alt-Enter
 
 function bayesh_up() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
@@ -95,7 +95,7 @@ function bayesh_up() {
     fi    
 }
 zle -N up bayesh_up
-bindkey '^[[1;5A' up # Ctrl-uparrow
+bindkey '^[[1;3A' up # Alt-uparrow
 
 function bayesh_down() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
@@ -103,6 +103,6 @@ function bayesh_down() {
     fi    
 }
 zle -N down bayesh_down
-bindkey '^[[1;5B' down # Ctrl-downarrow
+bindkey '^[[1;3B' down # Alt-downarrow
 
 trap 'fzf-tmux-server kill -c "$BAYESH_SERVER_CONFIG" &> /dev/null' EXIT
