@@ -93,4 +93,6 @@ if "$automatic_confirm" || allow "Add $_shell integration (required for Bayesh t
     echo "source ${REPO_DIR}/shell/bayesh.${_shell}" >> "$_rcfile"
 fi
 
-echo "- done installing Bayesh. See https://github.com/mads-bisgaard/bayesh for documentation"
+echo "- done installing Bayesh"
+echo "- restart your terminal and open Bayesh by using Ctrl-e"
+echo "- for documentation, see https://github.com/mads-bisgaard/bayesh"
