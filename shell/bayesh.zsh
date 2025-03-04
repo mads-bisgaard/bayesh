@@ -87,7 +87,7 @@ function bayesh_select() {
     fi    
 }
 zle -N select bayesh_select
-bindkey '^[^M' select # Alt-Enter
+bindkey '^[[1;5C' select # Ctrl-rightarrow
 
 function bayesh_up() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
@@ -95,7 +95,7 @@ function bayesh_up() {
     fi    
 }
 zle -N up bayesh_up
-bindkey '^[[1;3A' up # Alt-uparrow
+bindkey '^[[1;5A' up # Ctrl-uparrow
 
 function bayesh_down() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
@@ -103,6 +103,6 @@ function bayesh_down() {
     fi    
 }
 zle -N down bayesh_down
-bindkey '^[[1;3B' down # Alt-downarrow
+bindkey '^[[1;5B' down # Ctrl-downarrow
 
 trap 'fzf-tmux-server kill -c "$BAYESH_SERVER_CONFIG" &> /dev/null' EXIT
