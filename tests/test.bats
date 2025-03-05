@@ -9,10 +9,9 @@ setup_file() {
     cd "${_repo_copy}" || exit 1
     cd "$(ls)" || exit 1
     set -o vi
-    bash ./install.sh -y
+    bash ./install.sh bash -y
     # shellcheck disable=SC1090
     source ~/.bashrc
-    #[ "$status" -eq 0 ] 
 }
 
 teardown_file() {

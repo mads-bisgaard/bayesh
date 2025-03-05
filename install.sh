@@ -6,10 +6,14 @@ REPO_DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 
 # Function to display usage
 usage() {
-    echo "Usage: $(basename "$0") [-y]"
-    echo "Install Bayesh. Add -y argument to automatically answer 'yes' for automatic confirmation."
+    echo "Usage: $(basename "$0") <shell> [-y]"
+    echo "Install Bayesh. Supported shells: bash, zsh."
+    echo "Add -y argument to automatically answer 'yes' for automatic confirmation."
     exit 1
 }
+
+shell=$1
+[[ "$shell" == "bash" || "$shell" == "zsh" ]] || usage
 
 # Default value for the confirmation flag
 automatic_confirm=false
@@ -72,15 +76,7 @@ echo "- adding bayesh executable to bin directory"
 [[ -e "${REPO_DIR}/bin/bayesh" ]] && rm "${REPO_DIR}/bin/bayesh"
 rm -f "${REPO_DIR}/bin/bayesh" && ln -s "${REPO_DIR}/.venv/bin/bayesh" "${REPO_DIR}/bin/bayesh"
 
-_shell=""
-if [[ -n "$BASH" ]]; then
-  _shell="bash"
-fi
-if [[ -n "$ZSH" ]]; then
-  _shell="zsh"
-fi
-[[ -n "$_shell" ]] || { echo "Currently Bayesh is only compatible with zsh and bash" >&2; exit 1; }
-_rcfile="$HOME/.${_shell}rc"
+_rcfile="$HOME/.${shell}rc"
 
 if "$automatic_confirm" || allow "Add Bayesh to PATH (required for Bayesh to be functional)?"; then
     echo "- exporting PATH"
@@ -88,9 +84,9 @@ if "$automatic_confirm" || allow "Add Bayesh to PATH (required for Bayesh to be 
     echo 'export PATH="$PATH:'"${REPO_DIR}/bin"'"' >> "$_rcfile"
 fi
 
-if "$automatic_confirm" || allow "Add $_shell integration (required for Bayesh to be functional)?"; then
-    echo "- sourcing bayesh.${_shell}"
-    echo "source ${REPO_DIR}/shell/bayesh.${_shell}" >> "$_rcfile"
+if "$automatic_confirm" || allow "Add $shell integration (required for Bayesh to be functional)?"; then
+    echo "- sourcing bayesh.${shell}"
+    echo "source ${REPO_DIR}/shell/bayesh.${shell}" >> "$_rcfile"
 fi
 
 echo "- done installing Bayesh"
