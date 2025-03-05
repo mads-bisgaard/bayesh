@@ -7,7 +7,7 @@ jobs:
   bats-tests:
     name: Bats tests
     runs-on: ubuntu-latest
-    container: madsbis/bayesh-bats-testing:v1
+    container: madsbis/bayesh-bats-testing:v2
     steps:
       - name: Check out code
         uses: actions/checkout@v1

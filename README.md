@@ -7,31 +7,16 @@ Bayesh suggests relevant commands to you in your shell (using fzf). This is done
 
 ## Installation
 The following has been tested on Fedora and Ubuntu:
-1. Ensure the dependencies are installed ([fzf](https://github.com/junegunn/fzf) and [python3](https://www.python.org/))
-2. clone this repository
-3. run `bash install.bash` from the root of this repository.
-
-Now check that Bayesh is installed by running `bayesh --help`. To get the most out of Bayesh you should integrate it into your shell. Currently [Bash](#bash-integration) and [Zsh](#zsh-integration) are supported.
-
-### Bash integration
-Add the following lines to your `~/.bashrc` to create a keybinding for triggering Bayesh.
-
+1. Ensure the dependencies are installed ([fzf](https://github.com/junegunn/fzf), [jq](https://jqlang.org/) and [python3](https://www.python.org/))
+2. Execute the following snippet in your shell
 ```bash
-source "<bayesh root dir>/shell/bayesh.bash"
-bind -x '"\C-e":"bayesh_infer_cmd"'
+git clone https://github.com/mads-bisgaard/bayesh.git ~/.bayesh/bayesh
+~/.bayesh/bayesh/install.sh "$(basename "$SHELL")"
 ```
 
-Now you can generate bash command suggestions by pressing `Ctrl+e` in your bash shell.
+### Shell integration
+Bayesh is triggered by hitting `Ctrl-e` in your shell. You will by far get the most out of Bayesh if you use it in your z-shell within [tmux](https://github.com/tmux/tmux). In that case you toggle the fzf pane using `Ctrl-<up arrow>` and `Ctrl-<down arrow>` and you select a suggestion using `Ctrl-<right arrow>`.
 
-### Zsh integration
-Add the following lines to your `~/.zshrc` to trigger Bayesh automatically in your zsh shell:
-
-```bash
-autoload -Uz add-zle-hook-widget
-source "<bayesh root dir>/shell/bayesh.zsh"
-add-zle-hook-widget zle-line-init bayesh_infer_cmd
-```
-If at some later point you want to disable the automatic trigger again, remove `add-zle-hook-widget zle-line-init bayesh_infer_cmd` from your `~/.zshrc`:
 
 ## Remarks
 The purpose of Bayesh is to detect your repetitive shell workflows and (via a great UI (=[fzf](https://github.com/junegunn/fzf))) allow you to quickly reuse commands. In that sense its purpose is similar to the auto suggestion/complete feature smartphones offer. A key difference however, is that Bayesh is not "trained" on any external data. That means it will only ever suggest commands you have previously used. In particular it will only start generating useful suggestions after a short learning phase.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # shellcheck source=shell/bayesh.sh
-source "$(dirname "${BASH_SOURCE[0]}")"/bayesh.sh
+source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")"/bayesh.sh
 
 function bayesh_infer_cmd() {
     local result
@@ -20,3 +20,7 @@ else
     PROMPT_COMMAND="${PROMPT_COMMAND%;}; _bayesh_update;"
 fi
 export PROMPT_COMMAND
+
+if [[ $- == *i* ]]; then
+    bind -x '"\C-e":"bayesh_infer_cmd"'
+fi
