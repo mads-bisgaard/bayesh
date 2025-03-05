@@ -14,6 +14,7 @@ usage() {
 
 shell=$1
 [[ "$shell" == "bash" || "$shell" == "zsh" ]] || usage
+shift 
 
 # Default value for the confirmation flag
 automatic_confirm=false
