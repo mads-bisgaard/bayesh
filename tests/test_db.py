@@ -15,6 +15,7 @@ import sqlite3
 from faker import Faker
 from datetime import datetime
 from random import shuffle
+from sqlalchemy.exc import IntegrityError
 
 
 def get_n_rows(db: Path) -> int:
@@ -66,7 +67,7 @@ def test_db_unique_key(tmp_path: Path, db: Path, faker: Faker):
         db, Row(f"{tmp_path}", previous_cmd, current_cmd, event_counter, datetime.now())
     )
     assert get_n_rows(db) == 1
-    with pytest.raises(sqlite3.IntegrityError):
+    with pytest.raises(IntegrityError):
         insert_row(
             db,
             Row(
@@ -84,7 +85,7 @@ def test_get_row(db: Path, faker: Faker, tmp_path: Path, row: Row):
     insert_row(db, row)
     _row = get_row(db, row.cwd, row.previous_cmd, row.current_cmd)
     assert _row is not None
-    assert row.cwd == _row.cwd
+    assert row.cwd == f"{_row.cwd}"
     assert row.previous_cmd == _row.previous_cmd
     assert row.current_cmd == _row.current_cmd
     assert row.event_counter == _row.event_counter
@@ -99,7 +100,7 @@ def test_update_row(db: Path, faker: Faker, row: Row):
     update_row(db, row, _event_counter, last_modified=_last_modified)
     _row = get_row(db, row.cwd, row.previous_cmd, row.current_cmd)
     assert _row.event_counter == _event_counter
-    assert _row.last_modified == f"{_last_modified}"
+    assert _row.last_modified == _last_modified
 
 
 def test_infer_current_cmd(db: Path, faker: Faker):
