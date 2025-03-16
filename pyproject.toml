@@ -2,7 +2,8 @@
 name = "bayesh"
 version = "0.0.0"
 dependencies = [
-    "click"
+    "click",
+    "sqlalchemy"
 ]
 
 [tool.setuptools.packages.find]

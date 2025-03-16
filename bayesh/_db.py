@@ -1,11 +1,15 @@
-import sqlite3
 from pathlib import Path
 from typing import Final
 from enum import StrEnum
 from datetime import datetime
 from typing import NamedTuple
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Index
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.dialects.sqlite import insert
 
 _TABLE: Final[str] = "events"
+Base = declarative_base()
 
 
 class Columns(StrEnum):
@@ -14,6 +18,16 @@ class Columns(StrEnum):
     current_cmd = "current_cmd"
     event_counter = "event_counter"
     last_modified = "last_modified"
+
+
+class Event(Base):
+    __tablename__ = _TABLE
+    cwd = Column(String, primary_key=True)
+    previous_cmd = Column(String, primary_key=True)
+    current_cmd = Column(String, primary_key=True)
+    event_counter = Column(Integer, nullable=False)
+    last_modified = Column(DateTime, nullable=False)
+    __table_args__ = (Index("idx_event_counter", "event_counter"),)
 
 
 class Row(NamedTuple):
@@ -25,83 +39,76 @@ class Row(NamedTuple):
 
 
 def create_db(db: Path) -> None:
-    create_query = f"""
-    CREATE TABLE {_TABLE} (
-        {Columns.cwd} TEXT,
-        {Columns.previous_cmd} TEXT,
-        {Columns.current_cmd} TEXT,
-        {Columns.event_counter} INTEGER CHECK({Columns.event_counter} >= 0),
-        {Columns.last_modified} DATETIME,
-        PRIMARY KEY ({Columns.cwd}, {Columns.previous_cmd}, {Columns.current_cmd})
-    )
-    """
-    index_query = (
-        f"CREATE INDEX idx_event_counter ON {_TABLE} ({Columns.event_counter})"
-    )
-    with sqlite3.connect(f"{db}") as conn:
-        cursor = conn.cursor()
-        cursor.execute(create_query)
-        cursor.execute(index_query)
-        conn.commit()
+    engine = create_engine(f"sqlite:///{db}")
+    Base.metadata.create_all(engine)
 
 
 def insert_row(db: Path, row: Row) -> None:
-    assert db.is_file()  # nosec
-    insert_statement = f"""
-    INSERT INTO {_TABLE}({Columns.cwd},{Columns.previous_cmd},{Columns.current_cmd},{Columns.event_counter},{Columns.last_modified})
-    VALUES(?,?,?,?,?) 
-    """
-    with sqlite3.connect(f"{db}") as conn:
-        cursor = conn.cursor()
-        cursor.execute(insert_statement, row)
-        conn.commit()
-
-
-def get_row(db: Path, cwd: Path, previous_cmd: str, current_cmd) -> Row | None:
-    assert db.is_file()  # nosec
-    get_statement = f"""
-    SELECT * FROM {_TABLE}
-    WHERE {Columns.cwd} = ? AND {Columns.previous_cmd} = ? AND {Columns.current_cmd} = ?
-    """
-    params = (f"{cwd}", previous_cmd, current_cmd)
-    with sqlite3.connect(f"{db}") as conn:
-        cursor = conn.cursor()
-        cursor.execute(get_statement, params)
-        result = cursor.fetchone()
-        return None if result is None else Row(*result)
+    engine = create_engine(f"sqlite:///{db}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    event = Event(
+        cwd=str(row.cwd),
+        previous_cmd=row.previous_cmd,
+        current_cmd=row.current_cmd,
+        event_counter=row.event_counter,
+        last_modified=row.last_modified,
+    )
+    session.add(event)
+    session.commit()
+    session.close()
 
 
 def update_row(db: Path, row: Row, event_counter: int, last_modified: datetime) -> None:
-    assert db.is_file()  # nosec
-    update_statement = f"""
-    UPDATE {_TABLE}
-    SET {Columns.event_counter} = ?, {Columns.last_modified} = ?
-    WHERE {Columns.cwd} = ? AND {Columns.previous_cmd} = ? AND {Columns.current_cmd} = ?
-    """
-    params = (
-        event_counter,
-        last_modified,
-        f"{row.cwd}",
-        row.previous_cmd,
-        row.current_cmd,
+    engine = create_engine(f"sqlite:///{db}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    event = (
+        session.query(Event)
+        .filter_by(
+            cwd=str(row.cwd), previous_cmd=row.previous_cmd, current_cmd=row.current_cmd
+        )
+        .first()
     )
-    with sqlite3.connect(f"{db}") as conn:
-        cursor = conn.cursor()
-        cursor.execute(update_statement, params)
-        conn.commit()
+    if event:
+        event.event_counter = event_counter
+        event.last_modified = last_modified
+        session.commit()
+    session.close()
+
+
+def get_row(db: Path, cwd: Path, previous_cmd: str, current_cmd: str) -> Row | None:
+    engine = create_engine(f"sqlite:///{db}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    event = (
+        session.query(Event)
+        .filter_by(cwd=str(cwd), previous_cmd=previous_cmd, current_cmd=current_cmd)
+        .first()
+    )
+    session.close()
+    return (
+        None
+        if event is None
+        else Row(
+            cwd=Path(event.cwd),
+            previous_cmd=event.previous_cmd,
+            current_cmd=event.current_cmd,
+            event_counter=event.event_counter,
+            last_modified=event.last_modified,
+        )
+    )
 
 
 def infer_current_cmd(db: Path, cwd: Path, previous_cmd: str) -> list[str]:
-    assert db.is_file  # nosec
-    query = f"""
-    SELECT {Columns.current_cmd}
-    FROM {_TABLE}
-    WHERE {Columns.cwd} = ? AND {Columns.previous_cmd} = ?
-    ORDER BY {Columns.event_counter} DESC
-    """
-    params = (f"{cwd}", previous_cmd)
-    with sqlite3.connect(f"{db}") as conn:
-        cursor = conn.cursor()
-        cursor.execute(query, params)
-        rows = cursor.fetchall()
-        return [r[0] for r in rows] if rows is not None else []
+    engine = create_engine(f"sqlite:///{db}")
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    events = (
+        session.query(Event.current_cmd)
+        .filter_by(cwd=str(cwd), previous_cmd=previous_cmd)
+        .order_by(Event.event_counter.desc())
+        .all()
+    )
+    session.close()
+    return [event.current_cmd for event in events]
