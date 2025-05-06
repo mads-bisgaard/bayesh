@@ -1,6 +1,8 @@
 # Bayesh 🚀  
 **Your shell history, smarter and faster.**
 
+![Bayesh Demo](assets/demo.gif)
+
 ## What is Bayesh?  
 Bayesh is your personal shell assistant, designed to make your command-line experience smoother and more efficient. It learns from your shell history and suggests commands you’ve used before—no more digging through endless history logs! Powered by [fzf](https://github.com/junegunn/fzf), Bayesh brings a sleek and intuitive UI to your terminal.
 
