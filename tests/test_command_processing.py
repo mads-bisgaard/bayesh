@@ -4,9 +4,22 @@ from typing import Final, Iterable
 import pytest
 from pydantic import BaseModel
 from pytest_mock import MockerFixture
+from faker import Faker
 
 _COMMANDS_FILE: Final[Path] = Path(__file__).parent / "data" / "processed_bash_commands"
 assert _COMMANDS_FILE.is_file()
+
+
+def test_no_permission(mocker: MockerFixture):
+    # https://github.com/mads-bisgaard/bayesh/issues/14
+    def mock_exists(*args, **kwargs):
+        raise PermissionError
+
+    mock = mocker.patch(
+        "bayesh._command_processing.Path.exists", side_effect=mock_exists
+    )
+    _ = process_cmd(f"cat myfile.txt")
+    assert mock.called
 
 
 class CommandPairTestData(BaseModel):
