@@ -1,4 +1,4 @@
-# Bayesh 🚀  
+# Bayesh
 **Your shell history, smarter and faster.**
 
 ![Bayesh Demo](assets/demo.gif)
