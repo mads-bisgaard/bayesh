@@ -1,4 +1,4 @@
-# Bayesh 🚀  
+# Bayesh
 **Your shell history, smarter and faster.**
 
 ![Bayesh Demo](assets/demo.gif)
@@ -76,6 +76,19 @@ Bayesh draws inspiration from:
 - [autojump](https://github.com/wting/autojump), [z](https://github.com/rupa/z), and [zoxide](https://github.com/ajeetdsouza/zoxide)  
 - The incredible [fzf](https://github.com/junegunn/fzf)  
 - [Peter Norvig](https://norvig.com/)'s legendary [blogpost](https://norvig.com/spell-correct.html) on building a spelling corrector  
+
+---
+
+## Contributions 🤝  
+
+Want to contribute? Whether it's fixing a bug, suggesting a feature, or improving documentation, your help is very much appreciated.  
+
+### How to Contribute:  
+1. Fork the repository.  
+2. Create a new branch for your changes.  
+3. Submit a pull request with a clear description of your changes.  
+
+Feel free to open an issue if you have questions or need guidance. Let's make Bayesh even better together!  
 
 ---
 

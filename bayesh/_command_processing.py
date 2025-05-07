@@ -21,8 +21,12 @@ def process_cmd(cmd: str) -> str:
     for ii, p in enumerate(parts):
         if cmd.count(p) > 1:
             continue
+        try:
+            exists = Path(p).exists()
+        except OSError:
+            continue
         if (
-            Path(p).exists()
+            exists
             and p != "."
             and ii > 0
             and not parts[ii - 1].endswith(
@@ -30,7 +34,7 @@ def process_cmd(cmd: str) -> str:
             )  # https://docs.python.org/3/library/shlex.html#improved-compatibility-with-shells
         ):  # allow paths in 0th position: pointing to executable
             cmd = cmd.replace(p, Tokens.PATH)
-        elif " " in p and not Path(p).exists():
+        elif " " in p and not exists:
             cmd = cmd.replace(p, Tokens.STRING)
 
     return cmd
