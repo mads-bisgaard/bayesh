@@ -24,10 +24,17 @@ Bayesh is your personal shell assistant, designed to make your command-line expe
    - [tmux](https://github.com/tmux/tmux) (optional, but highly recommmended)
 
 2. **Install Bayesh:**  
-   Run this snippet in your shell:  
+   Run this snippet in your shell to get the code:  
    ```bash
    git clone https://github.com/mads-bisgaard/bayesh.git ~/.bayesh/bayesh
-   ~/.bayesh/bayesh/install.sh "$(basename "$SHELL")"
+   ```
+   To install, run the following command if using `zsh`
+   ```bash
+   ~/.bayesh/bayesh/install.sh zsh
+   ``` 
+   and if you use `bash`, run 
+   ```bash
+   ~/.bayesh/bayesh/install.sh bash
    ```
 
 ---
