@@ -12,7 +12,7 @@ def cli():
     pass
 
 
-@cli.command()
+@cli.command("record-event")
 @click.argument("cwd", type=click.Path(path_type=Path))
 @click.argument("previous_cmd")
 @click.argument("current_cmd")
@@ -40,7 +40,7 @@ def record_event(cwd: Path, previous_cmd: str, current_cmd: str):
         insert_row(db=settings.db, row=row)
 
 
-@cli.command()
+@cli.command("infer-cmd")
 @click.argument("cwd", type=click.Path(path_type=Path))
 @click.argument("previous_cmd")
 def infer_cmd(cwd: Path, previous_cmd: str):
@@ -51,6 +51,6 @@ def infer_cmd(cwd: Path, previous_cmd: str):
     click.echo(ansi_color_tokens("\n".join(results)), color=True)
 
 
-@cli.command()
+@cli.command("print-settings")
 def print_settings():
     click.echo(json.dumps(BayeshSettings()))
