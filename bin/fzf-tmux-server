@@ -29,7 +29,7 @@ start() {
     script=(
         'echo "" | fzf '
         "--listen "
-        '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\", \"server_pid\": "$$" }" > '"$fifo"' & )'\''' 
+        '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
         "--scheme=history "
         "--no-sort "
         "--exact "
@@ -46,7 +46,7 @@ start() {
 
     tmux split-window -l 6 -d "${script[*]}"
 
-    jq -c --arg client_pid $1 '. + {client_pid: $client_pid}' < "$fifo"
+    jq -c --argjson client_pid $1 '. + {client_pid: $client_pid}' < "$fifo"
     rm "$fifo"
 }
 
