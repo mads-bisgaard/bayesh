@@ -8,8 +8,8 @@ if ! command -v fzf > /dev/null; then echo "Error: fzf-tmux-server requires fzf.
 _exe_name=$(basename "$0")
 
 start_help() {
-    echo "Usage: $_exe_name start"
-    echo "Starts fzf-tmux server and prints server config to stdout."
+    echo "Usage: $_exe_name start <pid of current shell>"
+    echo "Starts fzf-tmux server with current shell as client and prints server config to stdout."
     echo "Capture the config and pass it to other methods in order to access the server."
 }
 
@@ -18,6 +18,10 @@ start() {
         start_help
         return
     fi
+    if ! [[ "$1" =~ ^[0-9]+$ ]] || [[ ! -d "/proc/$1" ]]; then
+        echo "Error: Argument must be a valid PID of a running process." >&2
+        return 1
+    fi
     local fifo
     fifo=$(mktemp -u)
     mkfifo "$fifo"
@@ -25,7 +29,7 @@ start() {
     script=(
         'echo "" | fzf '
         "--listen "
-        '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
+        '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\", \"server_pid\": "$$" }" > '"$fifo"' & )'\''' 
         "--scheme=history "
         "--no-sort "
         "--exact "
@@ -42,7 +46,7 @@ start() {
 
     tmux split-window -l 6 -d "${script[*]}"
 
-    jq -c . < "$fifo"
+    jq -c --arg client_pid $1 '. + {client_pid: $client_pid}' < "$fifo"
     rm "$fifo"
 }
 
