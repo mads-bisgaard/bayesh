@@ -1,7 +1,10 @@
 package src
 
 import (
+	"bufio"
+	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -69,5 +72,52 @@ func TestEndsWithAny(t *testing.T) {
 	}
 	if endsWithAny("foo", []string{"|", ";"}) {
 		t.Error("endsWithAny should return false for no match")
+	}
+}
+
+func TestProcessCmd_Parametrized(t *testing.T) {
+	dataFile := filepath.Join("..", "tests", "data", "processed_bash_commands")
+	f, err := os.Open(dataFile)
+	if err != nil {
+		t.Fatalf("Failed to open test data file: %v", err)
+	}
+	defer f.Close()
+
+	type CommandPairTestData struct {
+		RawCmd        string   `json:"raw_cmd"`
+		SanitizedCmd  string   `json:"sanitized_cmd"`
+		RequiredPaths []string `json:"required_paths"`
+	}
+
+	scanner := bufio.NewScanner(f)
+	idx := 0
+	for scanner.Scan() {
+		var testCase CommandPairTestData
+		if err := json.Unmarshal([]byte(scanner.Text()), &testCase); err != nil {
+			t.Errorf("Failed to parse JSON on line %d: %v", idx+1, err)
+			continue
+		}
+
+		for _, p := range testCase.RequiredPaths {
+			if p == "" {
+				continue
+			}
+			file, err := os.CreateTemp("", "testfile*")
+			if err == nil {
+				os.Rename(file.Name(), p)
+				file.Close()
+			}
+		}
+
+		t.Run(testCase.RawCmd, func(t *testing.T) {
+			result := ProcessCmd(testCase.RawCmd)
+			if result != testCase.SanitizedCmd {
+				t.Errorf("Raw: %q\nGot: %q\nWant: %q", testCase.RawCmd, result, testCase.SanitizedCmd)
+			}
+		})
+		idx++
+	}
+	if err := scanner.Err(); err != nil {
+		t.Fatalf("Error reading test data file: %v", err)
 	}
 }
