@@ -7,6 +7,10 @@ import (
 	"github.com/google/shlex"
 )
 
+type FileSystem interface {
+	Stat(name string) (os.FileInfo, error)
+}
+
 type Token string
 
 const (
@@ -20,7 +24,7 @@ func AnsiColorTokens(cmds string) string {
 	return cmds
 }
 
-func ProcessCmd(cmd string) string {
+func ProcessCmd(fs FileSystem, cmd string) string {
 	parts, err := shlex.Split(cmd)
 	if err != nil {
 		return cmd // fallback: return original if parsing fails
@@ -30,7 +34,7 @@ func ProcessCmd(cmd string) string {
 			continue
 		}
 		exists := false
-		if _, err := os.Stat(p); err == nil {
+		if _, err := fs.Stat(p); err == nil {
 			exists = true
 		}
 		if exists && p != "." && i > 0 && !endsWithAny(parts[i-1], []string{"(", ")", ";", "<", ">", "|", "&"}) {
