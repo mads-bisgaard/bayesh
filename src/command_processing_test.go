@@ -3,6 +3,7 @@ package src
 import (
 	"bufio"
 	"encoding/json"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
@@ -64,7 +65,7 @@ func TestProcessCmd_Parametrized(t *testing.T) {
 			},
 		}
 
-		t.Run(testCase.RawCmd[:min(10, len(testCase.RawCmd))], func(t *testing.T) {
+		t.Run(testCase.RawCmd[:int(math.Min(10, float64(len(testCase.RawCmd))))], func(t *testing.T) {
 			result := ProcessCmd(fs, testCase.RawCmd)
 			if result != testCase.SanitizedCmd {
 				t.Errorf("Raw: %q\nGot: %q\nWant: %q", testCase.RawCmd, result, testCase.SanitizedCmd)
@@ -75,12 +76,4 @@ func TestProcessCmd_Parametrized(t *testing.T) {
 	if err := scanner.Err(); err != nil {
 		t.Fatalf("Error reading test data file: %v", err)
 	}
-}
-
-// Helper function for min
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
