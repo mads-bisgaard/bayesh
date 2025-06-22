@@ -10,3 +10,13 @@ include = ["bayesh"]
 
 [project.scripts]
 bayesh = "bayesh.cli:cli"
+
+[project.optional-dependencies]
+dev = [
+    "faker",
+    "parse",
+    "pre-commit",
+    "pydantic",
+    "pytest",
+    "pytest-mock"
+]
