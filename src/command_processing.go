@@ -1,4 +1,4 @@
-package src
+package bayesh
 
 import (
 	"os"

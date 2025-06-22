@@ -1,4 +1,4 @@
-package src
+package bayesh
 
 import (
 	"bufio"
@@ -12,14 +12,23 @@ import (
 // Helper for tests: a FileSystem implementation using a function
 
 type mockFileSystem struct {
-	existsFunc func(string) bool
+	statFunc func(string) (os.FileInfo, error)
 }
 
 func (m mockFileSystem) Stat(name string) (os.FileInfo, error) {
-	if m.existsFunc != nil && m.existsFunc(name) {
-		return nil, nil
+	if m.statFunc == nil {
+		return nil, os.ErrInvalid
 	}
-	return nil, os.ErrNotExist
+	return m.statFunc(name)
+}
+
+func TestNoPermission(t *testing.T) {
+	fs := mockFileSystem{
+		statFunc: func(path string) (os.FileInfo, error) {
+			return nil, os.ErrPermission
+		},
+	}
+	ProcessCmd(fs, "echo ./myfile.txt")
 }
 
 func TestAnsiColorTokens(t *testing.T) {
@@ -55,13 +64,13 @@ func TestProcessCmd_Parametrized(t *testing.T) {
 		}
 
 		fs := mockFileSystem{
-			existsFunc: func(path string) bool {
+			statFunc: func(path string) (os.FileInfo, error) {
 				for _, p := range testCase.RequiredPaths {
 					if p == path {
-						return true
+						return os.FileInfo(nil), nil
 					}
 				}
-				return false
+				return nil, os.ErrNotExist
 			},
 		}
 
