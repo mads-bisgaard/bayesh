@@ -12,10 +12,6 @@ func main() {
 	fmt.Println(rslt)
 }
 
-// osFS implements src.FileSystem using the real os.Stat
-// This allows you to use src.ProcessCmd from main
-// and is idiomatic for dependency injection in Go
-
 type osFS struct{}
 
 func (osFS) Stat(name string) (os.FileInfo, error) {
