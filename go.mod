@@ -1,4 +1,4 @@
-module bayesh
+module github.com/mads-bisgaard/bayesh
 
 go 1.24.3
 
