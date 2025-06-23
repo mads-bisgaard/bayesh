@@ -7,7 +7,7 @@ import (
 	"github.com/google/shlex"
 )
 
-type FileSystem interface {
+type StatFileSystem interface {
 	Stat(name string) (os.FileInfo, error)
 }
 
@@ -24,7 +24,8 @@ func AnsiColorTokens(cmds string) string {
 	return cmds
 }
 
-func ProcessCmd(fs FileSystem, cmd string) string {
+// Update ProcessCmd to use StatFileSystem
+func ProcessCmd(fs StatFileSystem, cmd string) string {
 	parts, err := shlex.Split(cmd)
 	if err != nil {
 		return cmd // fallback: return original if parsing fails

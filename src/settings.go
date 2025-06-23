@@ -12,12 +12,20 @@ type Settings struct {
 	DB        string
 }
 
-func CreateSettings() (*Settings, error) {
-	home, err := os.UserHomeDir()
+type FileSystem interface {
+	UserHomeDir() (string, error)
+	Getenv(key string) string
+	MkdirAll(path string, perm os.FileMode) error
+	Stat(name string) (os.FileInfo, error)
+	Create(name string) (*os.File, error)
+}
+
+func CreateSettings(fs FileSystem) (*Settings, error) {
+	home, err := fs.UserHomeDir()
 	if err != nil {
 		return nil, err
 	}
-	bayeshDir := os.Getenv(BayeshDirEnvVar)
+	bayeshDir := fs.Getenv(BayeshDirEnvVar)
 	if bayeshDir == "" {
 		bayeshDir = filepath.Join(home, ".bayesh")
 	}
@@ -25,18 +33,19 @@ func CreateSettings() (*Settings, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := os.MkdirAll(absDir, 0o755); err != nil {
+	if err := fs.MkdirAll(absDir, 0o755); err != nil {
 		return nil, err
 	}
 	dbPath := filepath.Join(absDir, "bayesh.db")
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		f, err := os.Create(dbPath)
+	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
+		f, err := fs.Create(dbPath)
 		if err != nil {
 			return nil, err
 		}
-		err = f.Close()
-		if err != nil {
-			return nil, err
+		if f != nil {
+			if err = f.Close(); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return &Settings{
