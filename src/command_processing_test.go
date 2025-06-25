@@ -11,11 +11,11 @@ import (
 
 // Helper for tests: a FileSystem implementation using a function
 
-type mockFileSystem struct {
+type mockStatFileSystem struct {
 	statFunc func(string) (os.FileInfo, error)
 }
 
-func (m mockFileSystem) Stat(name string) (os.FileInfo, error) {
+func (m mockStatFileSystem) Stat(name string) (os.FileInfo, error) {
 	if m.statFunc == nil {
 		return nil, os.ErrInvalid
 	}
@@ -23,7 +23,7 @@ func (m mockFileSystem) Stat(name string) (os.FileInfo, error) {
 }
 
 func TestNoPermission(t *testing.T) {
-	fs := mockFileSystem{
+	fs := mockStatFileSystem{
 		statFunc: func(path string) (os.FileInfo, error) {
 			return nil, os.ErrPermission
 		},
@@ -63,7 +63,7 @@ func TestProcessCmd_Parametrized(t *testing.T) {
 			continue
 		}
 
-		fs := mockFileSystem{
+		fs := mockStatFileSystem{
 			statFunc: func(path string) (os.FileInfo, error) {
 				for _, p := range testCase.RequiredPaths {
 					if p == path {
