@@ -39,8 +39,9 @@ func (m mockFileSystem) Create(name string) (*os.File, error) {
 
 func TestBayeshDir(t *testing.T) {
 	tests := []struct {
-		name string
-		fs   mockFileSystem
+		name        string
+		fs          mockFileSystem
+		expectedDir string
 	}{
 		{
 			name: "bayesh dir exists",
@@ -49,6 +50,7 @@ func TestBayeshDir(t *testing.T) {
 				envVars:       map[string]string{},
 				existingPaths: map[string]bool{"/home/user/.bayesh": true},
 			},
+			expectedDir: "/home/user/.bayesh",
 		},
 		{
 			name: "bayesh dir does not exist (should be created)",
@@ -57,21 +59,21 @@ func TestBayeshDir(t *testing.T) {
 				envVars:       map[string]string{},
 				existingPaths: map[string]bool{},
 			},
+			expectedDir: "/home/user/.bayesh",
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 
-			expectedDir := filepath.Join(tc.fs.homeDir, ".bayesh")
-			expectedDB := filepath.Join(expectedDir, "bayesh.db")
+			expectedDB := filepath.Join(tc.expectedDir, "bayesh.db")
 
 			settings, err := CreateSettings(tc.fs)
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
-			if settings.BayeshDir != expectedDir {
-				t.Errorf("expected BayeshDir to be %s, got %s", expectedDir, settings.BayeshDir)
+			if settings.BayeshDir != tc.expectedDir {
+				t.Errorf("expected BayeshDir to be %s, got %s", tc.expectedDir, settings.BayeshDir)
 			}
 			if settings.DB != expectedDB {
 				t.Errorf("expected DB to be %s, got %s", expectedDB, settings.DB)
