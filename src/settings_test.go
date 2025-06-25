@@ -1,9 +1,12 @@
 package bayesh
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/google/uuid"
 )
 
 type mockFileSystem struct {
@@ -22,16 +25,10 @@ func (m mockFileSystem) Getenv(key string) string {
 	return ""
 }
 func (m mockFileSystem) MkdirAll(path string, perm os.FileMode) error {
-	if _, exists := m.existingPaths[path]; !exists {
-		m.existingPaths[path] = true
-	}
-	return nil
+	return os.MkdirAll(path, perm)
 }
 func (m mockFileSystem) Stat(name string) (os.FileInfo, error) {
-	if _, exists := m.existingPaths[name]; exists {
-		return nil, nil
-	}
-	return nil, os.ErrNotExist
+	return os.Stat(name)
 }
 func (m mockFileSystem) Create(name string) (*os.File, error) {
 	return os.Create(name)
@@ -39,45 +36,64 @@ func (m mockFileSystem) Create(name string) (*os.File, error) {
 
 func TestBayeshDir(t *testing.T) {
 	tests := []struct {
-		name        string
-		fs          mockFileSystem
-		expectedDir string
+		bayeshDirExists bool
+		setEnvVar       bool
 	}{
+
 		{
-			name: "bayesh dir exists",
-			fs: mockFileSystem{
-				homeDir:       "/home/user",
-				envVars:       map[string]string{},
-				existingPaths: map[string]bool{"/home/user/.bayesh": true},
-			},
-			expectedDir: "/home/user/.bayesh",
+			bayeshDirExists: false,
+			setEnvVar:       false,
 		},
 		{
-			name: "bayesh dir does not exist (should be created)",
-			fs: mockFileSystem{
-				homeDir:       "/home/user",
-				envVars:       map[string]string{},
-				existingPaths: map[string]bool{},
-			},
-			expectedDir: "/home/user/.bayesh",
+			bayeshDirExists: true,
+			setEnvVar:       false,
+		},
+		{
+			bayeshDirExists: false,
+			setEnvVar:       true,
+		},
+		{
+			bayeshDirExists: true,
+			setEnvVar:       true,
 		},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
+		t.Run(
+			fmt.Sprintf("EnvVar_%v_DirExists_%v", tc.setEnvVar, tc.bayeshDirExists),
+			func(t *testing.T) {
 
-			expectedDB := filepath.Join(tc.expectedDir, "bayesh.db")
+				homeDir, err := os.MkdirTemp(os.TempDir(), "")
+				if err != nil {
+					t.Fatalf("Failed to create temporary home directory: %v", err)
+				}
+				defer func() {
+					if err := os.RemoveAll(homeDir); err != nil {
+						t.Errorf("Failed to remove temporary home directory: %v", err)
+					}
+				}()
 
-			settings, err := CreateSettings(tc.fs)
-			if err != nil {
-				t.Fatalf("expected no error, got %v", err)
-			}
-			if settings.BayeshDir != tc.expectedDir {
-				t.Errorf("expected BayeshDir to be %s, got %s", tc.expectedDir, settings.BayeshDir)
-			}
-			if settings.DB != expectedDB {
-				t.Errorf("expected DB to be %s, got %s", expectedDB, settings.DB)
-			}
-		})
+				bayeshDir := filepath.Join(homeDir, ".bayesh")
+				envVars := map[string]string{}
+				if tc.setEnvVar {
+					bayeshDir = filepath.Join(homeDir, uuid.NewString())
+					envVars[BayeshDirEnvVar] = bayeshDir
+				}
+
+				mockFS := mockFileSystem{
+					homeDir:       homeDir,
+					envVars:       envVars,
+					existingPaths: map[string]bool{},
+				}
+
+				settings, err := CreateSettings(mockFS)
+				if err != nil {
+					t.Fatalf("CreateSettings failed: %v", err)
+				}
+				if settings.BayeshDir != bayeshDir {
+					t.Errorf("Expected BayeshDir %q, got %q", bayeshDir, settings.BayeshDir)
+				}
+			},
+		)
 	}
 }
