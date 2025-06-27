@@ -100,3 +100,37 @@ func TestBayeshDir(t *testing.T) {
 		)
 	}
 }
+
+func TestBayeshDir_FilePath(t *testing.T) {
+	homeDir, err := os.MkdirTemp(os.TempDir(), "")
+	if err != nil {
+		t.Fatalf("Failed to create temporary home directory: %v", err)
+	}
+	defer func() {
+		if err := os.RemoveAll(homeDir); err != nil {
+			t.Errorf("Failed to remove temporary home directory: %v", err)
+		}
+	}()
+
+	bayeshDirAsFile := filepath.Join(homeDir, "bayesh_dir_file")
+	file, err := os.Create(bayeshDirAsFile)
+	if err != nil {
+		t.Fatalf("Failed to create file: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(file.Name()); err != nil {
+			t.Errorf("Failed to remove file: %v", err)
+		}
+	}()
+	envVars := map[string]string{BayeshDirEnvVar: bayeshDirAsFile}
+
+	mockFS := mockFileSystem{
+		homeDir: homeDir,
+		envVars: envVars,
+	}
+
+	_, err = CreateSettings(mockFS)
+	if err == nil {
+		t.Fatal("Expected error when BAYESH_DIR is a file, but got nil")
+	}
+}
