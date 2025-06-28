@@ -37,15 +37,10 @@ func CreateSettings(fs FileSystem) (*Settings, error) {
 		return nil, err
 	}
 	dbPath := filepath.Join(absDir, "bayesh.db")
+	// If the database file doesn't exist, create it and set up the schema.
 	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
-		f, err := fs.Create(dbPath)
-		if err != nil {
+		if err := CreateDB(dbPath); err != nil {
 			return nil, err
-		}
-		if f != nil {
-			if err = f.Close(); err != nil {
-				return nil, err
-			}
 		}
 	}
 	return &Settings{
