@@ -1,6 +1,9 @@
 package bayesh
 
 import (
+	"context"
+	"database/sql"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -20,7 +23,7 @@ type FileSystem interface {
 	Create(name string) (*os.File, error)
 }
 
-func CreateSettings(fs FileSystem) (*Settings, error) {
+func Initialize(context context.Context, fs FileSystem) (*Settings, error) {
 	home, err := fs.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -39,7 +42,17 @@ func CreateSettings(fs FileSystem) (*Settings, error) {
 	dbPath := filepath.Join(absDir, "bayesh.db")
 	// If the database file doesn't exist, create it and set up the schema.
 	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
-		if err := CreateDB(dbPath); err != nil {
+		db, err := sql.Open("sqlite3", dbPath)
+		if err != nil {
+			return nil, err
+		}
+		defer func() {
+			if err := db.Close(); err != nil {
+				log.Fatal("Failed to close DB:", err)
+			}
+		}()
+		queries := New(db)
+		if err := queries.CreateSchema(context); err != nil {
 			return nil, err
 		}
 	}

@@ -1,6 +1,7 @@
 package bayesh
 
 import (
+	"context"
 	"database/sql"
 	"os"
 	"testing"
@@ -11,15 +12,6 @@ import (
 func TestCreateDB(t *testing.T) {
 	dbFile := "test_create.db"
 
-	if err := CreateDB(dbFile); err != nil {
-		t.Fatalf("CreateDB failed: %v", err)
-	}
-	defer func() {
-		if err := os.Remove(dbFile); err != nil {
-			t.Fatalf("Failed to remove test DB file: %v", err)
-		}
-	}()
-
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		t.Fatalf("Failed to open DB: %v", err)
@@ -27,6 +19,17 @@ func TestCreateDB(t *testing.T) {
 	defer func() {
 		if err := db.Close(); err != nil {
 			t.Fatalf("Failed to close DB: %v", err)
+		}
+	}()
+
+	context := context.Background()
+	queries := New(db)
+	if err := queries.CreateSchema(context); err != nil {
+		t.Fatalf("Failed to create schema: %v", err)
+	}
+	defer func() {
+		if err := os.Remove(dbFile); err != nil {
+			t.Fatalf("Failed to remove test DB file: %v", err)
 		}
 	}()
 

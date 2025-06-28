@@ -1,6 +1,7 @@
 package bayesh
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -88,8 +89,8 @@ func TestBayeshDir(t *testing.T) {
 					homeDir: homeDir,
 					envVars: envVars,
 				}
-
-				settings, err := CreateSettings(mockFS)
+				context := context.Background()
+				settings, err := Initialize(context, mockFS)
 				if err != nil {
 					t.Fatalf("CreateSettings failed: %v", err)
 				}
@@ -131,8 +132,8 @@ func TestBayeshDir_FilePath(t *testing.T) {
 		homeDir: homeDir,
 		envVars: envVars,
 	}
-
-	_, err = CreateSettings(mockFS)
+	context := context.Background()
+	_, err = Initialize(context, mockFS)
 	var pathError *os.PathError
 	if !errors.As(err, &pathError) {
 		t.Fatalf("Expected a *os.PathError when BAYESH_DIR is a file, but got %T: %v", err, err)
@@ -145,7 +146,8 @@ func TestCreateSettings_UserHomeDirError(t *testing.T) {
 		homeDirErr: errors.New(expectedErr),
 	}
 
-	_, err := CreateSettings(mockFS)
+	context := context.Background()
+	_, err := Initialize(context, mockFS)
 	if err == nil {
 		t.Fatal("Expected an error when UserHomeDir fails, but got nil")
 	}
