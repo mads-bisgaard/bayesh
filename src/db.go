@@ -3,6 +3,7 @@ package bayesh
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	_ "github.com/mattn/go-sqlite3" // SQLite driver
 )
@@ -23,7 +24,7 @@ func CreateDB(dbPath string) error {
 	}
 	defer func() {
 		if closeErr := db.Close(); closeErr != nil {
-			fmt.Printf("Warning: failed to close database connection: %v\n", closeErr)
+			log.Printf("Warning: failed to close database connection: %v\n", closeErr)
 		}
 	}()
 
