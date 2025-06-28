@@ -1,6 +1,7 @@
 package bayesh
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,12 +11,15 @@ import (
 )
 
 type mockFileSystem struct {
-	homeDir       string
-	envVars       map[string]string
-	existingPaths map[string]bool
+	homeDir    string
+	homeDirErr error
+	envVars    map[string]string
 }
 
 func (m mockFileSystem) UserHomeDir() (string, error) {
+	if m.homeDirErr != nil {
+		return "", m.homeDirErr
+	}
 	return m.homeDir, nil
 }
 func (m mockFileSystem) Getenv(key string) string {
@@ -81,9 +85,8 @@ func TestBayeshDir(t *testing.T) {
 				}
 
 				mockFS := mockFileSystem{
-					homeDir:       homeDir,
-					envVars:       envVars,
-					existingPaths: map[string]bool{},
+					homeDir: homeDir,
+					envVars: envVars,
 				}
 
 				settings, err := CreateSettings(mockFS)
@@ -130,7 +133,24 @@ func TestBayeshDir_FilePath(t *testing.T) {
 	}
 
 	_, err = CreateSettings(mockFS)
+	var pathError *os.PathError
+	if !errors.As(err, &pathError) {
+		t.Fatalf("Expected a *os.PathError when BAYESH_DIR is a file, but got %T: %v", err, err)
+	}
+}
+
+func TestCreateSettings_UserHomeDirError(t *testing.T) {
+	expectedErr := "home directory not found"
+	mockFS := mockFileSystem{
+		homeDirErr: errors.New(expectedErr),
+	}
+
+	_, err := CreateSettings(mockFS)
 	if err == nil {
-		t.Fatal("Expected error when BAYESH_DIR is a file, but got nil")
+		t.Fatal("Expected an error when UserHomeDir fails, but got nil")
+	}
+
+	if err.Error() != expectedErr {
+		t.Errorf("Expected error message %q, got %q", expectedErr, err.Error())
 	}
 }
