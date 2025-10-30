@@ -115,7 +115,7 @@ func (q *Queries) InferCurrentCmd(ctx context.Context, cwd, previousCmd string) 
 		}
 	}()
 
-	var items []string
+	items := make([]string, 0)
 	for rows.Next() {
 		var currentCmd string
 		if err := rows.Scan(&currentCmd); err != nil {

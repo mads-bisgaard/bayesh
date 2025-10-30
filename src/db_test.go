@@ -3,44 +3,62 @@ package bayesh
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"math/rand"
 	"os"
+	"slices"
 	"testing"
+	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func TestCreateDB(t *testing.T) {
-	dbFile := "test_create.db"
+// setupTestDB creates a new temporary database for testing and returns the queries object and the db object.
+// It also registers a cleanup function to close and remove the database file.
+func setupTestDB(t *testing.T) (*Queries, *sql.DB) {
+	t.Helper()
+
+	tempFile, err := os.CreateTemp(t.TempDir(), "test-*.db")
+	if err != nil {
+		t.Fatalf("Failed to create temp file for db: %v", err)
+	}
+	dbFile := tempFile.Name()
+	if err := tempFile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
 
 	db, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
 		t.Fatalf("Failed to open DB: %v", err)
 	}
-	defer func() {
+
+	t.Cleanup(func() {
 		if err := db.Close(); err != nil {
 			t.Fatalf("Failed to close DB: %v", err)
 		}
-	}()
+		// os.Remove is not needed here because t.TempDir() handles cleanup
+	})
 
-	context := context.Background()
 	queries := New(db)
-	if err := queries.CreateSchema(context); err != nil {
+	if err := queries.CreateSchema(context.Background()); err != nil {
 		t.Fatalf("Failed to create schema: %v", err)
 	}
-	defer func() {
-		if err := os.Remove(dbFile); err != nil {
-			t.Fatalf("Failed to remove test DB file: %v", err)
-		}
-	}()
+
+	return queries, db
+}
+
+func TestCreateDB(t *testing.T) {
+	_, db := setupTestDB(t)
 
 	// Check table exists
 	var tableName string
-	err = db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name=?", eventsTable).Scan(&tableName)
+	err := db.QueryRow("SELECT name FROM sqlite_master WHERE type='table' AND name=?", eventsTable).Scan(&tableName)
 	if err != nil {
 		t.Fatalf("Table %s does not exist: %v", eventsTable, err)
 	}
 
 	// Check columns
+
 	cols, err := db.Query("PRAGMA table_info(" + eventsTable + ")")
 	if err != nil {
 		t.Fatalf("Failed to get table info: %v", err)
@@ -74,5 +92,267 @@ func TestCreateDB(t *testing.T) {
 	err = db.QueryRow("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_event_counter'").Scan(&idxName)
 	if err != nil {
 		t.Errorf("Index idx_event_counter does not exist: %v", err)
+	}
+}
+
+func TestInsertRow(t *testing.T) {
+	queries, db := setupTestDB(t)
+	ctx := context.Background()
+
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM " + eventsTable).Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count rows: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("Expected 0 rows, got %d", count)
+	}
+
+	rowToInsert := Row{
+		Cwd:          "/tmp",
+		PreviousCmd:  "ls -l",
+		CurrentCmd:   "cat file.txt",
+		EventCounter: 123,
+		LastModified: time.Now(),
+	}
+
+	if err := queries.InsertRow(ctx, rowToInsert); err != nil {
+		t.Fatalf("Failed to insert row: %v", err)
+	}
+
+	err = db.QueryRow("SELECT COUNT(*) FROM " + eventsTable).Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count rows: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("Expected 1 row, got %d", count)
+	}
+
+	var fetchedRow Row
+	err = db.QueryRow("SELECT cwd, previous_cmd, current_cmd, event_counter, last_modified FROM "+eventsTable).Scan(
+		&fetchedRow.Cwd,
+		&fetchedRow.PreviousCmd,
+		&fetchedRow.CurrentCmd,
+		&fetchedRow.EventCounter,
+		&fetchedRow.LastModified,
+	)
+	if err != nil {
+		t.Fatalf("Failed to fetch inserted row: %v", err)
+	}
+
+	if fetchedRow.Cwd != rowToInsert.Cwd {
+		t.Errorf("Expected Cwd to be %s, got %s", rowToInsert.Cwd, fetchedRow.Cwd)
+	}
+	if fetchedRow.PreviousCmd != rowToInsert.PreviousCmd {
+		t.Errorf("Expected PreviousCmd to be %s, got %s", rowToInsert.PreviousCmd, fetchedRow.PreviousCmd)
+	}
+	if fetchedRow.CurrentCmd != rowToInsert.CurrentCmd {
+		t.Errorf("Expected CurrentCmd to be %s, got %s", rowToInsert.CurrentCmd, fetchedRow.CurrentCmd)
+	}
+	if fetchedRow.EventCounter != rowToInsert.EventCounter {
+		t.Errorf("Expected EventCounter to be %d, got %d", rowToInsert.EventCounter, fetchedRow.EventCounter)
+	}
+}
+
+func TestInsertDuplicateRow(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+
+	rowToInsert := Row{
+		Cwd:          "/tmp",
+		PreviousCmd:  "ls -l",
+		CurrentCmd:   "cat file.txt",
+		EventCounter: 123,
+		LastModified: time.Now(),
+	}
+
+	if err := queries.InsertRow(ctx, rowToInsert); err != nil {
+		t.Fatalf("Failed to insert first row: %v", err)
+	}
+
+	// Create a new row with the same primary key but different non-primary key data
+
+	duplicateRow := Row{
+		Cwd:          rowToInsert.Cwd,
+		PreviousCmd:  rowToInsert.PreviousCmd,
+		CurrentCmd:   rowToInsert.CurrentCmd,
+		EventCounter: 456,                         // Different event counter
+		LastModified: time.Now().Add(time.Second), // Different timestamp
+	}
+
+	if err := queries.InsertRow(ctx, duplicateRow); err == nil {
+		t.Fatal("Expected error when inserting row with duplicate primary key, but got nil")
+	}
+}
+
+func TestGetRow(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+
+	// 1. Test getting a non-existent row
+	_, err := queries.GetRow(ctx, "non-existent", "non-existent", "non-existent")
+	if err == nil {
+		t.Fatal("Expected an error when getting a non-existent row, but got nil")
+	}
+	if err != sql.ErrNoRows {
+		t.Fatalf("Expected sql.ErrNoRows, but got %v", err)
+	}
+
+	// 2. Test getting an existing row
+
+	rowToInsert := Row{
+		Cwd:          "/tmp",
+		PreviousCmd:  "ls -l",
+		CurrentCmd:   "cat file.txt",
+		EventCounter: 123,
+		LastModified: time.Now().UTC().Truncate(time.Second), // Truncate for reliable comparison
+	}
+
+	if err := queries.InsertRow(ctx, rowToInsert); err != nil {
+		t.Fatalf("Failed to insert row for testing GetRow: %v", err)
+	}
+
+	fetchedRow, err := queries.GetRow(ctx, rowToInsert.Cwd, rowToInsert.PreviousCmd, rowToInsert.CurrentCmd)
+	if err != nil {
+		t.Fatalf("Expected no error when getting an existing row, but got: %v", err)
+	}
+
+	// Compare the fields
+	if fetchedRow.Cwd != rowToInsert.Cwd {
+		t.Errorf("Expected Cwd to be %s, got %s", rowToInsert.Cwd, fetchedRow.Cwd)
+	}
+	if fetchedRow.PreviousCmd != rowToInsert.PreviousCmd {
+		t.Errorf("Expected PreviousCmd to be %s, got %s", rowToInsert.PreviousCmd, fetchedRow.PreviousCmd)
+	}
+	if fetchedRow.CurrentCmd != rowToInsert.CurrentCmd {
+		t.Errorf("Expected CurrentCmd to be %s, got %s", rowToInsert.CurrentCmd, fetchedRow.CurrentCmd)
+	}
+	if fetchedRow.EventCounter != rowToInsert.EventCounter {
+		t.Errorf("Expected EventCounter to be %d, got %d", rowToInsert.EventCounter, fetchedRow.EventCounter)
+	}
+	if !fetchedRow.LastModified.UTC().Truncate(time.Second).Equal(rowToInsert.LastModified) {
+		t.Errorf("Expected LastModified to be %v, got %v", rowToInsert.LastModified, fetchedRow.LastModified)
+	}
+}
+
+func TestUpdateRow(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+
+	// 1. Insert a row to be updated
+
+	rowToInsert := Row{
+		Cwd:          "/tmp",
+		PreviousCmd:  "ls -l",
+		CurrentCmd:   "cat file.txt",
+		EventCounter: 123,
+		LastModified: time.Now().UTC().Truncate(time.Second),
+	}
+	if err := queries.InsertRow(ctx, rowToInsert); err != nil {
+		t.Fatalf("Failed to insert initial row: %v", err)
+	}
+
+	// 2. Update the row with new data
+
+	updatedRow := Row{
+		Cwd:          rowToInsert.Cwd,
+		PreviousCmd:  rowToInsert.PreviousCmd,
+		CurrentCmd:   rowToInsert.CurrentCmd,
+		EventCounter: 456,
+		LastModified: time.Now().UTC().Truncate(time.Second).Add(time.Hour),
+	}
+	if err := queries.UpdateRow(ctx, updatedRow); err != nil {
+		t.Fatalf("Failed to update row: %v", err)
+	}
+
+	// 3. Get the row again and verify the changes
+
+	fetchedRow, err := queries.GetRow(ctx, rowToInsert.Cwd, rowToInsert.PreviousCmd, rowToInsert.CurrentCmd)
+	if err != nil {
+		t.Fatalf("Failed to get updated row: %v", err)
+	}
+
+	if fetchedRow.EventCounter != updatedRow.EventCounter {
+		t.Errorf("Expected EventCounter to be %d, got %d", updatedRow.EventCounter, fetchedRow.EventCounter)
+	}
+
+	if !fetchedRow.LastModified.Equal(updatedRow.LastModified) {
+		t.Errorf("Expected LastModified to be %v, got %v", updatedRow.LastModified, fetchedRow.LastModified)
+	}
+}
+
+func TestInferCurrentCmd(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+
+	// 1. Setup data
+	var allRows []Row
+	// Create and add some noise data
+	for i := 0; i < 50; i++ {
+		noiseRow := Row{
+			Cwd:          fmt.Sprintf("/tmp/noise/%d", i),
+			PreviousCmd:  fmt.Sprintf("noise_prev_%d", i),
+			CurrentCmd:   fmt.Sprintf("noise_curr_%d", i),
+			EventCounter: rand.Intn(1000),
+			LastModified: time.Now(),
+		}
+		allRows = append(allRows, noiseRow)
+	}
+
+	// Create and add the rows we care about
+	targetCwd := "/home/user/project"
+	targetPrevCmd := "git status"
+	var expectedCmds []string
+	for i := 0; i < 10; i++ {
+		row := Row{
+			Cwd:          targetCwd,
+			PreviousCmd:  targetPrevCmd,
+			CurrentCmd:   fmt.Sprintf("git add file%d.txt", i),
+			EventCounter: 100 - i, // Higher counter for earlier commands in the list
+			LastModified: time.Now(),
+		}
+		allRows = append(allRows, row)
+		expectedCmds = append(expectedCmds, row.CurrentCmd)
+	}
+
+	// Shuffle and insert all rows together
+	rand.Shuffle(len(allRows), func(i, j int) {
+		allRows[i], allRows[j] = allRows[j], allRows[i]
+	})
+
+	for _, row := range allRows {
+		if err := queries.InsertRow(ctx, row); err != nil {
+			t.Fatalf("Failed to insert row: %v", err)
+		}
+	}
+
+	// 2. Infer the commands
+	inferredCmds, err := queries.InferCurrentCmd(ctx, targetCwd, targetPrevCmd)
+	if err != nil {
+		t.Fatalf("InferCurrentCmd failed: %v", err)
+	}
+
+	// 3. Verify the result
+	if !slices.Equal(inferredCmds, expectedCmds) {
+		t.Errorf("Inferred commands do not match expected commands.\nExpected: %v\nGot:      %v", expectedCmds, inferredCmds)
+	}
+}
+
+func TestInferCurrentCmdNoResults(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+
+	// Call InferCurrentCmd on an empty database
+	result, err := queries.InferCurrentCmd(ctx, "some_cwd", "some_prev_cmd")
+	if err != nil {
+		t.Fatalf("Expected no error, but got %v", err)
+	}
+
+	if result == nil {
+		t.Fatal("Expected an empty slice, but got nil")
+	}
+
+	if len(result) != 0 {
+		t.Errorf("Expected an empty slice, but got a slice with length %d", len(result))
 	}
 }
