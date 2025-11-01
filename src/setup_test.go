@@ -156,3 +156,24 @@ func TestCreateSettings_UserHomeDirError(t *testing.T) {
 		t.Errorf("Expected error message %q, got %q", expectedErr, err.Error())
 	}
 }
+
+func TestSettings_ToJSON(t *testing.T) {
+	settings := &Settings{
+		BayeshDir: "/path/to/bayesh",
+		DB:        "/path/to/bayesh/bayesh.db",
+	}
+
+	expectedJSON := `{
+  "bayesh_dir": "/path/to/bayesh",
+  "db": "/path/to/bayesh/bayesh.db"
+}`
+
+	jsonString, err := settings.ToJSON()
+	if err != nil {
+		t.Fatalf("ToJSON failed: %v", err)
+	}
+
+	if jsonString != expectedJSON {
+		t.Errorf("Expected JSON %s, got %s", expectedJSON, jsonString)
+	}
+}

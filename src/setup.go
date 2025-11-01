@@ -3,6 +3,7 @@ package bayesh
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"os"
 	"path/filepath"
@@ -11,8 +12,16 @@ import (
 const BayeshDirEnvVar = "BAYESH_DIR"
 
 type Settings struct {
-	BayeshDir string
-	DB        string
+	BayeshDir string `json:"bayesh_dir"`
+	DB        string `json:"db"`
+}
+
+func (s *Settings) ToJSON() (string, error) {
+	jsonBytes, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return "", err
+	}
+	return string(jsonBytes), nil
 }
 
 type FileSystem interface {
