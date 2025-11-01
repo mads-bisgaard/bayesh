@@ -8,3 +8,5 @@ require (
 )
 
 require github.com/google/uuid v1.6.0
+
+require github.com/urfave/cli/v3 v3.5.0 // indirect
