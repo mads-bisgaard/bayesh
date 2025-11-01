@@ -32,7 +32,7 @@ type FileSystem interface {
 	Create(name string) (*os.File, error)
 }
 
-func Initialize(context context.Context, fs FileSystem) (*Settings, error) {
+func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 	home, err := fs.UserHomeDir()
 	if err != nil {
 		return nil, err

@@ -37,7 +37,7 @@ func main() {
 				Name:  "settings",
 				Usage: "Print settings to stdout",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					settings, err := bayesh.Initialize(ctx, osFS{})
+					settings, err := bayesh.Setup(ctx, osFS{})
 					if err != nil {
 						return err
 					}
