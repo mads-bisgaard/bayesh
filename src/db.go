@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 )
 
@@ -104,6 +105,12 @@ func (q *Queries) InferCurrentCmd(ctx context.Context, cwd, previousCmd string) 
     FROM ` + eventsTable + `
     WHERE ` + colCwd + ` = ? AND ` + colPreviousCmd + ` = ?
     ORDER BY ` + colEventCounter + ` DESC`
+
+	slog.Debug("Inferring current command with",
+		"query", query,
+		"cwd", cwd,
+		"previousCmd", previousCmd,
+	)
 
 	rows, err := q.db.QueryContext(ctx, query, cwd, previousCmd)
 	if err != nil {

@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
+	"strings"
 
 	"github.com/urfave/cli/v3" // imports as package "cli"
 
 	bayesh "github.com/mads-bisgaard/bayesh/src"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type osFS struct{}
@@ -31,6 +35,8 @@ func (osFS) MkdirAll(path string, perm os.FileMode) error {
 
 func main() {
 	ctx := context.Background()
+	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
+	slog.SetDefault(slog.New(logHandler))
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
 			{
@@ -46,6 +52,42 @@ func main() {
 						return err
 					}
 					fmt.Println(jsonSettings)
+					return nil
+				},
+			},
+			{
+				Name:  "infer-cmd",
+				Usage: "Infer command",
+				Arguments: []cli.Argument{
+					&cli.StringArg{
+						Name: "cwd",
+					},
+					&cli.StringArg{
+						Name: "previous-cmd",
+					},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					settings, err := bayesh.Setup(ctx, osFS{})
+					if err != nil {
+						return err
+					}
+					previous_cmd := bayesh.ProcessCmd(osFS{}, cmd.StringArg("previous-cmd"))
+					cwd := cmd.StringArg("cwd")
+					db, err := sql.Open("sqlite3", settings.DB)
+					if err != nil {
+						return err
+					}
+					defer func() {
+						if err := db.Close(); err != nil {
+							log.Fatal("Failed to close DB:", err)
+						}
+					}()
+					queries := bayesh.New(db)
+					inferredCmd, err := queries.InferCurrentCmd(ctx, cwd, previous_cmd)
+					if err != nil {
+						return err
+					}
+					fmt.Println(strings.Join(inferredCmd, "\n"))
 					return nil
 				},
 			},
