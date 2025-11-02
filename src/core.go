@@ -74,7 +74,7 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
+		if err := tx.Rollback(); err != sql.ErrTxDone {
 			log.Println("Error rolling back transaction:", err)
 		}
 	}()

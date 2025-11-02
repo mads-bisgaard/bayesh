@@ -205,7 +205,7 @@ func TestGetRow(t *testing.T) {
 		PreviousCmd:  "ls -l",
 		CurrentCmd:   "cat file.txt",
 		EventCounter: 123,
-		LastModified: time.Now().UTC().Truncate(time.Second), // Truncate for reliable comparison
+		LastModified: time.Now().Truncate(time.Second), // Truncate for reliable comparison
 	}
 
 	if err := queries.InsertRow(ctx, rowToInsert); err != nil {
@@ -230,7 +230,7 @@ func TestGetRow(t *testing.T) {
 	if fetchedRow.EventCounter != rowToInsert.EventCounter {
 		t.Errorf("Expected EventCounter to be %d, got %d", rowToInsert.EventCounter, fetchedRow.EventCounter)
 	}
-	if !fetchedRow.LastModified.UTC().Truncate(time.Second).Equal(rowToInsert.LastModified) {
+	if !fetchedRow.LastModified.Truncate(time.Second).Equal(rowToInsert.LastModified) {
 		t.Errorf("Expected LastModified to be %v, got %v", rowToInsert.LastModified, fetchedRow.LastModified)
 	}
 }
@@ -246,7 +246,7 @@ func TestUpdateRow(t *testing.T) {
 		PreviousCmd:  "ls -l",
 		CurrentCmd:   "cat file.txt",
 		EventCounter: 123,
-		LastModified: time.Now().UTC().Truncate(time.Second),
+		LastModified: time.Now().Truncate(time.Second),
 	}
 	if err := queries.InsertRow(ctx, rowToInsert); err != nil {
 		t.Fatalf("Failed to insert initial row: %v", err)
@@ -259,7 +259,7 @@ func TestUpdateRow(t *testing.T) {
 		PreviousCmd:  rowToInsert.PreviousCmd,
 		CurrentCmd:   rowToInsert.CurrentCmd,
 		EventCounter: 456,
-		LastModified: time.Now().UTC().Truncate(time.Second).Add(time.Hour),
+		LastModified: time.Now().Truncate(time.Second).Add(time.Hour),
 	}
 	if err := queries.UpdateRow(ctx, updatedRow); err != nil {
 		t.Fatalf("Failed to update row: %v", err)
