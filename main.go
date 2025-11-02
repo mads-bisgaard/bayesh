@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"log/slog"
@@ -12,42 +11,28 @@ import (
 	"github.com/urfave/cli/v3" // imports as package "cli"
 
 	bayesh "github.com/mads-bisgaard/bayesh/src"
-	_ "github.com/mattn/go-sqlite3"
 )
-
-type osFS struct{}
-
-func (osFS) Stat(name string) (os.FileInfo, error) {
-	return os.Stat(name)
-}
-func (osFS) Create(name string) (*os.File, error) {
-	return os.Create(name)
-}
-func (osFS) UserHomeDir() (string, error) {
-	return os.UserHomeDir()
-}
-func (osFS) Getenv(key string) string {
-	return os.Getenv(key)
-}
-func (osFS) MkdirAll(path string, perm os.FileMode) error {
-	return os.MkdirAll(path, perm)
-}
 
 func main() {
 	ctx := context.Background()
+	settings, err := bayesh.Setup(ctx, bayesh.OsFs{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	core, err := bayesh.NewCore(ctx, settings)
+	if err != nil {
+		log.Fatal(err)
+	}
 	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})
 	slog.SetDefault(slog.New(logHandler))
+
 	cmd := &cli.Command{
 		Commands: []*cli.Command{
 			{
 				Name:  "settings",
 				Usage: "Print settings to stdout",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					settings, err := bayesh.Setup(ctx, osFS{})
-					if err != nil {
-						return err
-					}
-					jsonSettings, err := settings.ToJSON()
+					jsonSettings, err := core.Settings.ToJSON()
 					if err != nil {
 						return err
 					}
@@ -67,28 +52,35 @@ func main() {
 					},
 				},
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					settings, err := bayesh.Setup(ctx, osFS{})
-					if err != nil {
-						return err
-					}
-					previous_cmd := bayesh.ProcessCmd(osFS{}, cmd.StringArg("previous-cmd"))
+					previous_cmd := cmd.StringArg("previous-cmd")
 					cwd := cmd.StringArg("cwd")
-					db, err := sql.Open("sqlite3", settings.DB)
+					inferredCommands, err := core.InferCommands(ctx, cwd, previous_cmd)
 					if err != nil {
 						return err
 					}
-					defer func() {
-						if err := db.Close(); err != nil {
-							log.Fatal("Failed to close DB:", err)
-						}
-					}()
-					queries := bayesh.New(db)
-					inferredCmd, err := queries.InferCurrentCmd(ctx, cwd, previous_cmd)
-					if err != nil {
-						return err
-					}
-					fmt.Println(strings.Join(inferredCmd, "\n"))
+					fmt.Println(strings.Join(inferredCommands, "\n"))
 					return nil
+				},
+			},
+			{
+				Name:  "record-event",
+				Usage: "Record a command event",
+				Arguments: []cli.Argument{
+					&cli.StringArg{
+						Name: "cwd",
+					},
+					&cli.StringArg{
+						Name: "previous-cmd",
+					},
+					&cli.StringArg{
+						Name: "current-cmd",
+					},
+				},
+				Action: func(ctx context.Context, cmd *cli.Command) error {
+					cwd := cmd.StringArg("cwd")
+					previousCmd := cmd.StringArg("previous-cmd")
+					currentCmd := cmd.StringArg("current-cmd")
+					return core.RecordEvent(ctx, cwd, previousCmd, currentCmd)
 				},
 			},
 		},
