@@ -4,16 +4,19 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 const BayeshDirEnvVar = "BAYESH_DIR"
+const LogLevelEnvVar = "BAYESH_LOG_LEVEL"
 
 type Settings struct {
-	BayeshDir string `json:"bayesh_dir"`
-	DB        string `json:"db"`
+	BayeshDir string     `json:"BAYESH_DIR"`
+	DB        string     `json:"BAYESH_DB"`
+	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL"`
 }
 
 func (s *Settings) ToJSON() (string, error) {
@@ -33,6 +36,19 @@ type FileSystem interface {
 }
 
 func Setup(context context.Context, fs FileSystem) (*Settings, error) {
+	logLevel := slog.LevelError
+	logLevelStr := strings.ToLower(fs.Getenv(LogLevelEnvVar))
+	switch logLevelStr {
+	case "debug":
+		logLevel = slog.LevelDebug
+	case "info":
+		logLevel = slog.LevelInfo
+	case "warn":
+		logLevel = slog.LevelWarn
+	case "error":
+		logLevel = slog.LevelError
+	}
+
 	home, err := fs.UserHomeDir()
 	if err != nil {
 		return nil, err
@@ -57,7 +73,7 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 		}
 		defer func() {
 			if err := db.Close(); err != nil {
-				log.Fatal("Failed to close DB:", err)
+				slog.Error("Failed to close DB:", "error", err)
 			}
 		}()
 		queries := New(db)
@@ -68,5 +84,6 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 	return &Settings{
 		BayeshDir: absDir,
 		DB:        dbPath,
+		LogLevel:  logLevel,
 	}, nil
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"log/slog"
 	"time"
 )
@@ -118,7 +117,7 @@ func (q *Queries) InferCurrentCmd(ctx context.Context, cwd, previousCmd string) 
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			log.Fatal("Failed to close rows:", err)
+			slog.Error("Failed to close rows:", "error", err)
 		}
 	}()
 

@@ -3,7 +3,7 @@ package bayesh
 import (
 	"context"
 	"database/sql"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -45,7 +45,7 @@ func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Println("Error closing database:", err)
+			slog.Error("Error closing database:", "error", err)
 		}
 	}()
 	queries := New(db)
@@ -65,7 +65,7 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 	}
 	defer func() {
 		if err := db.Close(); err != nil {
-			log.Println("Error closing database:", err)
+			slog.Error("Error closing database:", "error", err)
 		}
 	}()
 
@@ -75,7 +75,7 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 	}
 	defer func() {
 		if err := tx.Rollback(); err != sql.ErrTxDone {
-			log.Println("Error rolling back transaction:", err)
+			slog.Error("Error rolling back transaction:", "error", err)
 		}
 	}()
 
