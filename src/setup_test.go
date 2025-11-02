@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -161,11 +162,13 @@ func TestSettings_ToJSON(t *testing.T) {
 	settings := &Settings{
 		BayeshDir: "/path/to/bayesh",
 		DB:        "/path/to/bayesh/bayesh.db",
+		LogLevel:  slog.LevelError,
 	}
 
 	expectedJSON := `{
-  "bayesh_dir": "/path/to/bayesh",
-  "db": "/path/to/bayesh/bayesh.db"
+  "BAYESH_DIR": "/path/to/bayesh",
+  "BAYESH_DB": "/path/to/bayesh/bayesh.db",
+  "BAYESH_LOG_LEVEL": "ERROR"
 }`
 
 	jsonString, err := settings.ToJSON()
