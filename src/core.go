@@ -3,6 +3,7 @@ package bayesh
 import (
 	"context"
 	"database/sql"
+	"log"
 	"log/slog"
 	"os"
 	"time"
@@ -75,7 +76,7 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 	}
 	defer func() {
 		if err := tx.Rollback(); err != sql.ErrTxDone {
-			slog.Error("Error rolling back transaction:", "error", err)
+			log.Fatalf("Error rolling back transaction: %v", err)
 		}
 	}()
 

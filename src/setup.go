@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -73,7 +74,7 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 		}
 		defer func() {
 			if err := db.Close(); err != nil {
-				slog.Error("Failed to close DB:", "error", err)
+				log.Fatalf("Failed to close DB: %v", err)
 			}
 		}()
 		queries := New(db)
