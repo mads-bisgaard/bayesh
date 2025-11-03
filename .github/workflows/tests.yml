@@ -19,11 +19,11 @@ jobs:
     env:
       CGO_ENABLED: 1
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
       - name: Install Go
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
-      - name: Check out code
-        uses: actions/checkout@v4
       - name: Run tests
         run: go test ./src -v
