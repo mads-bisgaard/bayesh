@@ -58,7 +58,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					fmt.Println(strings.Join(inferredCommands, "\n"))
+					fmt.Println(bayesh.AnsiColorTokens(strings.Join(inferredCommands, "\n")))
 					return nil
 				},
 			},
