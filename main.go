@@ -19,14 +19,16 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
+	slog.SetDefault(slog.New(logHandler))
 	core, err := bayesh.NewCore(ctx, settings)
 	if err != nil {
 		log.Fatal(err)
 	}
-	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
-	slog.SetDefault(slog.New(logHandler))
 
 	cmd := &cli.Command{
+		Name:  "bayesh",
+		Usage: "CLI for integrating Bayesh into your shell",
 		Commands: []*cli.Command{
 			{
 				Name:  "settings",
