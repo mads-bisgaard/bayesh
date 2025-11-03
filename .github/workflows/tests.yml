@@ -10,7 +10,7 @@ jobs:
     container: madsbis/bayesh-bats-testing:v2
     steps:
       - name: Check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: Test
         run: bats --print-output-on-failure tests
   go-tests:
@@ -19,11 +19,11 @@ jobs:
     env:
       CGO_ENABLED: 1
     steps:
-      - name: Install the latest version of Go
-        uses: actions/setup-go@v2
+      - name: Install Go
+        uses: actions/setup-go@v5
         with:
-          go-version: '>=1.24.3'
+          go-version-file: 'go.mod'
       - name: Check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: Run tests
         run: go test ./src -v
