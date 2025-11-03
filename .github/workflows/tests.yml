@@ -13,19 +13,17 @@ jobs:
         uses: actions/checkout@v1
       - name: Test
         run: bats --print-output-on-failure tests
-  pytest-tests:
-    name: Pytest tests
+  go-tests:
+    name: Go tests
     runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 1
     steps:
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
+      - name: Install the latest version of Go
+        uses: actions/setup-go@v2
         with:
-          version: "latest"    
+          go-version: "latest"
       - name: Check out code
         uses: actions/checkout@v1
       - name: Run tests
-        run: |
-          uv venv .venv
-          source .venv/bin/activate
-          uv pip install -r dev-requirements.txt
-          uv run pytest tests
+        run: go test ./src -v
