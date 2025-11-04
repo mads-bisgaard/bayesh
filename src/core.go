@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"log/slog"
 	"os"
 	"time"
 
@@ -31,25 +30,31 @@ func (OsFs) MkdirAll(path string, perm os.FileMode) error {
 
 type Core struct {
 	Settings *Settings
+	db       *sql.DB
 }
 
 func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
-	return &Core{
-		Settings: settings,
-	}, nil
-}
-
-func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
-	db, err := sql.Open("sqlite3", c.Settings.DB)
+	db, err := sql.Open("sqlite3", settings.DB)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			slog.Error("Error closing database:", "error", err)
-		}
-	}()
-	queries := New(db)
+
+	return &Core{
+		Settings: settings,
+		db:       db,
+	}, nil
+}
+
+// Close should be called to gracefully close the database connection.
+func (c *Core) Close() error {
+	if c != nil && c.db != nil {
+		return c.db.Close()
+	}
+	return nil
+}
+
+func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
+	queries := New(c.db)
 	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
 	inferredCmds, err := queries.InferCurrentCmd(ctx, cwd, processedPreviousCmd)
 	if err != nil {
@@ -60,17 +65,7 @@ func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string
 }
 
 func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, currentCmd string) error {
-	db, err := sql.Open("sqlite3", c.Settings.DB)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			slog.Error("Error closing database:", "error", err)
-		}
-	}()
-
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err := c.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
@@ -80,7 +75,7 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 		}
 	}()
 
-	queries := New(db).WithTx(tx)
+	queries := New(c.db).WithTx(tx)
 	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
 	processedCurrentCmd := ProcessCmd(OsFs{}, currentCmd)
 

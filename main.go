@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"os"
 	"strings"
@@ -17,14 +16,22 @@ func main() {
 	ctx := context.Background()
 	settings, err := bayesh.Setup(ctx, bayesh.OsFs{})
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "Error: Failed during initial setup: %v\n", err)
+		os.Exit(1)
 	}
 	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
 	slog.SetDefault(slog.New(logHandler))
 	core, err := bayesh.NewCore(ctx, settings)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("Failed to create core", "error", err)
+		os.Exit(1)
 	}
+	defer func() {
+		if err := core.Close(); err != nil {
+			slog.Error("Failed to close core", "error", err)
+			os.Exit(1)
+		}
+	}()
 
 	cmd := &cli.Command{
 		Name:  "bayesh",
@@ -88,7 +95,8 @@ func main() {
 		},
 	}
 	if err := cmd.Run(ctx, os.Args); err != nil {
-		log.Fatal(err)
+		slog.Error("CLI command failed", "error", err)
+		os.Exit(1)
 	}
 
 }
