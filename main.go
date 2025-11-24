@@ -12,6 +12,9 @@ import (
 	bayesh "github.com/mads-bisgaard/bayesh/src"
 )
 
+// version is set at build time using ldflags.
+var version = "development"
+
 func main() {
 	ctx := context.Background()
 	settings, err := bayesh.Setup(ctx, bayesh.OsFs{})
@@ -34,8 +37,9 @@ func main() {
 	}()
 
 	cmd := &cli.Command{
-		Name:  "bayesh",
-		Usage: "CLI for integrating Bayesh into your shell",
+		Name:    "bayesh",
+		Usage:   "CLI for integrating Bayesh into your shell",
+		Version: version,
 		Commands: []*cli.Command{
 			{
 				Name:  "settings",
