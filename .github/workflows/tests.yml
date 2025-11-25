@@ -55,5 +55,4 @@ jobs:
         permissions: write
         if: github.ref_type == 'tag'
         with:
-          files: |
-            build/*
+          files: build/**
