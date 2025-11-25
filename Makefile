@@ -13,5 +13,8 @@ bats-tests:
 VERSION := $(shell git describe --tags --always --dirty)
 .PHONY: build
 build:
-	mkdir -p build
-	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh ./main.go
+	mkdir -p build/bin build/shell
+	cp -r bin/. build/bin/
+	cp -r shell/. build/shell/
+	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bin/bayesh ./main.go
+	
