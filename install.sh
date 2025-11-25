@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+set -e
 set -o pipefail
 
 DIR=$(realpath "$HOME/.bayesh")
@@ -66,23 +67,31 @@ _check_dependency "grep"
 _check_dependency "curl"
 _check_dependency "jq"
 
+echo "- creating installation directory"
+mkdir -p "${DIR}"
+
 echo "- downloading latest bayesh binary from github"
-asset_url=$(curl -s https://api.github.com/repos/mads-bisgaard/bayesh/releases/latest | jq -r '.assets_url')
-curl -L "${asset_url}" -o "${DIR}"
-chmod +x "${DIR}/bin/bayesh"
-_check_exists "${DIR}/bin/bayesh"
+curl -s https://api.github.com/repos/mads-bisgaard/bayesh/releases/latest | \
+jq -r '.assets[] | "\(.name) \(.browser_download_url)"' | \
+while read -r name url; do
+    echo "  - downloading ${name}"
+    curl -sSL "${url}" -o "${DIR}/${name}"
+    chmod +x "${DIR}/${name}"
+done
+
+_check_exists "${DIR}/bayesh"
 
 _rcfile="$HOME/.${shell}rc"
 
 if "$automatic_confirm" || allow "Add Bayesh to PATH (required for Bayesh to be functional)?"; then
     echo "- exporting PATH"
     # shellcheck disable=SC2016
-    echo 'export PATH="$PATH:'"${DIR}/bin"'"' >> "$_rcfile"
+    echo 'export PATH="$PATH:'"${DIR}"'"' >> "$_rcfile"
 fi
 
 if "$automatic_confirm" || allow "Add $shell integration (required for Bayesh to be functional)?"; then
     echo "- sourcing bayesh.${shell}"
-    echo "source ${DIR}/shell/bayesh.${shell}" >> "$_rcfile"
+    echo "source ${DIR}/bayesh.${shell}" >> "$_rcfile"
 fi
 
 echo "- done installing Bayesh"
