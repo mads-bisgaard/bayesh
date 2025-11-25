@@ -2,6 +2,9 @@ name: "CI"
 on: 
   pull_request:
     branches: ["main"]
+  push:
+    tags:
+      - '*'
 
 jobs:
   bats-tests:
@@ -10,22 +13,40 @@ jobs:
     container: madsbis/bayesh-bats-testing:v2
     steps:
       - name: Check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: Test
         run: bats --print-output-on-failure tests
-  pytest-tests:
-    name: Pytest tests
+  go-tests:
+    name: Go tests
     runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 1
     steps:
-      - name: Install the latest version of uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "latest"    
       - name: Check out code
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
       - name: Run tests
-        run: |
-          uv venv .venv
-          source .venv/bin/activate
-          uv pip install -r dev-requirements.txt
-          uv run pytest tests
+        run: go test ./src -v
+  build:
+    name: Build binary
+    runs-on: ubuntu-latest
+    needs: [bats-tests, go-tests]
+    env:
+      CGO_ENABLED: 1
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+      - name: Build
+        run: make build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: build/
