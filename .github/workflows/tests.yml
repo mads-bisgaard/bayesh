@@ -44,14 +44,14 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: Build
-        run: make build
+        run: make release
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build
-          path: build/
+          name: dist
+          path: dist/
       - name: Release
         uses: softprops/action-gh-release@v2
         if: github.ref_type == 'tag'
         with:
-          files: build/**
+          files: dist/**
