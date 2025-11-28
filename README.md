@@ -4,7 +4,7 @@
 ![Bayesh Demo](assets/demo.gif)
 
 ## What is Bayesh?  
-Think of Bayesh as the auto-suggestion feature on your phone when writing messages — but for your terminal: It suggests shell commands for you in real time. Bayesh supports Bash and Zsh shells. Zsh in tmux is where it really shines ☀️.
+Think of Bayesh as the auto-suggestion feature on your phone when writing messages — but for your terminal: It suggests shell commands for you in real time. Bayesh supports Bash and Zsh shells. Zsh in tmux is where Bayesh really shines ☀️.
 
 ## Installation 
 
