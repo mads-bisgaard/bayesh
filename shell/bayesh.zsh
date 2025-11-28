@@ -53,7 +53,7 @@ function zle-line-init() {
         mkfifo "$fifo"
         (
             bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}" > "$fifo" &
-            echo "change-query()" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+            echo "search()" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
             echo "reload(cat $fifo; rm $fifo)" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
         )
     fi
@@ -63,7 +63,7 @@ zle -N zle-line-init
 
 function zle-line-pre-redraw() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
-        ( echo "change-query("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
+        ( echo "search("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi
 }
 zle -N zle-line-pre-redraw
