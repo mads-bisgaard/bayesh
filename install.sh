@@ -34,6 +34,7 @@ _check_dependency "tail"
 _check_dependency "echo"
 _check_dependency "grep"
 _check_dependency "curl"
+_check_dependency "jq"
 _check_dependency "tar"
 
 echo "- creating installation directory"
