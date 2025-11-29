@@ -4,7 +4,7 @@
 ![Bayesh Demo](assets/demo.gif)
 
 ## What is Bayesh?  
-Think of Bayesh as the auto-suggestion feature on your phone when writing messages — but for your terminal! It suggests shell commands for you in real time based on your shell history. Bayesh is lightening fast ⚡ (written in Go) and powered by [fzf](https://github.com/junegunn/fzf) for great UX. Bayesh supports Bash and Zsh shells. Zsh in [tmux](https://github.com/tmux/tmux) is where Bayesh really shines ☀️.
+Bayesh is the auto-suggestion feature on your phone when you write messages — but for your terminal! Bayesh suggests shell commands to you in real time, based on your shell history. Bayesh is lightening fast ⚡ (written in Go) and powered by [fzf](https://github.com/junegunn/fzf) for great UX. Bayesh supports Bash and Zsh shells. Zsh in [tmux](https://github.com/tmux/tmux) is where Bayesh really shines ☀️.
 
 ## Installation 
 
@@ -23,7 +23,6 @@ Think of Bayesh as the auto-suggestion feature on your phone when writing messag
    ```bash
    curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | bash -s bash
    ```
----
 
 ## How to Use Bayesh 
 Bayesh is triggered by hitting `Ctrl-e` in your shell.  
@@ -31,6 +30,8 @@ Bayesh is triggered by hitting `Ctrl-e` in your shell.
 When using Zsh shell in tmux you
 - toggle the fzf pane with `Ctrl-<up arrow>` and `Ctrl-<down arrow>`.  
 - select a suggestion with `Ctrl-<right arrow>`.  
+
+At first Bayesh has a short "learning phase" before it will start suggesting you commands.
 
 ## Gotchas 
 Bayesh relies on your shell’s history behavior. To get the best experience:  
