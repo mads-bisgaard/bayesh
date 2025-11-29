@@ -72,4 +72,4 @@ Feel free to open an issue if you have questions or need guidance. Let's make Ba
 
 
 ## Why the Name "Bayesh"? 👀  
-**Bayes**ian statistics applied to your ba**sh** history.
+**Bayes**ian statistics applied to your Z**sh** history.
