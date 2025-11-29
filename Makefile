@@ -4,13 +4,15 @@
 clean:
 	git clean -fd
 
-.PHONY: install
-install:
-	uv pip install -e .[dev]
-
 .PHONY: bats-tests
 bats-tests:
-	docker run -v "$(shell pwd):/code" madsbis/bayesh-bats-testing:v2 --print-output-on-failure tests
+	docker run \
+		--user $(id -u):$(id -g) \
+		-v "$(shell pwd):/code" \
+		madsbis/bayesh-bats-testing:v5 \
+		--print-output-on-failure \
+		--verbose-run \
+		tests
 	
 # VERSION is dynamically set from git. It will be vX.Y.Z for a tag,
 # or vX.Y.Z-<commits>-g<hash> for a dev build.

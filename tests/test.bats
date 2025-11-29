@@ -1,30 +1,16 @@
 #!/usr/bin/env bash
 # tests must be run from the root directory of the repo
 bats_require_minimum_version 1.5.0
-_repo=$(pwd)
-_repo_copy=$(mktemp -d)
+repo=$(pwd)
 
 setup_file() {
-    cp -r "${_repo}" "${_repo_copy}" || exit 1
-    cd "${_repo_copy}" || exit 1
-    cd "$(ls)" || exit 1
-    set -o vi
-    bash ./install.sh bash -y
-    # shellcheck disable=SC1090
-    source ~/.bashrc
-}
-
-teardown_file() {
-    cd "${_repo}" || exit 1
-    rm -rf "${_repo_copy}"
-    rm -f /usr/local/bin/bayesh
-    run -127 bayesh --help
-    [ "$status" -eq 127 ] 
+    export PATH="$PATH:'${repo}/build'"
+    source "${repo}/build/bayesh.bash"
 }
 
 setup() {
-    bats_load_library bats-support
-    bats_load_library bats-assert
+    load /batslib/bats-support/load
+    load /batslib/bats-assert/load
     BAYESH_DIR=$(mktemp -d)
     export BAYESH_DIR
 }
