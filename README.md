@@ -13,6 +13,7 @@ Think of Bayesh as the auto-suggestion feature on your phone when writing messag
    - [fzf](https://github.com/junegunn/fzf)  
    - [jq](https://jqlang.org/)  
    - [tmux](https://github.com/tmux/tmux) (optional, but highly recommmended)
+   
 
 2. **Install Bayesh:**  
    To install Bayesh into your Zsh shell, run  
