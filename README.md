@@ -1,5 +1,5 @@
 # Bayesh
-**Make more of your shell history!**
+**Make better use of your shell history!**
 
 ![Bayesh Demo](assets/demo.gif)
 
@@ -23,6 +23,8 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
    ```bash
    curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | bash -s bash
    ```
+3. **Go!**  
+   Close and open your shell to ensure Bayesh is visible. Run `bayesh --version` to double check. Hit `Ctrl-e` to open bayesh.
 
 ## How to Use Bayesh 
 Bayesh is triggered by hitting `Ctrl-e` in your shell.  
@@ -33,24 +35,8 @@ When using Zsh shell in tmux you
 
 At first Bayesh has a short "learning phase" before it will start suggesting you commands.
 
-## Gotchas 
-Bayesh relies on your shell’s history behavior. To get the best experience:  
 
-- **For Bash Users:**  
-  Add this to your `~/.bashrc`:  
-  ```bash
-  export HISTCONTROL=
-  ```  
 
-- **For Zsh Users:**  
-  Add this to your `~/.zshrc`:  
-  ```bash
-  unsetopt HIST_IGNORE_DUPS
-  ```  
-
-Test your setup by running `history -1` twice. If the two lines are different (timestamps or event numbers), you’re good to go!  
-
----
 
 ## Inspirations 
 Bayesh draws inspiration from:  
@@ -58,7 +44,6 @@ Bayesh draws inspiration from:
 - The incredible [fzf](https://github.com/junegunn/fzf)  
 - [Peter Norvig](https://norvig.com/)'s legendary [blogpost](https://norvig.com/spell-correct.html) on building a spelling corrector  
 
----
 
 ## Contributions 
 
@@ -74,3 +59,23 @@ Feel free to open an issue if you have questions or need guidance. Let's make Ba
 
 ## Why the Name "Bayesh"? 👀  
 **Bayes**ian statistics applied to your Z**sh** history.
+
+
+## Gotchas 
+- Bayesh relies on your shell’s history behavior. To get the best experience:  
+
+  - **For Bash Users:**  
+    Add this to your `~/.bashrc`:  
+    ```bash
+    export HISTCONTROL=
+    ```  
+
+  - **For Zsh Users:**  
+    Add this to your `~/.zshrc`:  
+    ```bash
+    unsetopt HIST_IGNORE_DUPS
+    ```  
+
+  Test your setup by running `history -1` twice. If the two lines are different (timestamps or event numbers), you’re good to go!  
+
+-  Bayesh is built with `CGO_ENABLED=1`, so it relies on glibc being available at run time. 
