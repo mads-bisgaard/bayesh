@@ -8,8 +8,6 @@ setup_file() {
     [ -d "${repo}/build" ] || exit 1
     [ -f "${repo}/build/bayesh" ] || exit 1
     export PATH="$PATH:${repo}/build"
-    #shellcheck source=./shell/bayesh.bash
-    source "${repo}/build/bayesh.bash"
 }
 
 setup() {
@@ -38,7 +36,8 @@ teardown() {
 }
 
 @test "test only record new command" {
-    source shell/bayesh.bash
+    #shellcheck source=./shell/bayesh.bash
+    source "${repo}/build/bayesh.bash"
     command="random command ${RANDOM}"
     db=$(bayesh settings | jq -r .BAYESH_DB)
     
@@ -89,7 +88,8 @@ teardown() {
 }
 
 @test "test inference function (no tokens)" {
-    source shell/bayesh.bash
+    #shellcheck source=./shell/bayesh.bash
+    source "${repo}/build/bayesh.bash"
 
     db=$(bayesh settings | jq -r .BAYESH_DB)
 
