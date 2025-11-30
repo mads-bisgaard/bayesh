@@ -40,10 +40,23 @@ _check_dependency "tar"
 echo "- creating installation directory"
 mkdir -p "${DIR}"
 
-echo "- downloading latest bayesh binary from github"
-url=$(curl -s https://api.github.com/repos/mads-bisgaard/bayesh/releases/latest | jq -r '.assets[] | select(.name | endswith(".tar.gz")) | .browser_download_url')
+echo "- detecting OS and architecture"
+os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m)
 
-_check_exists "${DIR}"
+case "$arch" in
+    x86_64)
+        arch="amd64"
+        ;;
+    *)
+        echo "Unsupported architecture: $arch. Please file an issue on https://github.com/mads-bisgaard/bayesh and I will add support for your architecture."
+        exit 1
+        ;;
+esac
+
+echo "- downloading latest bayesh binary from github"
+search_pattern="${os_name}-${arch}"
+url=$(curl -s https://api.github.com/repos/mads-bisgaard/bayesh/releases/latest | grep "browser_download_url.*${search_pattern}.*\.tar\.gz" | sed -E 's/.*"browser_download_url": "(.*)".*/\1/')
 curl -sSL "${url}" | tar -xz -C "${DIR}"
 _check_exists "${DIR}/bayesh"
 

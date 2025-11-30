@@ -28,6 +28,7 @@ start() {
         '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
         "--scheme=history "
         "--no-sort "
+        "--no-input "
         "--exact "
         "--ansi "
         "--border=none "
@@ -40,7 +41,7 @@ start() {
         "--border=rounded"
     )
 
-    tmux split-window -l 6 -d "${script[*]}"
+    tmux split-window -l 5 -d "${script[*]}"
 
     jq -c . < "$fifo"
     rm "$fifo"
