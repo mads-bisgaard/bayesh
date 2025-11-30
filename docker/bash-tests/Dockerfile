@@ -2,17 +2,16 @@ FROM debian:stable-slim AS base
 
 RUN apt-get update; \
     apt-get install -y \
-    git \
     bats \
-    python3 \
-    sqlite3 \
-    jq \
-    inotify-tools \
-    fzf \
-    sudo \
-    grep \
     curl \
-    jq
+    fzf \
+    git \
+    grep \
+    inotify-tools \
+    jq \
+    make \
+    sqlite3 \
+    sudo
 
 RUN git clone https://github.com/ztombol/bats-support batslib/bats-support && \
     git clone https://github.com/ztombol/bats-assert batslib/bats-assert
