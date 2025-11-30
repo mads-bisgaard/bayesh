@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: ["main"]
   push:
+    branches: ["main"]
     tags:
       - 'v*'
 
@@ -61,7 +62,9 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: Run tests
-        run: go test ./src -v
+        run: go test -v -coverprofile=coverage.out ./src 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4        
   release:
     name: Release binary
     runs-on: ubuntu-latest

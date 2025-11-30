@@ -1,4 +1,6 @@
 # Bayesh
+[![codecov](https://codecov.io/gh/mads-bisgaard/bayesh/graph/badge.svg)](https://app.codecov.io/gh/mads-bisgaard/bayesh)
+
 **Make better use of your shell history!**
 
 ![Bayesh Demo](assets/demo.gif)
