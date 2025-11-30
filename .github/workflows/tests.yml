@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: ["main"]
   push:
-    branches: ["main"]
+    branches: ["main", "add-test-coverage-to-readme"]
     tags:
       - 'v*'
 
