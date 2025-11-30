@@ -66,9 +66,8 @@ jobs:
   release:
     name: Release binary
     runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
     needs: [build, bats-tests, go-tests]
-    env:
-      CGO_ENABLED: 1
     steps:
       - name: Download build artifacts
         uses: actions/download-artifact@v5
@@ -77,6 +76,5 @@ jobs:
           path: dist
       - name: Release
         uses: softprops/action-gh-release@v2
-        if: github.ref_type == 'tag'
         with:
           files: dist/**
