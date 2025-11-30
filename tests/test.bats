@@ -4,7 +4,11 @@ bats_require_minimum_version 1.5.0
 repo=$(pwd)
 
 setup_file() {
+    # install bayesh binary
+    [ -d "${repo}/build" ] || exit 1
+    [ -f "${repo}/build/bayesh" ] || exit 1
     export PATH="$PATH:${repo}/build"
+    #shellcheck source=./shell/bayesh.bash
     source "${repo}/build/bayesh.bash"
 }
 
