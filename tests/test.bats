@@ -4,7 +4,7 @@ bats_require_minimum_version 1.5.0
 repo=$(pwd)
 
 setup_file() {
-    export PATH="$PATH:'${repo}/build'"
+    export PATH="$PATH:${repo}/build"
     source "${repo}/build/bayesh.bash"
 }
 
@@ -36,7 +36,7 @@ teardown() {
 @test "test only record new command" {
     source shell/bayesh.bash
     command="random command ${RANDOM}"
-    db=$(bayesh print-settings | jq -r .db)
+    db=$(bayesh settings | jq -r .BAYESH_DB)
     
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
@@ -45,10 +45,12 @@ teardown() {
     # simulate run command
     history -s "${command}"
     # wait for insertion into db (https://linux.die.net/man/1/inotifywait)
+    inotifywait --event modify --timeout 5 "${db}" &
+    monitor_pid=$!
     _bayesh_update
-    run inotifywait --event modify --timeout 5 "${db}"
     [ "$status" -eq 0 ]
-    
+    wait "$monitor_pid"
+
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
     assert_output '1'
@@ -67,10 +69,11 @@ teardown() {
     assert_output '1'    
 
     # simulate running new command
+    inotifywait --event modify --timeout 5 "${db}" &
+    monitor_pid=$!
     history -s "${command} ${RANDOM}"
     _bayesh_update 
-    run inotifywait --event modify --timeout 5 "${db}"
-    [ "$status" -eq 0 ]
+    wait "$monitor_pid"
 
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
@@ -84,7 +87,7 @@ teardown() {
 @test "test inference function (no tokens)" {
     source shell/bayesh.bash
 
-    db=$(bayesh print-settings | jq -r .db)
+    db=$(bayesh settings | jq -r .BAYESH_DB)
 
     cwd=$(mktemp -d)
     previous_cmd="previous command ${RANDOM}"

@@ -7,7 +7,7 @@ clean:
 .PHONY: bats-tests
 bats-tests:
 	docker run \
-		--user $(id -u):$(id -g) \
+		--user $(shell id -u):$(shell id -g) \
 		-v "$(shell pwd):/code" \
 		madsbis/bayesh-bats-testing:v5 \
 		--print-output-on-failure \
