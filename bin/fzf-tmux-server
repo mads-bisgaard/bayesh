@@ -1,21 +1,15 @@
 #!/usr/bin/env bash
 
-[ -z "$TMUX" ] && { echo "Error: fzf-tmux-server must be run inside a tmux session." >&2; exit 1; }
-if ! command -v jq > /dev/null; then echo "Error: fzf-tmux-server requires jq." >&2; exit 1; fi
-if ! command -v curl > /dev/null; then echo "Error: fzf-tmux-server requires curl." >&2; exit 1; fi
-if ! command -v fzf > /dev/null; then echo "Error: fzf-tmux-server requires fzf." >&2; exit 1; fi
 
-_exe_name=$(basename "$0")
-
-start_help() {
-    echo "Usage: $_exe_name start"
+_fzf_tmux_server_start_help() {
+    echo "Usage: _fzf_tmux_server_start"
     echo "Starts fzf-tmux server and prints server config to stdout."
     echo "Capture the config and pass it to other methods in order to access the server."
 }
 
-start() {
+_fzf_tmux_server_start() {
     if [[ "$1" == "--help" ]]; then
-        start_help
+        _fzf_tmux_server_start_help
         return
     fi
     local fifo
@@ -48,7 +42,7 @@ start() {
 }
 
 
-parse_config() {
+_fzf_tmux_server_parse_config() {
     local input=""
     
     while getopts ":c:" opt; do
@@ -75,21 +69,20 @@ parse_config() {
     echo "$input"
 }
 
-
-kill_help() {
-    echo "Usage: $_exe_name kill -c <server config>"
+_fzf_tmux_server_kill_help() {
+    echo "Usage: _fzf_tmux_server_kill -c <server config>"
     echo "Kills the server specified by the config."
 }
 
-kill() {
+_fzf_tmux_server_kill() {
     if [[ "$1" == "--help" ]]; then
-        kill_help
+        _fzf_tmux_server_kill_help
         return
     fi
     local config
     local url
     local pane_id
-    config=$(parse_config "$@") || { kill_help; exit 1; }
+    config=$(_fzf_tmux_server_parse_config "$@") || { _fzf_tmux_server_kill_help; exit 1; }
     url=$(echo "$config" | jq -r .url)
     pane_id=$(echo "$config" | jq -r .tmux_pane_id)
     
@@ -101,19 +94,19 @@ kill() {
     fi
 }
 
-get_help() {
-    echo "Usage: $_exe_name get -c <server config>"
+_fzf_tmux_server_get_help() {
+    echo "Usage: _fzf_tmux_server_get -c <server config>"
     echo "Get the state of the fzf-tmux server."
 }
 
-get() {
+_fzf_tmux_server_get() {
     if [[ "$1" == "--help" ]]; then
-        get_help
+        _fzf_tmux_server_get_help
         return
     fi
     local config
     local url
-    config=$(parse_config "$@") || { get_help; exit 1; }
+    config=$(_fzf_tmux_server_parse_config "$@") || { _fzf_tmux_server_get_help; exit 1; }
     url=$(echo "$config" | jq -r .url)
     if ! curl -XGET "$url"; then
         echo "GET request failed" >&2
@@ -121,21 +114,21 @@ get() {
     fi
 }
 
-post_help() {
-    echo "Usage: $_exe_name post -c <server config>"
+_fzf_tmux_server_post_help() {
+    echo "Usage: _fzf_tmux_server_post -c <server config>"
     echo "Post an action to the fzf-tmux-server by piping the request body to stdin"
     # shellcheck disable=SC2016
     echo 'Example: echo "reload(find $(pwd))" | fzf-tmux-server post -c "$config"'
 }
 
-post() {
+_fzf_tmux_server_post() {
     if [[ "$1" == "--help" ]]; then
-        post_help
+        _fzf_tmux_server_post_help
         return
     fi
     local config
     local url
-    config=$(parse_config "$@") || { post_help; exit 1; }
+    config=$(_fzf_tmux_server_parse_config "$@") || { _fzf_tmux_server_post_help; exit 1; }
     url=$(echo "$config" | jq -r .url)
     if ! curl -XPOST "$url" -d "$(cat)"; then
         echo "POST request failed" >&2
@@ -143,39 +136,3 @@ post() {
     fi
 }
 
-case "$1" in
-    start)
-        shift
-        start "$@"
-        ;;
-    kill)
-        shift
-        kill "$@"
-        ;;
-    get)
-        shift
-        get "$@"
-        ;;
-    post)
-        shift
-        post "$@"
-        ;;
-    *)
-        echo "Usage: $_exe_name {start|kill|get|post} [additional args]"
-        echo "Options:"
-        echo "  start   Start fzf-tmux server"
-        echo "  kill    Kill fzf-tmux server"
-        echo "  get     Make GET request"
-        echo "  post    Make POST request"
-        echo "Example:"
-        # shellcheck disable=SC2016
-        echo '  config=$(fzf-tmux-server start)'
-        # shellcheck disable=SC2016
-        echo '  fzf-tmux-server get -c "$config"'
-        # shellcheck disable=SC2016
-        echo '  echo "reload(find $(pwd))" | fzf-tmux-server post -c "$config"'
-        # shellcheck disable=SC2016
-        echo '  fzf-tmux-server kill -c "$config"'
-        exit 0
-        ;;
-esac
