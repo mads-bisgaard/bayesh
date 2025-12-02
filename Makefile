@@ -21,8 +21,6 @@ ARCH := $(shell go env GOARCH)
 .PHONY: build
 build:
 	mkdir -p build
-	cp -r bin/. build
-	cp -r shell/. build
 	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh ./main.go
 
 .PHONY: release
