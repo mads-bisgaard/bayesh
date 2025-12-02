@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"log/slog"
 	"os"
@@ -11,6 +12,18 @@ import (
 
 	bayesh "github.com/mads-bisgaard/bayesh/src"
 )
+
+//go:embed shell/bayesh.bash
+var bayeshBash string
+
+//go:embed shell/bayesh.zsh
+var bayeshZsh string
+
+//go:embed shell/bayesh.sh
+var bayeshSh string
+
+//go:embed shell/fzf_tmux_server.zsh
+var fzfTmuxServerZsh string
 
 // version is set at build time using ldflags.
 var version = "development"
@@ -36,10 +49,40 @@ func main() {
 		}
 	}()
 
+	var bash bool
+	var zsh bool
+
 	cmd := &cli.Command{
 		Name:    "bayesh",
 		Usage:   "CLI for integrating Bayesh into your shell",
 		Version: version,
+		Flags: []cli.Flag{
+			&cli.BoolFlag{
+				Name:        "bash",
+				Usage:       "Print the bash shell integration script",
+				Destination: &bash,
+			},
+			&cli.BoolFlag{
+				Name:        "zsh",
+				Usage:       "Print the zsh shell integration script",
+				Destination: &zsh,
+			},
+		},
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			if bash {
+				fmt.Print(bayeshSh)
+				fmt.Print(bayeshBash)
+			} else if zsh {
+				fmt.Print(bayeshSh)
+				fmt.Print(fzfTmuxServerZsh)
+				fmt.Print(bayeshZsh)
+			} else {
+				if err := cli.ShowAppHelp(cmd); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 		Commands: []*cli.Command{
 			{
 				Name:  "settings",
