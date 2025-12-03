@@ -7,7 +7,7 @@ setup_file() {
     # install bayesh binary
     [ -d "${repo}/build" ] || exit 1
     [ -f "${repo}/build/bayesh" ] || exit 1
-    export PATH="$PATH:${repo}/build"
+    cp "${repo}/build/bayesh" /usr/local/bin/bayesh
 }
 
 setup() {
@@ -29,7 +29,7 @@ teardown() {
 @test "test source script" {
     run bash -c \
     '
-    source shell/bayesh.bash
+    source < (bayesh --bash)
     [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]
     '
     [ "$status" -eq 0 ]
@@ -37,7 +37,7 @@ teardown() {
 
 @test "test only record new command" {
     #shellcheck source=./shell/bayesh.bash
-    source "${repo}/build/bayesh.bash"
+    source <(bayesh --bash)
     command="random command ${RANDOM}"
     db=$(bayesh settings | jq -r .BAYESH_DB)
     
@@ -89,7 +89,7 @@ teardown() {
 
 @test "test inference function (no tokens)" {
     #shellcheck source=./shell/bayesh.bash
-    source "${repo}/build/bayesh.bash"
+    bayesh --bash | source
 
     db=$(bayesh settings | jq -r .BAYESH_DB)
 

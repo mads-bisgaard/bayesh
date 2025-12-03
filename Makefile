@@ -7,7 +7,6 @@ clean:
 .PHONY: bats-tests
 bats-tests:
 	docker run \
-		--user $(shell id -u):$(shell id -g) \
 		-v "$(shell pwd):/code" \
 		madsbis/bayesh-bats-testing:v5 \
 		--print-output-on-failure \
@@ -22,11 +21,14 @@ else
 VERSION := $(shell git describe --tags --always --dirty)
 endif
 ARCH := $(shell go env GOARCH)
+
 .PHONY: build
 build:
 	mkdir -p build
-	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh-$(VERSION)-linux-$(ARCH) ./main.go
+	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh ./main.go
 
 .PHONY: release
 release: build
 	grep -qF $(VERSION) install.sh
+	mkdir -p build
+	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh-$(VERSION)-linux-$(ARCH) ./main.go	
