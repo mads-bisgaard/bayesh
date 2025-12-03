@@ -16,14 +16,17 @@ bats-tests:
 	
 # VERSION is dynamically set from git. It will be vX.Y.Z for a tag,
 # or vX.Y.Z-<commits>-g<hash> for a dev build.
+ifdef BAYESH_VERSION
+VERSION := $(BAYESH_VERSION)
+else
 VERSION := $(shell git describe --tags --always --dirty)
+endif
 ARCH := $(shell go env GOARCH)
 .PHONY: build
 build:
 	mkdir -p build
-	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh ./main.go
+	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh-$(VERSION)-linux-$(ARCH) ./main.go
 
 .PHONY: release
 release: build
-	mkdir -p dist
-	tar -czf dist/bayesh-$(VERSION)-linux-$(ARCH).tar.gz -C build .
+	grep -qF $(VERSION) install.sh
