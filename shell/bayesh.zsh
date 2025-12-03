@@ -2,8 +2,6 @@
 
 autoload -Uz add-zsh-hook
 # add hook for updating bayesh db
-# shellcheck source=shell/bayesh.sh
-source "$(dirname $0)"/bayesh.sh
 add-zsh-hook precmd _bayesh_update
 
 if [[ ! -n "$TMUX" ]]; then
