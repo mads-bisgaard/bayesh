@@ -10,7 +10,7 @@ function _usage() {
     echo "Usage: $(basename "$0") [--help]"
     echo "Install Bayesh." 
     echo "Options:"
-    echo "  --help                    Show this help message and exit"
+    echo "  --help   Show this help message and exit"
     exit 0
 }
 
