@@ -64,7 +64,7 @@ case "$arch" in
         ;;
     armv7l|armv6l|arm)
         _install_bayesh "arm"
-        ;;        
+        ;;
     *)
         echo "Unsupported architecture: $arch. Please file an issue on https://github.com/mads-bisgaard/bayesh and I will add support for your architecture."
         exit 1

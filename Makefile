@@ -33,7 +33,7 @@ release:
 	rm -rf dist && mkdir -p dist
 	for arc in $(ARCH); do \
 		tmpdir=$$(mktemp -d); \
-		GOARCH=$$arc go build -ldflags="-X 'main.version=${VERSION}'" -o $$tmpdir/bayesh ./main.go; \
+		GOARCH=$$arc go build -ldflags="-s -w -X 'main.version=${VERSION}'" -o $$tmpdir/bayesh ./main.go; \
 		tar -czf ./dist/bayesh-$(VERSION)-linux-$$arc.tar.gz -C $$tmpdir bayesh; \
 		rm -rf $$tmpdir; \
 	done
