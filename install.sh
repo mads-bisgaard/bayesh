@@ -4,7 +4,12 @@ set -e
 set -o pipefail
 
 version=v0.0.1
-target_path="/usr/local/bin/bayesh"
+target_dir="/usr/local/bin"
+[ -d "$target_dir" ] || target_dir="/usr/bin"
+[ -d "$target_dir" ] || { echo "- Error: Could not find /usr/local/bin nor /usr/bin directories." >&2; exit 1; }
+
+_sudo="sudo"
+command -v sudo &> /dev/null || _sudo=""
 
 function _usage() {
     echo "Usage: $(basename "$0") [--help]"
@@ -20,9 +25,10 @@ function _check_dependency() {
 
 function _install_bayesh(){
     arc=$1
-    url="https://github.com/repos/mads-bisgaard/bayesh/releases/download/${version}/bayesh-${version}-linux-${arc}"
-    sudo curl -sSL "${url}" -o "${target_path}"
-    sudo chmod +x "${target_path}"
+    url="https://github.com/mads-bisgaard/bayesh/releases/download/${version}/bayesh-${version}-linux-${arc}.tar.gz"
+    echo "- downloading Bayesh ${version} for architecture ${arc} to ${target_dir}/bayesh"
+    ${_sudo} curl -sSL "$url" | tar -xzf - -C "${target_dir}"
+    ${_sudo} chmod +x "${target_dir}/bayesh"
     command -v "bayesh" &> /dev/null || { echo "- Error: bayesh could not be found after installation." >&2; exit 1; }
 }
 
