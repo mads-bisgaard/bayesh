@@ -27,9 +27,9 @@ teardown() {
 }
 
 @test "test source script" {
-    run bash -c \
+    run bash -i -c \
     '
-    source < (bayesh --bash)
+    source <(bayesh --bash)
     [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]
     '
     [ "$status" -eq 0 ]
@@ -89,7 +89,7 @@ teardown() {
 
 @test "test inference function (no tokens)" {
     #shellcheck source=./shell/bayesh.bash
-    bayesh --bash | source
+    source <(bayesh --bash)
 
     db=$(bayesh settings | jq -r .BAYESH_DB)
 

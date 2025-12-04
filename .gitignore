@@ -3,5 +3,6 @@
 .vscode/*
 tmp*
 build/*
+dist/*
 bayesh.egg-info/*
 bin/bayesh
