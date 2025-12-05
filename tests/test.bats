@@ -7,7 +7,7 @@ setup_file() {
     # install bayesh binary
     [ -d "${repo}/build" ] || exit 1
     [ -f "${repo}/build/bayesh" ] || exit 1
-    cp "${repo}/build/bayesh" /usr/local/bin/bayesh
+    sudo cp "${repo}/build/bayesh" /usr/local/bin/bayesh
 }
 
 setup() {
