@@ -20,12 +20,12 @@ jobs:
         with:
           go-version-file: 'go.mod'
       - name: Build
-        run: make release
+        run: make build
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist
-          path: dist/ 
+          name: build
+          path: build/ 
   bats-tests:
     name: Bats tests
     runs-on: ubuntu-latest
@@ -37,15 +37,8 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v5
         with:
-          name: dist
-          path: dist
-      - name: Extract build artifact
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p build
-          archive=$(find dist -maxdepth 1 -type f -name "*.tar*" -print -quit || true)
-          tar -xzf "$archive" -C build
+          name: build
+          path: build
       - name: Test
         run: bats --print-output-on-failure tests
   go-tests:
@@ -68,11 +61,8 @@ jobs:
     if: github.ref_type == 'tag'
     needs: [build, bats-tests, go-tests]
     steps:
-      - name: Download build artifacts
-        uses: actions/download-artifact@v5
-        with:
-          name: dist
-          path: dist
+      - name: Build release artifacts
+        run: make release
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
