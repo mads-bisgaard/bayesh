@@ -9,22 +9,25 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
 ## Installation 
 
 1. **Install Dependencies:**  
-   Ensure you have the following installed:  
-   - [fzf](https://github.com/junegunn/fzf)  
-   - [jq](https://jqlang.org/)  
-   - [tmux](https://github.com/tmux/tmux) (optional, but highly recommmended)
+   Ensure you have the following installed: [fzf](https://github.com/junegunn/fzf?tab=readme-ov-file#installation), [jq](https://jqlang.org/download/), [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) (tmux is only required for the Zsh shell)
    
 2. **Install Bayesh:**  
-   To install Bayesh into your Zsh shell, run  
-   ```bash
-   curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | zsh -s zsh
+   To install Bayesh run  
+   ```sh
+   curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | sh
    ```
-   if instead you want to install it into your Bash shell, run
-   ```bash
-   curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | bash -s bash
-   ```
+   
+3. **Integrate Bayesh into your shell**
+  - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by running
+  ```sh
+  echo "command -v bayesh > /dev/null && source <(bayesh --zsh)" >> ~/.zshrc
+  ```
+  - To integrate Bayesh into Bash, add `source <(bayesh --bash)` to your configuration file. You can do so by running
+  ```sh
+  echo "command -v bayesh > /dev/null && source <(bayesh --bash)" >> ~/.bashrc
+  ```
 3. **Go!**  
-   Close and open your shell to ensure Bayesh is visible. Run `bayesh --version` to double check. Hit `Ctrl-e` to open bayesh.
+   Close and reopen your shell to ensure Bayesh is visible. Run `bayesh --version` to double check. Hit `Ctrl-e` to open bayesh.
 
 ## How to Use Bayesh 
 Bayesh is triggered by hitting `Ctrl-e` in your shell.  
