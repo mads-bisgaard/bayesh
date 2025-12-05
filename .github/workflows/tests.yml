@@ -40,7 +40,9 @@ jobs:
           name: build
           path: /usr/local/bin
       - name: Test
-        run: bats --print-output-on-failure tests
+        run: |
+          chmod +x /usr/local/bin/bayesh
+          bats --print-output-on-failure tests
   go-tests:
     name: Go tests
     runs-on: ubuntu-latest
