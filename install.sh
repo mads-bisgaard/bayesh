@@ -61,7 +61,6 @@ function _print_bayesh() {
     CYAN="\033[0;36m"
     RESET="\033[0m"
 
-    # Hardcoded ASCII Art for "BAYESH"
     echo -e "${CYAN}"
     echo "░████████                                               ░██        "
     echo "░██    ░██                                              ░██        "
