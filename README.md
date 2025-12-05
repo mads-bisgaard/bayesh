@@ -9,14 +9,14 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
 ## Installation 
 
 1. **Install Dependencies:**  
-   Ensure you have the following installed: [fzf](https://github.com/junegunn/fzf?tab=readme-ov-file#installation), [jq](https://jqlang.org/download/), [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) (tmux is only required for the Zsh shell)
-   
+  Ensure you have the following installed: [fzf](https://github.com/junegunn/fzf?tab=readme-ov-file#installation), [jq](https://jqlang.org/download/), [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) (tmux is only required for the Zsh shell)
+  
 2. **Install Bayesh:**  
-   To install Bayesh run  
-   ```sh
-   curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | sh
-   ```
-   
+  To install Bayesh run  
+  ```sh
+  curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | sh
+  ```
+  
 3. **Integrate Bayesh into your shell**
   - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by running
   ```sh
