@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 # tests must be run from the root directory of the repo
 bats_require_minimum_version 1.5.0
-repo=$(pwd)
 
 setup_file() {
-    # install bayesh binary
-    [ -d "${repo}/build" ] || exit 1
-    [ -f "${repo}/build/bayesh" ] || exit 1
-    sudo cp "${repo}/build/bayesh" /usr/local/bin/bayesh
+    command -v bayesh &> /dev/null
 }
 
 setup() {
