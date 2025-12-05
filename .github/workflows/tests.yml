@@ -38,11 +38,9 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           name: build
-          path: build
+          path: /usr/local/bin
       - name: Test
         run: bats --print-output-on-failure tests
-        env:
-          PATH: ${{ github.workspace }}/build:${{ env.PATH }}
   go-tests:
     name: Go tests
     runs-on: ubuntu-latest
