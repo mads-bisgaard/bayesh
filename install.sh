@@ -11,11 +11,32 @@ target_dir="/usr/local/bin"
 _sudo="sudo"
 command -v sudo &> /dev/null || _sudo=""
 
+url_override=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --help)
+            _usage
+            ;;
+        --url)
+            url_override="$2"
+            shift # past argument
+            shift # past value
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            _usage
+            ;;
+    esac
+done
+
+
 function _usage() {
     echo "Usage: $(basename "$0") [--help]"
     echo "Install Bayesh." 
     echo "Options:"
-    echo "  --help   Show this help message and exit"
+    echo "  --help         Show this help message and exit"
+    echo "  --url <url>    Overwrite the download URL"
     exit 0
 }
 
@@ -25,25 +46,35 @@ function _check_dependency() {
 
 function _install_bayesh(){
     arc=$1
-    url="https://github.com/mads-bisgaard/bayesh/releases/download/${version}/bayesh-${version}-linux-${arc}.tar.gz"
+    if [[ -n "$url_override" ]]; then
+        url="$url_override"
+    else
+        url="https://github.com/mads-bisgaard/bayesh/releases/download/${version}/bayesh-${version}-linux-${arc}.tar.gz"
+    fi
     echo "- downloading Bayesh ${version} for architecture ${arc} to ${target_dir}/bayesh"
     ${_sudo} curl -sSL "$url" | tar -xzf - -C "${target_dir}"
     ${_sudo} chmod +x "${target_dir}/bayesh"
     command -v "bayesh" &> /dev/null || { echo "- Error: bayesh could not be found after installation." >&2; exit 1; }
 }
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --help)
-            _usage
-            ;;
-        *)
-            echo "Unknown option: $1" >&2
-            _usage
-            ;;
-    esac
-done
+function _print_bayesh() {
+    CYAN="\033[0;36m"
+    RESET="\033[0m"
 
+    # Hardcoded ASCII Art for "BAYESH"
+    echo -e "${CYAN}"
+    echo "░████████                                               ░██        "
+    echo "░██    ░██                                              ░██        "
+    echo "░██    ░██   ░██████   ░██    ░██  ░███████   ░███████  ░████████  "
+    echo "░████████         ░██  ░██    ░██ ░██    ░██ ░██        ░██    ░██ "
+    echo "░██     ░██  ░███████  ░██    ░██ ░█████████  ░███████  ░██    ░██ "
+    echo "░██     ░██ ░██   ░██  ░██   ░███ ░██               ░██ ░██    ░██ "
+    echo "░█████████   ░█████░██  ░█████░██  ░███████   ░███████  ░██    ░██ "
+    echo "                              ░██                                  "
+    echo "                        ░███████                                    "
+    echo -e "${RESET}"
+    echo "- For documentation, see https://github.com/mads-bisgaard/bayesh"    
+}
 
 _check_dependency "fzf"
 _check_dependency "awk"
@@ -71,6 +102,4 @@ case "$arch" in
         ;;
 esac
 
-echo "- done installing Bayesh"
-echo "- set up your shell integration to get the most out of Bayesh"
-echo "- for documentation, see https://github.com/mads-bisgaard/bayesh"
+_print_bayesh
