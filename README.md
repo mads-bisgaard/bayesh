@@ -26,7 +26,7 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
   ```sh
   echo "command -v bayesh > /dev/null && source <(bayesh --bash)" >> ~/.bashrc
   ```
-3. **Go!**  
+4. **Go!**  
    Close and reopen your shell to ensure Bayesh is visible. Run `bayesh --version` to double check. Hit `Ctrl-e` to open bayesh.
 
 ## How to Use Bayesh 
