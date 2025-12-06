@@ -17,7 +17,10 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
   curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | sh
   ```
   
-3. **Integrate Bayesh into your shell**
+3. **Go!**  
+   Make sure to [integrate](#shell-integration) Bayesh into your shell. Close and reopen your shell and hit `Ctrl-e` to open bayesh.
+
+## Shell integration
   - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by running
   ```sh
   echo "command -v bayesh > /dev/null && source <(bayesh --zsh)" >> ~/.zshrc
@@ -26,8 +29,6 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
   ```sh
   echo "command -v bayesh > /dev/null && source <(bayesh --bash)" >> ~/.bashrc
   ```
-4. **Go!**  
-   Close and reopen your shell to ensure Bayesh is visible. Run `bayesh --version` to double check. Hit `Ctrl-e` to open bayesh.
 
 ## How to Use Bayesh 
 Bayesh is triggered by hitting `Ctrl-e` in your shell.  
