@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-# shellcheck source=shell/bayesh.sh
-source "$(dirname "$(realpath "${BASH_SOURCE[0]}")")"/bayesh.sh
 
 function bayesh_infer_cmd() {
     local result

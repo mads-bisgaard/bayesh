@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
 # tests must be run from the root directory of the repo
 bats_require_minimum_version 1.5.0
-repo=$(pwd)
 
 setup_file() {
-    # install bayesh binary
-    [ -d "${repo}/build" ] || exit 1
-    [ -f "${repo}/build/bayesh" ] || exit 1
-    export PATH="$PATH:${repo}/build"
+    command -v bayesh &> /dev/null
 }
 
 setup() {
@@ -27,9 +23,9 @@ teardown() {
 }
 
 @test "test source script" {
-    run bash -c \
+    run bash -i -c \
     '
-    source shell/bayesh.bash
+    source <(bayesh --bash)
     [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]
     '
     [ "$status" -eq 0 ]
@@ -37,7 +33,7 @@ teardown() {
 
 @test "test only record new command" {
     #shellcheck source=./shell/bayesh.bash
-    source "${repo}/build/bayesh.bash"
+    source <(bayesh --bash)
     command="random command ${RANDOM}"
     db=$(bayesh settings | jq -r .BAYESH_DB)
     
@@ -89,7 +85,7 @@ teardown() {
 
 @test "test inference function (no tokens)" {
     #shellcheck source=./shell/bayesh.bash
-    source "${repo}/build/bayesh.bash"
+    source <(bayesh --bash)
 
     db=$(bayesh settings | jq -r .BAYESH_DB)
 
