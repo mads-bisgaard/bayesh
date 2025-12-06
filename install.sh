@@ -20,8 +20,8 @@ while [[ $# -gt 0 ]]; do
             ;;
         --url)
             url_override="$2"
-            shift # past argument
-            shift # past value
+            shift
+            shift
             ;;
         *)
             echo "Unknown option: $1" >&2
