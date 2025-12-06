@@ -3,28 +3,84 @@
 set -e
 set -o pipefail
 
-DIR="$HOME/.bayesh/bin"
+version=v0.0.1
+_sudo="sudo"
+command -v sudo &> /dev/null || _sudo=""
+target_dir="/usr/local/bin"
+[ -d "$target_dir" ] || target_dir="/usr/bin"
+[ -d "$target_dir" ] || { echo "- Error: Could not find /usr/local/bin nor /usr/bin directories." >&2; exit 1; }
 
-# Function to display usage
-usage() {
-    echo "Usage: $(basename "$0") <shell> [-y]"
-    echo "Install Bayesh. Supported shells: bash, zsh."
-    exit 1
+arch=$(uname -m)
+case "$arch" in
+    x86_64)
+        goarch="amd64"
+        ;;
+    armv7l|armv6l|arm)
+        goarch="arm"
+        ;;
+    *)
+        echo "Unsupported architecture: $arch. Please file an issue on https://github.com/mads-bisgaard/bayesh and I will add support for your architecture."
+        exit 1
+        ;;
+esac
+
+function _usage() {
+    echo "Usage: install.sh [--help] [--url <url>]"
+    echo "Install Bayesh." 
+    echo "Options:"
+    echo "  --help         Show this help message and exit"
+    echo "  --url <url>    Overwrite the download URL"
+    exit 0
 }
 
-shell=$1
-[[ "$shell" == "bash" || "$shell" == "zsh" ]] || usage
-shift 
+url="https://github.com/mads-bisgaard/bayesh/releases/download/${version}/bayesh-${version}-linux-${goarch}.tar.gz"
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --help)
+            _usage
+            ;;
+        --url)
+            url="$2"
+            shift
+            shift
+            ;;
+        *)
+            echo "Unknown option: $1" >&2
+            _usage
+            ;;
+    esac
+done
 
-function _check_exists() {
-    [[ -e "$1" ]] || { echo "- Error: Something unexpected happened. $1 does not exist"; exit 1; }
-}
 
 function _check_dependency() {
     command -v "$1" &> /dev/null || { echo "- Error: Required dependency $1 is not installed." >&2; exit 1; }
 }
 
-echo "- checking dependencies are installed"
+function _install_bayesh(){
+    echo "- downloading Bayesh ${version} for architecture ${goarch} to ${target_dir}/bayesh"
+    ${_sudo} curl -sSL "$url" | ${_sudo} tar -xzf - -C "${target_dir}"
+    ${_sudo} chmod +x "${target_dir}/bayesh"
+    command -v "bayesh" &> /dev/null || { echo "- Error: bayesh could not be found after installation." >&2; exit 1; }
+}
+
+function _print_bayesh() {
+    CYAN="\033[94m"
+    RESET="\033[0m"
+
+    echo -e "${CYAN}"
+    echo "░████████                                               ░██        "
+    echo "░██    ░██                                              ░██        "
+    echo "░██    ░██   ░██████   ░██    ░██  ░███████   ░███████  ░████████  "
+    echo "░████████         ░██  ░██    ░██ ░██    ░██ ░██        ░██    ░██ "
+    echo "░██     ░██  ░███████  ░██    ░██ ░█████████  ░███████  ░██    ░██ "
+    echo "░██     ░██ ░██   ░██  ░██   ░███ ░██               ░██ ░██    ░██ "
+    echo "░█████████   ░█████░██  ░█████░██  ░███████   ░███████  ░██    ░██ "
+    echo "                              ░██                                  "
+    echo "                        ░███████                                    "
+    echo -e "${RESET}"
+    echo "- For documentation, see https://github.com/mads-bisgaard/bayesh"    
+}
+
 _check_dependency "fzf"
 _check_dependency "awk"
 _check_dependency "md5sum"
@@ -36,38 +92,5 @@ _check_dependency "grep"
 _check_dependency "curl"
 _check_dependency "jq"
 _check_dependency "tar"
-
-echo "- creating installation directory"
-mkdir -p "${DIR}"
-
-echo "- detecting OS and architecture"
-os_name=$(uname -s | tr '[:upper:]' '[:lower:]')
-arch=$(uname -m)
-
-case "$arch" in
-    x86_64)
-        arch="amd64"
-        ;;
-    *)
-        echo "Unsupported architecture: $arch. Please file an issue on https://github.com/mads-bisgaard/bayesh and I will add support for your architecture."
-        exit 1
-        ;;
-esac
-
-echo "- downloading latest bayesh binary from github"
-search_pattern="${os_name}-${arch}"
-url=$(curl -s https://api.github.com/repos/mads-bisgaard/bayesh/releases/latest | grep "browser_download_url.*${search_pattern}.*\.tar\.gz" | sed -E 's/.*"browser_download_url": "(.*)".*/\1/')
-curl -sSL "${url}" | tar -xz -C "${DIR}"
-_check_exists "${DIR}/bayesh"
-
-_rcfile="$HOME/.${shell}rc"
-
-echo "- exporting PATH"
-# shellcheck disable=SC2016
-echo 'export PATH="$PATH:'"${DIR}"'"' >> "$_rcfile"
-echo "- sourcing bayesh.${shell}"
-echo "source ${DIR}/bayesh.${shell}" >> "$_rcfile"
-
-echo "- done installing Bayesh"
-echo "- restart your terminal and open Bayesh by using Ctrl-e"
-echo "- for documentation, see https://github.com/mads-bisgaard/bayesh"
+_install_bayesh
+_print_bayesh

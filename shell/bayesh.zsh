@@ -2,8 +2,6 @@
 
 autoload -Uz add-zsh-hook
 # add hook for updating bayesh db
-# shellcheck source=shell/bayesh.sh
-source "$(dirname $0)"/bayesh.sh
 add-zsh-hook precmd _bayesh_update
 
 if [[ ! -n "$TMUX" ]]; then
@@ -26,20 +24,19 @@ if [[ ! -n "$TMUX" ]]; then
 
 fi
 
-if ! fzf-tmux-server 1> /dev/null; then echo "Error: fzf-tmux-server doesn't seem to be functional." >&2; return; fi
 
 #functions for communicating with server
 
 function bayesh_start_or_kill_server() {
 
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
-        if fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" &> /dev/null; then
-            fzf-tmux-server kill -c "$BAYESH_SERVER_CONFIG"
+        if _fzf_tmux_server_get -c "$BAYESH_SERVER_CONFIG" &> /dev/null; then
+            _fzf_tmux_server_kill -c "$BAYESH_SERVER_CONFIG"
             unset BAYESH_SERVER_CONFIG
             return 
         fi
     fi
-    BAYESH_SERVER_CONFIG=$(fzf-tmux-server start)
+    BAYESH_SERVER_CONFIG=$(_fzf_tmux_server_start)
     export BAYESH_SERVER_CONFIG
     zle-line-init
 }
@@ -53,8 +50,8 @@ function zle-line-init() {
         mkfifo "$fifo"
         (
             bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}" > "$fifo" &
-            echo "search()" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
-            echo "reload(cat $fifo; rm $fifo)" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+            echo "search()" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+            echo "reload(cat $fifo; rm $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
         )
     fi
 }
@@ -63,7 +60,7 @@ zle -N zle-line-init
 
 function zle-line-pre-redraw() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
-        ( echo "search("$BUFFER")" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
+        ( echo "search("$BUFFER")" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi
 }
 zle -N zle-line-pre-redraw
@@ -76,7 +73,7 @@ function bayesh_select() {
     token_regex="<STRING>|<PATH>"
 
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
-        cmd=$(fzf-tmux-server get -c "$BAYESH_SERVER_CONFIG" 2> /dev/null | jq -r .current.text)
+        cmd=$(_fzf_tmux_server_get -c "$BAYESH_SERVER_CONFIG" 2> /dev/null | jq -r .current.text)
         p="${#cmd}"
         if echo "${cmd}" | grep -boq -E "${token_regex}"; then
             p=$(echo "${cmd}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
@@ -91,7 +88,7 @@ bindkey '^[[1;5C' select # Ctrl-rightarrow
 
 function bayesh_up() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
-        ( echo "up" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
+        ( echo "up" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi    
 }
 zle -N up bayesh_up
@@ -99,10 +96,10 @@ bindkey '^[[1;5A' up # Ctrl-uparrow
 
 function bayesh_down() {
     if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
-        ( echo "down" | fzf-tmux-server post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
+        ( echo "down" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi    
 }
 zle -N down bayesh_down
 bindkey '^[[1;5B' down # Ctrl-downarrow
 
-trap 'fzf-tmux-server kill -c "$BAYESH_SERVER_CONFIG" &> /dev/null' EXIT
+trap '_fzf_tmux_server_kill -c "$BAYESH_SERVER_CONFIG" &> /dev/null' EXIT
