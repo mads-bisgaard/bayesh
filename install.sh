@@ -58,7 +58,7 @@ function _check_dependency() {
 
 function _install_bayesh(){
     echo "- downloading Bayesh ${version} for architecture ${goarch} to ${target_dir}/bayesh"
-    ${_sudo} curl -sSL "$url" | tar -xzf - -C "${target_dir}"
+    ${_sudo} curl -sSL "$url" | ${_sudo} tar -xzf - -C "${target_dir}"
     ${_sudo} chmod +x "${target_dir}/bayesh"
     command -v "bayesh" &> /dev/null || { echo "- Error: bayesh could not be found after installation." >&2; exit 1; }
 }
