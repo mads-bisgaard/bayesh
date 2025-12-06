@@ -58,7 +58,7 @@ function _install_bayesh(){
 }
 
 function _print_bayesh() {
-    CYAN="\033[0;36m"
+    CYAN="\033[94m"
     RESET="\033[0m"
 
     echo -e "${CYAN}"

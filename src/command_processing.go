@@ -18,9 +18,14 @@ const (
 	STRING Token = "<STRING>"
 )
 
+const (
+	CYAN  Token = "\033[94m"
+	RESET Token = "\033[0m"
+)
+
 func AnsiColorTokens(cmds string) string {
-	cmds = strings.ReplaceAll(cmds, string(PATH), "\033[94m"+string(PATH)+"\033[0m")
-	cmds = strings.ReplaceAll(cmds, string(STRING), "\033[94m"+string(STRING)+"\033[0m")
+	cmds = strings.ReplaceAll(cmds, string(PATH), string(CYAN)+string(PATH)+string(RESET))
+	cmds = strings.ReplaceAll(cmds, string(STRING), string(CYAN)+string(STRING)+string(RESET))
 	return cmds
 }
 
