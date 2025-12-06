@@ -63,6 +63,12 @@ jobs:
     if: github.ref_type == 'tag'
     needs: [build, bats-tests, go-tests]
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'      
       - name: Build release artifacts
         run: make release
       - name: Release
