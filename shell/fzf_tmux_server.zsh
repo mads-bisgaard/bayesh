@@ -35,6 +35,8 @@ _fzf_tmux_server_start() {
         "--no-mouse "
         "--no-info "
         "--border=rounded"
+        "--style=minimal"
+        "--no-scrollbar"
     )
 
     tmux split-window -l 5 -d "${script[*]}"
