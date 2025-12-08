@@ -36,7 +36,8 @@ function bayesh_start_or_kill_server() {
             return 
         fi
     fi
-    BAYESH_SERVER_CONFIG=$(_fzf_tmux_server_start)
+    config=$(_fzf_tmux_server_start)
+    BAYESH_SERVER_CONFIG=$(echo "$config" | jq -Mc ". + { \"client_pid\": \"$$\"}")
     export BAYESH_SERVER_CONFIG
     zle-line-init
 }
