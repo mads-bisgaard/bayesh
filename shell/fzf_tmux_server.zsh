@@ -12,14 +12,12 @@ _fzf_tmux_server_start() {
         _fzf_tmux_server_start_help
         return
     fi
-    api_key=$1
-    [ -n "$api_key" ] && api_key="FZF_API_KEY=$api_key"
     local fifo
     fifo=$(mktemp -u)
     mkfifo "$fifo"
     # shellcheck disable=SC2016
     script=(
-        'echo "" | '"$api_key"' fzf '
+        'echo "" | fzf '
         "--listen "
         '--bind='\''start:execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
         "--scheme=history "
