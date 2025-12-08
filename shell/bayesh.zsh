@@ -35,7 +35,7 @@ function _bayesh_is_active() {
 
 function bayesh_start_or_kill_server() {
 
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
+    if _bayesh_is_active; then
         if _fzf_tmux_server_get -c "$BAYESH_SERVER_CONFIG" &> /dev/null; then
             _fzf_tmux_server_kill -c "$BAYESH_SERVER_CONFIG"
             unset BAYESH_SERVER_CONFIG
