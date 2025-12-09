@@ -115,12 +115,33 @@ ${current_cmd}"
 @test "test bayesh server active function" {
     run zsh -i -c \
     '
-    export TMUX="tmuxsessionid"
+    set -e \
+    export TMUX="tmuxsessionid" \
+    source <(bayesh --zsh) \
+    unset BAYESH_SERVER_CONFIG \
+    _bayesh_is_active
+    '
+    [ "$status" -eq 1 ]
+
+
+    run zsh -i -c \
+    '
+    set -e \
+    export TMUX="tmuxsessionid" \
     source <(bayesh --zsh) \
     export BAYESH_SERVER_CONFIG="{\"url\":\"http://localhost:8000\", \"tmux_pane_id\": \"%1\", \"client_pid\":99999}" \
-    _bayesh_is_active \
-    exit $?
+    _bayesh_is_active
     '
-
     [ "$status" -eq 1 ]
+
+
+    run zsh -i -c \
+    '
+    set -e \
+    export TMUX="tmuxsessionid" \
+    source <(bayesh --zsh) \
+    export BAYESH_SERVER_CONFIG="{\"url\":\"http://localhost:8000\", \"tmux_pane_id\": \"%1\", \"client_pid\":$$}" \
+    _bayesh_is_active
+    '
+    [ "$status" -eq 0 ]    
 }
