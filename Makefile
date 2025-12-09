@@ -9,7 +9,7 @@ bats-tests:
 	docker run \
 		-v "$(shell pwd):/code" \
 		-v "$(shell pwd)/build:/usr/local/bin" \
-		madsbis/bayesh-bats-testing:v5 \
+		madsbis/bayesh-bats-testing:v6 \
 		--print-output-on-failure \
 		--verbose-run \
 		tests
