@@ -11,7 +11,8 @@ RUN apt-get update; \
     jq \
     make \
     sqlite3 \
-    sudo
+    sudo \
+    zsh
 
 RUN git clone https://github.com/ztombol/bats-support batslib/bats-support && \
     git clone https://github.com/ztombol/bats-assert batslib/bats-assert

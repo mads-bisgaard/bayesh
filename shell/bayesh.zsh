@@ -24,19 +24,26 @@ if [[ ! -n "$TMUX" ]]; then
 
 fi
 
+function _bayesh_is_active() {
+    [[ -n "$BAYESH_SERVER_CONFIG" ]] || return 1
+    client_pid=$(echo "$BAYESH_SERVER_CONFIG" | jq -r .client_pid)
+    [[ "$client_pid" == "$$" ]] || return 1
+}
+
 
 #functions for communicating with server
 
 function bayesh_start_or_kill_server() {
 
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
+    if _bayesh_is_active; then
         if _fzf_tmux_server_get -c "$BAYESH_SERVER_CONFIG" &> /dev/null; then
             _fzf_tmux_server_kill -c "$BAYESH_SERVER_CONFIG"
             unset BAYESH_SERVER_CONFIG
             return 
         fi
     fi
-    BAYESH_SERVER_CONFIG=$(_fzf_tmux_server_start)
+    config=$(_fzf_tmux_server_start)
+    BAYESH_SERVER_CONFIG=$(echo "$config" | jq -Mc ". + { \"client_pid\": $$ }")
     export BAYESH_SERVER_CONFIG
     zle-line-init
 }
@@ -45,7 +52,7 @@ bindkey '^E' start_or_kill_server
 
 
 function zle-line-init() {
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
+    if _bayesh_is_active; then
         fifo=$(mktemp -u)
         mkfifo "$fifo"
         (
@@ -59,7 +66,7 @@ zle -N zle-line-init
 
 
 function zle-line-pre-redraw() {
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
+    if _bayesh_is_active; then
         ( echo "search("$BUFFER")" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi
 }
@@ -72,7 +79,7 @@ function bayesh_select() {
     local p
     token_regex="<STRING>|<PATH>"
 
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
+    if _bayesh_is_active; then
         cmd=$(_fzf_tmux_server_get -c "$BAYESH_SERVER_CONFIG" 2> /dev/null | jq -r .current.text)
         p="${#cmd}"
         if echo "${cmd}" | grep -boq -E "${token_regex}"; then
@@ -87,7 +94,7 @@ zle -N select bayesh_select
 bindkey '^[[1;5C' select # Ctrl-rightarrow
 
 function bayesh_up() {
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
+    if _bayesh_is_active; then
         ( echo "up" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi    
 }
@@ -95,7 +102,7 @@ zle -N up bayesh_up
 bindkey '^[[1;5A' up # Ctrl-uparrow
 
 function bayesh_down() {
-    if [[ -n "$BAYESH_SERVER_CONFIG" ]]; then
+    if _bayesh_is_active; then
         ( echo "down" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null & )
     fi    
 }
