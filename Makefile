@@ -5,7 +5,7 @@ clean:
 	git clean -fd
 
 .PHONY: bats-tests
-bats-tests:
+bats-tests: build
 	docker run \
 		-v "$(shell pwd):/code" \
 		-v "$(shell pwd)/build:/usr/local/bin" \
