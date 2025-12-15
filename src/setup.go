@@ -107,7 +107,7 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 		return nil, err
 	}
 
-	result, err := govalidator.ValidateStruct(&settings)
+	result, err := govalidator.ValidateStruct(settings)
 	if err != nil {
 		return nil, err
 	}
