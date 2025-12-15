@@ -98,8 +98,8 @@ func TestBayeshDir(t *testing.T) {
 				if settings.BayeshDir != bayeshDir {
 					t.Errorf("Expected BayeshDir %q, got %q", bayeshDir, settings.BayeshDir)
 				}
-				if settings.DB != filepath.Join(bayeshDir, "bayesh.db") {
-					t.Errorf("Expected DB path %q, got %q", filepath.Join(bayeshDir, "bayesh.db"), settings.DB)
+				if settings.Db() != filepath.Join(bayeshDir, "bayesh.db") {
+					t.Errorf("Expected DB path %q, got %q", filepath.Join(bayeshDir, "bayesh.db"), settings.Db())
 				}
 			},
 		)
@@ -161,13 +161,11 @@ func TestCreateSettings_UserHomeDirError(t *testing.T) {
 func TestSettings_ToJSON(t *testing.T) {
 	settings := &Settings{
 		BayeshDir: "/path/to/bayesh",
-		DB:        "/path/to/bayesh/bayesh.db",
 		LogLevel:  slog.LevelError,
 	}
 
 	expectedJSON := `{
   "BAYESH_DIR": "/path/to/bayesh",
-  "BAYESH_DB": "/path/to/bayesh/bayesh.db",
   "BAYESH_LOG_LEVEL": "ERROR"
 }`
 

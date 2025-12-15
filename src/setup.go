@@ -4,20 +4,44 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
+
+	"github.com/asaskevich/govalidator"
 )
 
 const BayeshDirEnvVar = "BAYESH_DIR"
 const LogLevelEnvVar = "BAYESH_LOG_LEVEL"
 
 type Settings struct {
-	BayeshDir string     `json:"BAYESH_DIR"`
-	DB        string     `json:"BAYESH_DB"`
-	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL"`
+	BayeshDir string     `json:"BAYESH_DIR" validate:"required,dir"`
+	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
+}
+
+func (s *Settings) Db() string {
+	return filepath.Join(s.BayeshDir, "bayesh.db")
+}
+
+func (s *Settings) setupDatabase() error {
+	dbPath := s.Db()
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Fatalf("Failed to close DB: %v", err)
+		}
+	}()
+	queries := New(db)
+	if err := queries.CreateSchema(context.Background()); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Settings) ToJSON() (string, error) {
@@ -37,54 +61,47 @@ type FileSystem interface {
 }
 
 func Setup(context context.Context, fs FileSystem) (*Settings, error) {
-	logLevel := slog.LevelError
-	logLevelStr := strings.ToLower(fs.Getenv(LogLevelEnvVar))
-	switch logLevelStr {
-	case "debug":
-		logLevel = slog.LevelDebug
-	case "info":
-		logLevel = slog.LevelInfo
-	case "warn":
-		logLevel = slog.LevelWarn
-	case "error":
-		logLevel = slog.LevelError
+	logLevelStr := fs.Getenv(LogLevelEnvVar)
+	if logLevelStr == "" {
+		logLevelStr = "ERROR"
+	}
+	var logLevel slog.Level
+	err := logLevel.UnmarshalText([]byte(logLevelStr))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: Invalid log level %q: %v\n", logLevelStr, err)
+		return nil, err
 	}
 
-	home, err := fs.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
 	bayeshDir := fs.Getenv(BayeshDirEnvVar)
 	if bayeshDir == "" {
-		bayeshDir = filepath.Join(home, ".bayesh")
-	}
-	absDir, err := filepath.Abs(bayeshDir)
-	if err != nil {
-		return nil, err
-	}
-	if err := fs.MkdirAll(absDir, 0o755); err != nil {
-		return nil, err
-	}
-	dbPath := filepath.Join(absDir, "bayesh.db")
-	// If the database file doesn't exist, create it and set up the schema.
-	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
-		db, err := sql.Open("sqlite3", dbPath)
+		home, err := fs.UserHomeDir()
 		if err != nil {
 			return nil, err
 		}
-		defer func() {
-			if err := db.Close(); err != nil {
-				log.Fatalf("Failed to close DB: %v", err)
-			}
-		}()
-		queries := New(db)
-		if err := queries.CreateSchema(context); err != nil {
+		bayeshDir = filepath.Join(home, ".bayesh")
+	}
+	if err := fs.MkdirAll(bayeshDir, 0o755); err != nil {
+		return nil, err
+	}
+	settings := Settings{
+		BayeshDir: bayeshDir,
+		LogLevel:  logLevel,
+	}
+
+	result, err := govalidator.ValidateStruct(&settings)
+	if err != nil {
+		return nil, err
+	}
+	if !result {
+		return nil, errors.New("Could not validate settings: " + govalidator.ToString(&settings))
+	}
+
+	dbPath := settings.Db()
+	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
+		err := settings.setupDatabase()
+		if err != nil {
 			return nil, err
 		}
 	}
-	return &Settings{
-		BayeshDir: absDir,
-		DB:        dbPath,
-		LogLevel:  logLevel,
-	}, nil
+	return &settings, nil
 }
