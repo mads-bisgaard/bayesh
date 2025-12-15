@@ -10,16 +10,19 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 
 	"github.com/asaskevich/govalidator"
 )
 
 const BayeshDirEnvVar = "BAYESH_DIR"
 const LogLevelEnvVar = "BAYESH_LOG_LEVEL"
+const MinRequiredEventsEnvVar = "BAYESH_MIN_REQUIRED_EVENTS"
 
 type Settings struct {
-	BayeshDir string     `json:"BAYESH_DIR" validate:"required,dir"`
-	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
+	BayeshDir         string     `json:"BAYESH_DIR" validate:"required,dir"`
+	LogLevel          slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
+	MinRequiredEvents int        `json:"BAYESH_MIN_REQUIRED_EVENTS" validate:"required,min=0"`
 }
 
 func (s *Settings) Db() string {
@@ -60,32 +63,48 @@ type FileSystem interface {
 	Create(name string) (*os.File, error)
 }
 
-func Setup(context context.Context, fs FileSystem) (*Settings, error) {
-	logLevelStr := fs.Getenv(LogLevelEnvVar)
-	if logLevelStr == "" {
-		logLevelStr = "ERROR"
-	}
-	var logLevel slog.Level
-	err := logLevel.UnmarshalText([]byte(logLevelStr))
+func defaultSettings(fs FileSystem) (*Settings, error) {
+	userHomeDir, err := fs.UserHomeDir()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Invalid log level %q: %v\n", logLevelStr, err)
+		fmt.Fprintf(os.Stderr, "Failed to get user home directory: %v", err)
 		return nil, err
 	}
 
-	bayeshDir := fs.Getenv(BayeshDirEnvVar)
-	if bayeshDir == "" {
-		home, err := fs.UserHomeDir()
-		if err != nil {
-			return nil, err
-		}
-		bayeshDir = filepath.Join(home, ".bayesh")
-	}
-	if err := fs.MkdirAll(bayeshDir, 0o755); err != nil {
+	return &Settings{
+		BayeshDir:         filepath.Join(userHomeDir, ".bayesh"),
+		LogLevel:          slog.LevelError,
+		MinRequiredEvents: 1,
+	}, nil
+}
+
+func Setup(context context.Context, fs FileSystem) (*Settings, error) {
+	settings, err := defaultSettings(fs)
+	if err != nil {
 		return nil, err
 	}
-	settings := Settings{
-		BayeshDir: bayeshDir,
-		LogLevel:  logLevel,
+	if logLevelStr := fs.Getenv(LogLevelEnvVar); logLevelStr != "" {
+		var logLevel slog.Level
+		err := logLevel.UnmarshalText([]byte(logLevelStr))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Invalid log level %q: %v\n", logLevelStr, err)
+			return nil, err
+		}
+		settings.LogLevel = logLevel
+	}
+	if minRequiredEventsStr := fs.Getenv(MinRequiredEventsEnvVar); minRequiredEventsStr != "" {
+		minRequiredEvents, err := strconv.Atoi(minRequiredEventsStr)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: Invalid min required events %q: %v\n", minRequiredEventsStr, err)
+			return nil, err
+		}
+		settings.MinRequiredEvents = minRequiredEvents
+	}
+
+	if bayeshDir := fs.Getenv(BayeshDirEnvVar); bayeshDir != "" {
+		settings.BayeshDir = bayeshDir
+	}
+	if err := fs.MkdirAll(settings.BayeshDir, 0o755); err != nil {
+		return nil, err
 	}
 
 	result, err := govalidator.ValidateStruct(&settings)
@@ -103,5 +122,5 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 			return nil, err
 		}
 	}
-	return &settings, nil
+	return settings, nil
 }
