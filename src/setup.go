@@ -21,17 +21,13 @@ const MinRequiredEventsEnvVar = "BAYESH_MIN_REQUIRED_EVENTS"
 
 type Settings struct {
 	BayeshDir         string     `json:"BAYESH_DIR" validate:"required,dir"`
+	Database          string     `json:"BAYESH_DATABASE" validate:"required,file"`
 	LogLevel          slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
 	MinRequiredEvents int        `json:"BAYESH_MIN_REQUIRED_EVENTS" validate:"required,min=0"`
 }
 
-func (s *Settings) Db() string {
-	return filepath.Join(s.BayeshDir, "bayesh.db")
-}
-
 func (s *Settings) setupDatabase() error {
-	dbPath := s.Db()
-	db, err := sql.Open("sqlite3", dbPath)
+	db, err := sql.Open("sqlite3", s.Database)
 	if err != nil {
 		return err
 	}
@@ -63,25 +59,26 @@ type FileSystem interface {
 	Create(name string) (*os.File, error)
 }
 
-func defaultSettings(fs FileSystem) (*Settings, error) {
+func defaultSettings(fs FileSystem) *Settings {
+	var bayeshDir = ""
+	var bayeshDb = ""
+
 	userHomeDir, err := fs.UserHomeDir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to get user home directory: %v", err)
-		return nil, err
+	if err == nil {
+		bayeshDir = filepath.Join(userHomeDir, ".bayesh")
+		bayeshDb = filepath.Join(bayeshDir, "bayesh.db")
 	}
 
 	return &Settings{
-		BayeshDir:         filepath.Join(userHomeDir, ".bayesh"),
+		BayeshDir:         bayeshDir,
+		Database:          bayeshDb,
 		LogLevel:          slog.LevelError,
 		MinRequiredEvents: 1,
-	}, nil
+	}
 }
 
 func Setup(context context.Context, fs FileSystem) (*Settings, error) {
-	settings, err := defaultSettings(fs)
-	if err != nil {
-		return nil, err
-	}
+	settings := defaultSettings(fs)
 	if logLevelStr := fs.Getenv(LogLevelEnvVar); logLevelStr != "" {
 		var logLevel slog.Level
 		err := logLevel.UnmarshalText([]byte(logLevelStr))
@@ -91,10 +88,13 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 		}
 		settings.LogLevel = logLevel
 	}
+	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
+	slog.SetDefault(slog.New(logHandler))
+
 	if minRequiredEventsStr := fs.Getenv(MinRequiredEventsEnvVar); minRequiredEventsStr != "" {
 		minRequiredEvents, err := strconv.Atoi(minRequiredEventsStr)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Invalid min required events %q: %v\n", minRequiredEventsStr, err)
+			slog.Error("Error: Invalid min required events %q: %v\n", minRequiredEventsStr, err)
 			return nil, err
 		}
 		settings.MinRequiredEvents = minRequiredEvents
@@ -107,20 +107,20 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 		return nil, err
 	}
 
+	dbPath := settings.Database
+	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
+		err := settings.setupDatabase()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	result, err := govalidator.ValidateStruct(settings)
 	if err != nil {
 		return nil, err
 	}
 	if !result {
 		return nil, errors.New("Could not validate settings: " + govalidator.ToString(&settings))
-	}
-
-	dbPath := settings.Db()
-	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
-		err := settings.setupDatabase()
-		if err != nil {
-			return nil, err
-		}
 	}
 	return settings, nil
 }

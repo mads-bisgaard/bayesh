@@ -98,8 +98,8 @@ func TestBayeshDir(t *testing.T) {
 				if settings.BayeshDir != bayeshDir {
 					t.Errorf("Expected BayeshDir %q, got %q", bayeshDir, settings.BayeshDir)
 				}
-				if settings.Db() != filepath.Join(bayeshDir, "bayesh.db") {
-					t.Errorf("Expected DB path %q, got %q", filepath.Join(bayeshDir, "bayesh.db"), settings.Db())
+				if settings.Database != filepath.Join(bayeshDir, "bayesh.db") {
+					t.Errorf("Expected DB path %q, got %q", filepath.Join(bayeshDir, "bayesh.db"), settings.Database)
 				}
 			},
 		)

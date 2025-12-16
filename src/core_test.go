@@ -25,7 +25,7 @@ func setupCoreWithTempDB(t *testing.T) (*Core, string) {
 		t.Fatalf("NewCore failed: %v", err)
 	}
 
-	return core, settings.Db()
+	return core, settings.Database
 }
 
 func TestRecordEvent_NewEvent(t *testing.T) {

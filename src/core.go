@@ -34,7 +34,7 @@ type Core struct {
 }
 
 func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
-	db, err := sql.Open("sqlite3", settings.Db())
+	db, err := sql.Open("sqlite3", settings.Database)
 	if err != nil {
 		return nil, err
 	}
