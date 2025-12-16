@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -83,18 +82,14 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 		var logLevel slog.Level
 		err := logLevel.UnmarshalText([]byte(logLevelStr))
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error: Invalid log level %q: %v\n", logLevelStr, err)
 			return nil, err
 		}
 		settings.LogLevel = logLevel
 	}
-	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
-	slog.SetDefault(slog.New(logHandler))
 
 	if minRequiredEventsStr := fs.Getenv(MinRequiredEventsEnvVar); minRequiredEventsStr != "" {
 		minRequiredEvents, err := strconv.Atoi(minRequiredEventsStr)
 		if err != nil {
-			slog.Error("Error: Invalid min required events %q: %v\n", minRequiredEventsStr, err)
 			return nil, err
 		}
 		settings.MinRequiredEvents = minRequiredEvents
@@ -102,9 +97,10 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 
 	if bayeshDir := fs.Getenv(BayeshDirEnvVar); bayeshDir != "" {
 		settings.BayeshDir = bayeshDir
+		settings.Database = filepath.Join(bayeshDir, "bayesh.db")
 	}
 	if err := fs.MkdirAll(settings.BayeshDir, 0o755); err != nil {
-		return nil, err
+		return nil, errors.New("Could not create directory: '" + settings.BayeshDir + "'")
 	}
 
 	dbPath := settings.Database
@@ -122,5 +118,7 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 	if !result {
 		return nil, errors.New("Could not validate settings: " + govalidator.ToString(&settings))
 	}
+	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
+	slog.SetDefault(slog.New(logHandler))
 	return settings, nil
 }
