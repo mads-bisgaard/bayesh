@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 )
 
@@ -98,20 +99,40 @@ func (q *Queries) UpdateRow(ctx context.Context, arg Row) error {
 	return err
 }
 
-func (q *Queries) InferCurrentCmd(ctx context.Context, cwd, previousCmd string) ([]string, error) {
-	query := `
-    SELECT ` + colCurrentCmd + `
-    FROM ` + eventsTable + `
-    WHERE ` + colCwd + ` = ? AND ` + colPreviousCmd + ` = ?
-    ORDER BY ` + colEventCounter + ` DESC`
+func (q *Queries) ConditionalEventCounts(ctx context.Context, cwd *string, previousCmd *string, minEventCount *int) (map[string]int, error) {
+	newLine := "\n"
+
+	query := strings.Builder{}
+	query.WriteString("SELECT " + colCurrentCmd + ", SUM(" + colEventCounter + ")" + newLine)
+	query.WriteString("FROM " + eventsTable + newLine)
+
+	conditions := []string{}
+	args := []interface{}{}
+
+	if cwd != nil {
+		conditions = append(conditions, colCwd+" = ?")
+		args = append(args, *cwd)
+	}
+	if previousCmd != nil {
+		conditions = append(conditions, colPreviousCmd+" = ?")
+		args = append(args, *previousCmd)
+	}
+	if minEventCount != nil {
+		conditions = append(conditions, colEventCounter+" >= ?")
+		args = append(args, *minEventCount)
+	}
+	if len(conditions) > 0 {
+		query.WriteString("WHERE " + strings.Join(conditions, " AND ") + newLine)
+	}
+	query.WriteString("GROUP BY " + colCurrentCmd + newLine)
 
 	slog.Debug("Inferring current command with",
-		"query", query,
+		"query", query.String(),
 		"cwd", cwd,
 		"previousCmd", previousCmd,
 	)
 
-	rows, err := q.db.QueryContext(ctx, query, cwd, previousCmd)
+	rows, err := q.db.QueryContext(ctx, query.String(), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -121,16 +142,17 @@ func (q *Queries) InferCurrentCmd(ctx context.Context, cwd, previousCmd string) 
 		}
 	}()
 
-	items := make([]string, 0)
+	result := make(map[string]int)
 	for rows.Next() {
 		var currentCmd string
-		if err := rows.Scan(&currentCmd); err != nil {
+		var eventCounter int
+		if err := rows.Scan(&currentCmd, &eventCounter); err != nil {
 			return nil, err
 		}
-		items = append(items, currentCmd)
+		result[currentCmd] = eventCounter
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return items, nil
+	return result, nil
 }

@@ -327,14 +327,21 @@ func TestInferCurrentCmd(t *testing.T) {
 	}
 
 	// 2. Infer the commands
-	inferredCmds, err := queries.InferCurrentCmd(ctx, targetCwd, targetPrevCmd)
+	inferredCmds, err := queries.ConditionalEventCounts(ctx, &targetCwd, &targetPrevCmd, nil)
+	keys := make([]string, 0, len(inferredCmds))
+	for key := range inferredCmds {
+		keys = append(keys, key)
+	}
+	slices.SortStableFunc(keys, func(a, b string) int {
+		return inferredCmds[b] - inferredCmds[a]
+	})
 	if err != nil {
 		t.Fatalf("InferCurrentCmd failed: %v", err)
 	}
 
 	// 3. Verify the result
-	if !slices.Equal(inferredCmds, expectedCmds) {
-		t.Errorf("Inferred commands do not match expected commands.\nExpected: %v\nGot:      %v", expectedCmds, inferredCmds)
+	if !slices.Equal(keys, expectedCmds) {
+		t.Errorf("Inferred commands do not match expected commands.\nExpected: %v\nGot:      %v", expectedCmds, keys)
 	}
 }
 
@@ -343,7 +350,9 @@ func TestInferCurrentCmdNoResults(t *testing.T) {
 	ctx := context.Background()
 
 	// Call InferCurrentCmd on an empty database
-	result, err := queries.InferCurrentCmd(ctx, "some_cwd", "some_prev_cmd")
+	cwd := "some_cwd"
+	prevCmd := "some_prev_cmd"
+	result, err := queries.ConditionalEventCounts(ctx, &cwd, &prevCmd, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, but got %v", err)
 	}
