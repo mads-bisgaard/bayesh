@@ -308,7 +308,6 @@ func setupDataForConditionalEventCountTest(t *testing.T, ctx context.Context, qu
 	// Create and add the rows we care about
 	targetCwd := "/home/user/project"
 	targetPrevCmd := "git status"
-	var expectedCmds []string
 	for ii := 0; ii < 10; ii++ {
 		row := Row{
 			Cwd:          targetCwd,
@@ -318,7 +317,16 @@ func setupDataForConditionalEventCountTest(t *testing.T, ctx context.Context, qu
 			LastModified: time.Now(),
 		}
 		allRows = append(allRows, row)
-		expectedCmds = append(expectedCmds, row.CurrentCmd)
+	}
+	for ii := 0; ii < 10; ii++ {
+		row := Row{
+			Cwd:          targetCwd,
+			PreviousCmd:  fmt.Sprintf("git add file%d.txt", ii),
+			CurrentCmd:   "foo bar",
+			EventCounter: ii,
+			LastModified: time.Now(),
+		}
+		allRows = append(allRows, row)
 	}
 
 	// Shuffle and insert all rows together
