@@ -4,12 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"log/slog"
 	"os"
 	"slices"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
+
+const probabilityWeight float64 = (float64(1.0) / float64(3.0))
 
 type OsFs struct{}
 
@@ -54,20 +57,66 @@ func (c *Core) Close() error {
 	return nil
 }
 
+func conditionalProbabilities(ctx context.Context, queries *Queries, settings *Settings, cwd *string, processedPreviousCmd *string, channel chan map[string]float64) {
+
+	eventCounts, err := queries.ConditionalEventCounts(ctx, cwd, processedPreviousCmd, &settings.MinRequiredEvents)
+	if err != nil {
+		slog.Error("Failed to compute conditional events:" + err.Error())
+	}
+
+	totalCount := 0
+	for _, count := range eventCounts {
+		totalCount += count
+	}
+
+	probabilities := make(map[string]float64)
+	for cmd, count := range eventCounts {
+		probabilities[cmd] = float64(count) / float64(totalCount)
+	}
+	channel <- probabilities
+
+}
+
 func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
+
+	inferredCmdsMap := make(map[string]float64)
+
 	queries := New(c.db)
 	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
-	inferredCmdsMap, err := queries.ConditionalEventCounts(ctx, &cwd, &processedPreviousCmd, nil)
-	if err != nil {
-		return nil, err
+
+	chanCwd := make(chan map[string]float64)
+	chanPrevCmd := make(chan map[string]float64)
+	chanCwdPrevCmd := make(chan map[string]float64)
+	go conditionalProbabilities(ctx, queries, c.Settings, &cwd, nil, chanCwd)
+	go conditionalProbabilities(ctx, queries, c.Settings, nil, &processedPreviousCmd, chanPrevCmd)
+	go conditionalProbabilities(ctx, queries, c.Settings, &cwd, &processedPreviousCmd, chanCwdPrevCmd)
+
+	probCwd := <-chanCwd
+	probPrevCmd := <-chanPrevCmd
+	probCwdPrevCmd := <-chanCwdPrevCmd
+
+	for cmd, prob := range probCwd {
+		inferredCmdsMap[cmd] += probabilityWeight * prob
+	}
+	for cmd, prob := range probPrevCmd {
+		inferredCmdsMap[cmd] += probabilityWeight * prob
+	}
+	for cmd, prob := range probCwdPrevCmd {
+		inferredCmdsMap[cmd] += probabilityWeight * prob
 	}
 
 	keys := make([]string, 0, len(inferredCmdsMap))
-	for key := range inferredCmdsMap {
-		keys = append(keys, key)
+	for cmd := range inferredCmdsMap {
+		keys = append(keys, cmd)
 	}
-	slices.SortStableFunc(keys, func(a, b string) int {
-		return inferredCmdsMap[b] - inferredCmdsMap[a]
+
+	slices.SortFunc(keys, func(a, b string) int {
+		if inferredCmdsMap[a] > inferredCmdsMap[b] {
+			return -1
+		} else if inferredCmdsMap[a] < inferredCmdsMap[b] {
+			return 1
+		}
+		return 0
 	})
 
 	return keys, nil
