@@ -35,7 +35,7 @@ teardown() {
     #shellcheck source=./shell/bayesh.bash
     source <(bayesh --bash)
     command="random command ${RANDOM}"
-    db=$(bayesh settings | jq -r .BAYESH_DB)
+    db=$(bayesh settings | jq -r .BAYESH_DATABASE)
     
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
@@ -87,7 +87,7 @@ teardown() {
     #shellcheck source=./shell/bayesh.bash
     source <(bayesh --bash)
 
-    db=$(bayesh settings | jq -r .BAYESH_DB)
+    db=$(bayesh settings | jq -r .BAYESH_DATABASE)
 
     cwd=$(mktemp -d)
     previous_cmd="previous command ${RANDOM}"
@@ -109,4 +109,38 @@ teardown() {
     assert_output "${#current_cmd}
 ${current_cmd}"
 
+}
+
+
+@test "test bayesh server active function" {
+    run zsh -i -c \
+    '
+    set -e; \
+    export TMUX="tmuxsessionid"; \
+    source <(bayesh --zsh); \
+    _bayesh_is_active;
+    '
+    [ "$status" -eq 1 ]
+
+
+    run zsh -i -c \
+    '
+    set -e; \
+    export TMUX="tmuxsessionid"; \
+    source <(bayesh --zsh); \
+    export BAYESH_SERVER_CONFIG="{\"url\":\"http://localhost:8000\", \"tmux_pane_id\": \"%1\", \"client_pid\": \"not a pid\"}"; \
+    _bayesh_is_active;
+    '
+    [ "$status" -eq 1 ]
+
+
+    run zsh -i -c \
+    '
+    set -e; \
+    export TMUX="tmuxsessionid"; \
+    source <(bayesh --zsh); \
+    export BAYESH_SERVER_CONFIG="{\"url\":\"http://localhost:8000\", \"tmux_pane_id\": \"%1\", \"client_pid\":$$}"; \
+    _bayesh_is_active;
+    '
+    [ "$status" -eq 0 ]    
 }
