@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"maps"
 	"math/rand"
 	"os"
-	"slices"
 	"testing"
 	"time"
 
@@ -281,18 +281,24 @@ func TestUpdateRow(t *testing.T) {
 	}
 }
 
-func TestInferCurrentCmd(t *testing.T) {
-	queries, _ := setupTestDB(t)
-	ctx := context.Background()
+type conditionalEventCountTestSetup struct {
+	targetCwd           string
+	targetPrevCmd       string
+	targetMinEventCount int
+	allRows             []Row
+}
+
+func setupDataForConditionalEventCountTest(t *testing.T, ctx context.Context, queries *Queries) *conditionalEventCountTestSetup {
+	t.Helper()
 
 	// 1. Setup data
 	var allRows []Row
 	// Create and add some noise data
-	for i := 0; i < 50; i++ {
+	for ii := 0; ii < 50; ii++ {
 		noiseRow := Row{
-			Cwd:          fmt.Sprintf("/tmp/noise/%d", i),
-			PreviousCmd:  fmt.Sprintf("noise_prev_%d", i),
-			CurrentCmd:   fmt.Sprintf("noise_curr_%d", i),
+			Cwd:          fmt.Sprintf("/tmp/noise/%d", ii),
+			PreviousCmd:  fmt.Sprintf("noise_prev_%d", ii),
+			CurrentCmd:   fmt.Sprintf("noise_curr_%d", ii),
 			EventCounter: rand.Intn(1000),
 			LastModified: time.Now(),
 		}
@@ -302,17 +308,25 @@ func TestInferCurrentCmd(t *testing.T) {
 	// Create and add the rows we care about
 	targetCwd := "/home/user/project"
 	targetPrevCmd := "git status"
-	var expectedCmds []string
-	for i := 0; i < 10; i++ {
+	for ii := 0; ii < 10; ii++ {
 		row := Row{
 			Cwd:          targetCwd,
 			PreviousCmd:  targetPrevCmd,
-			CurrentCmd:   fmt.Sprintf("git add file%d.txt", i),
-			EventCounter: 100 - i, // Higher counter for earlier commands in the list
+			CurrentCmd:   fmt.Sprintf("git add file%d.txt", ii),
+			EventCounter: ii,
 			LastModified: time.Now(),
 		}
 		allRows = append(allRows, row)
-		expectedCmds = append(expectedCmds, row.CurrentCmd)
+	}
+	for ii := 0; ii < 10; ii++ {
+		row := Row{
+			Cwd:          targetCwd,
+			PreviousCmd:  fmt.Sprintf("git add file%d.txt", ii),
+			CurrentCmd:   "foo bar",
+			EventCounter: ii,
+			LastModified: time.Now(),
+		}
+		allRows = append(allRows, row)
 	}
 
 	// Shuffle and insert all rows together
@@ -326,15 +340,94 @@ func TestInferCurrentCmd(t *testing.T) {
 		}
 	}
 
-	// 2. Infer the commands
-	inferredCmds, err := queries.InferCurrentCmd(ctx, targetCwd, targetPrevCmd)
-	if err != nil {
-		t.Fatalf("InferCurrentCmd failed: %v", err)
+	return &conditionalEventCountTestSetup{
+		targetCwd:           targetCwd,
+		targetPrevCmd:       targetPrevCmd,
+		targetMinEventCount: 5,
+		allRows:             allRows,
 	}
 
-	// 3. Verify the result
-	if !slices.Equal(inferredCmds, expectedCmds) {
-		t.Errorf("Inferred commands do not match expected commands.\nExpected: %v\nGot:      %v", expectedCmds, inferredCmds)
+}
+
+func TestConditionalEventCount(t *testing.T) {
+
+	inputs := []struct {
+		targetCwd     bool
+		targetPrevCmd bool
+		minEventCount bool
+	}{
+		{
+			targetCwd:     true,
+			targetPrevCmd: true,
+			minEventCount: true,
+		},
+		{
+			targetCwd:     false,
+			targetPrevCmd: true,
+			minEventCount: true,
+		},
+		{
+			targetCwd:     true,
+			targetPrevCmd: false,
+			minEventCount: true,
+		},
+		{
+			targetCwd:     false,
+			targetPrevCmd: false,
+			minEventCount: true,
+		},
+		{
+			targetCwd:     true,
+			targetPrevCmd: true,
+			minEventCount: false,
+		},
+		{
+			targetCwd:     false,
+			targetPrevCmd: false,
+			minEventCount: false,
+		},
+	}
+
+	for _, input := range inputs {
+		t.Run(fmt.Sprintf("ConditionalEventCount%v%v%v", input.targetCwd, input.targetPrevCmd, input.minEventCount), func(t *testing.T) {
+
+			queries, _ := setupTestDB(t)
+			ctx := context.Background()
+
+			testData := setupDataForConditionalEventCountTest(t, ctx, queries)
+
+			expectedData := map[string]int{}
+			for _, row := range testData.allRows {
+				matchesCwd := !input.targetCwd || row.Cwd == testData.targetCwd
+				matchesPrevCmd := !input.targetPrevCmd || row.PreviousCmd == testData.targetPrevCmd
+				matchesMinEventCount := !input.minEventCount || row.EventCounter >= testData.targetMinEventCount
+
+				if matchesCwd && matchesPrevCmd && matchesMinEventCount {
+					expectedData[row.CurrentCmd] += row.EventCounter
+				}
+			}
+
+			var cwd *string = nil
+			if input.targetCwd {
+				cwd = &testData.targetCwd
+			}
+			var prevCmd *string = nil
+			if input.targetPrevCmd {
+				prevCmd = &testData.targetPrevCmd
+			}
+			var minEventCount *int = nil
+			if input.minEventCount {
+				minEventCount = &testData.targetMinEventCount
+			}
+
+			eventCounts, err := queries.ConditionalEventCounts(ctx, cwd, prevCmd, minEventCount)
+			if err != nil {
+				t.Fatalf("Expected no error, but got %v", err)
+			}
+			if !maps.Equal(eventCounts, expectedData) {
+				t.Errorf("Inferred commands do not match expected commands.\nExpected: %v\nGot:      %v", expectedData, eventCounts)
+			}
+		})
 	}
 }
 
@@ -343,7 +436,9 @@ func TestInferCurrentCmdNoResults(t *testing.T) {
 	ctx := context.Background()
 
 	// Call InferCurrentCmd on an empty database
-	result, err := queries.InferCurrentCmd(ctx, "some_cwd", "some_prev_cmd")
+	cwd := "some_cwd"
+	prevCmd := "some_prev_cmd"
+	result, err := queries.ConditionalEventCounts(ctx, &cwd, &prevCmd, nil)
 	if err != nil {
 		t.Fatalf("Expected no error, but got %v", err)
 	}

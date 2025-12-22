@@ -98,8 +98,8 @@ func TestBayeshDir(t *testing.T) {
 				if settings.BayeshDir != bayeshDir {
 					t.Errorf("Expected BayeshDir %q, got %q", bayeshDir, settings.BayeshDir)
 				}
-				if settings.DB != filepath.Join(bayeshDir, "bayesh.db") {
-					t.Errorf("Expected DB path %q, got %q", filepath.Join(bayeshDir, "bayesh.db"), settings.DB)
+				if settings.Database != filepath.Join(bayeshDir, "bayesh.db") {
+					t.Errorf("Expected DB path %q, got %q", filepath.Join(bayeshDir, "bayesh.db"), settings.Database)
 				}
 			},
 		)
@@ -133,16 +133,17 @@ func TestBayeshDir_FilePath(t *testing.T) {
 		homeDir: homeDir,
 		envVars: envVars,
 	}
+	expectedErr := "Could not create directory: '" + bayeshDirAsFile + "'"
+
 	context := context.Background()
 	_, err = Setup(context, mockFS)
-	var pathError *os.PathError
-	if !errors.As(err, &pathError) {
-		t.Fatalf("Expected a *os.PathError when BAYESH_DIR is a file, but got %T: %v", err, err)
+	if err.Error() != expectedErr {
+		t.Fatalf("Expected %s but got %s", expectedErr, err.Error())
 	}
 }
 
 func TestCreateSettings_UserHomeDirError(t *testing.T) {
-	expectedErr := "home directory not found"
+	expectedErr := "Could not create directory: ''"
 	mockFS := mockFileSystem{
 		homeDirErr: errors.New(expectedErr),
 	}
@@ -160,15 +161,17 @@ func TestCreateSettings_UserHomeDirError(t *testing.T) {
 
 func TestSettings_ToJSON(t *testing.T) {
 	settings := &Settings{
-		BayeshDir: "/path/to/bayesh",
-		DB:        "/path/to/bayesh/bayesh.db",
-		LogLevel:  slog.LevelError,
+		BayeshDir:         "/path/to/bayesh",
+		Database:          "/path/to/bayesh/bayesh.db",
+		LogLevel:          slog.LevelError,
+		MinRequiredEvents: 0,
 	}
 
 	expectedJSON := `{
   "BAYESH_DIR": "/path/to/bayesh",
-  "BAYESH_DB": "/path/to/bayesh/bayesh.db",
-  "BAYESH_LOG_LEVEL": "ERROR"
+  "BAYESH_DATABASE": "/path/to/bayesh/bayesh.db",
+  "BAYESH_LOG_LEVEL": "ERROR",
+  "BAYESH_MIN_REQUIRED_EVENTS": 0
 }`
 
 	jsonString, err := settings.ToJSON()

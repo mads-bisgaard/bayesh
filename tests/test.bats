@@ -35,7 +35,7 @@ teardown() {
     #shellcheck source=./shell/bayesh.bash
     source <(bayesh --bash)
     command="random command ${RANDOM}"
-    db=$(bayesh settings | jq -r .BAYESH_DB)
+    db=$(bayesh settings | jq -r .BAYESH_DATABASE)
     
     run bash -c "sqlite3 ${db} 'select count(*) from events'"
     [ "$status" -eq 0 ]
@@ -87,7 +87,7 @@ teardown() {
     #shellcheck source=./shell/bayesh.bash
     source <(bayesh --bash)
 
-    db=$(bayesh settings | jq -r .BAYESH_DB)
+    db=$(bayesh settings | jq -r .BAYESH_DATABASE)
 
     cwd=$(mktemp -d)
     previous_cmd="previous command ${RANDOM}"

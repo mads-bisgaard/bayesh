@@ -4,20 +4,42 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
+	"strconv"
+
+	"github.com/asaskevich/govalidator"
 )
 
 const BayeshDirEnvVar = "BAYESH_DIR"
 const LogLevelEnvVar = "BAYESH_LOG_LEVEL"
+const MinRequiredEventsEnvVar = "BAYESH_MIN_REQUIRED_EVENTS"
 
 type Settings struct {
-	BayeshDir string     `json:"BAYESH_DIR"`
-	DB        string     `json:"BAYESH_DB"`
-	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL"`
+	BayeshDir         string     `json:"BAYESH_DIR" validate:"required,dir"`
+	Database          string     `json:"BAYESH_DATABASE" validate:"required,file"`
+	LogLevel          slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
+	MinRequiredEvents int        `json:"BAYESH_MIN_REQUIRED_EVENTS" validate:"required,min=0"`
+}
+
+func (s *Settings) setupDatabase() error {
+	db, err := sql.Open("sqlite3", s.Database)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Fatalf("Failed to close DB: %v", err)
+		}
+	}()
+	queries := New(db)
+	if err := queries.CreateSchema(context.Background()); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Settings) ToJSON() (string, error) {
@@ -36,55 +58,67 @@ type FileSystem interface {
 	Create(name string) (*os.File, error)
 }
 
-func Setup(context context.Context, fs FileSystem) (*Settings, error) {
-	logLevel := slog.LevelError
-	logLevelStr := strings.ToLower(fs.Getenv(LogLevelEnvVar))
-	switch logLevelStr {
-	case "debug":
-		logLevel = slog.LevelDebug
-	case "info":
-		logLevel = slog.LevelInfo
-	case "warn":
-		logLevel = slog.LevelWarn
-	case "error":
-		logLevel = slog.LevelError
+func defaultSettings(fs FileSystem) *Settings {
+	var bayeshDir = ""
+	var bayeshDb = ""
+
+	userHomeDir, err := fs.UserHomeDir()
+	if err == nil {
+		bayeshDir = filepath.Join(userHomeDir, ".bayesh")
+		bayeshDb = filepath.Join(bayeshDir, "bayesh.db")
 	}
 
-	home, err := fs.UserHomeDir()
-	if err != nil {
-		return nil, err
+	return &Settings{
+		BayeshDir:         bayeshDir,
+		Database:          bayeshDb,
+		LogLevel:          slog.LevelError,
+		MinRequiredEvents: 2,
 	}
-	bayeshDir := fs.Getenv(BayeshDirEnvVar)
-	if bayeshDir == "" {
-		bayeshDir = filepath.Join(home, ".bayesh")
-	}
-	absDir, err := filepath.Abs(bayeshDir)
-	if err != nil {
-		return nil, err
-	}
-	if err := fs.MkdirAll(absDir, 0o755); err != nil {
-		return nil, err
-	}
-	dbPath := filepath.Join(absDir, "bayesh.db")
-	// If the database file doesn't exist, create it and set up the schema.
-	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
-		db, err := sql.Open("sqlite3", dbPath)
+}
+
+func Setup(context context.Context, fs FileSystem) (*Settings, error) {
+	settings := defaultSettings(fs)
+	if logLevelStr := fs.Getenv(LogLevelEnvVar); logLevelStr != "" {
+		var logLevel slog.Level
+		err := logLevel.UnmarshalText([]byte(logLevelStr))
 		if err != nil {
 			return nil, err
 		}
-		defer func() {
-			if err := db.Close(); err != nil {
-				log.Fatalf("Failed to close DB: %v", err)
-			}
-		}()
-		queries := New(db)
-		if err := queries.CreateSchema(context); err != nil {
+		settings.LogLevel = logLevel
+	}
+
+	if minRequiredEventsStr := fs.Getenv(MinRequiredEventsEnvVar); minRequiredEventsStr != "" {
+		minRequiredEvents, err := strconv.Atoi(minRequiredEventsStr)
+		if err != nil {
+			return nil, err
+		}
+		settings.MinRequiredEvents = minRequiredEvents
+	}
+
+	if bayeshDir := fs.Getenv(BayeshDirEnvVar); bayeshDir != "" {
+		settings.BayeshDir = bayeshDir
+		settings.Database = filepath.Join(bayeshDir, "bayesh.db")
+	}
+	if err := fs.MkdirAll(settings.BayeshDir, 0o755); err != nil {
+		return nil, errors.New("Could not create directory: '" + settings.BayeshDir + "'")
+	}
+
+	dbPath := settings.Database
+	if _, err := fs.Stat(dbPath); os.IsNotExist(err) {
+		err := settings.setupDatabase()
+		if err != nil {
 			return nil, err
 		}
 	}
-	return &Settings{
-		BayeshDir: absDir,
-		DB:        dbPath,
-		LogLevel:  logLevel,
-	}, nil
+
+	result, err := govalidator.ValidateStruct(settings)
+	if err != nil {
+		return nil, err
+	}
+	if !result {
+		return nil, errors.New("Could not validate settings: " + govalidator.ToString(&settings))
+	}
+	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
+	slog.SetDefault(slog.New(logHandler))
+	return settings, nil
 }

@@ -32,11 +32,10 @@ func main() {
 	ctx := context.Background()
 	settings, err := bayesh.Setup(ctx, bayesh.OsFs{})
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: Failed during initial setup: %v\n", err)
+		slog.Error("Error: Failed during initial setup", "error", err)
 		os.Exit(1)
 	}
-	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
-	slog.SetDefault(slog.New(logHandler))
+
 	core, err := bayesh.NewCore(ctx, settings)
 	if err != nil {
 		slog.Error("Failed to create core", "error", err)

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"slices"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -34,7 +35,7 @@ type Core struct {
 }
 
 func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
-	db, err := sql.Open("sqlite3", settings.DB)
+	db, err := sql.Open("sqlite3", settings.Database)
 	if err != nil {
 		return nil, err
 	}
@@ -56,12 +57,20 @@ func (c *Core) Close() error {
 func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
 	queries := New(c.db)
 	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
-	inferredCmds, err := queries.InferCurrentCmd(ctx, cwd, processedPreviousCmd)
+	inferredCmdsMap, err := queries.ConditionalEventCounts(ctx, &cwd, &processedPreviousCmd, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return inferredCmds, nil
+	keys := make([]string, 0, len(inferredCmdsMap))
+	for key := range inferredCmdsMap {
+		keys = append(keys, key)
+	}
+	slices.SortStableFunc(keys, func(a, b string) int {
+		return inferredCmdsMap[b] - inferredCmdsMap[a]
+	})
+
+	return keys, nil
 }
 
 func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, currentCmd string) error {
