@@ -35,6 +35,9 @@ func addConditionalProbabilities(
 	channel <- nil
 }
 
+// ComputeCommandProbabilities computes a weighted average of conditional probabilities.
+// I.e. it computes the average of P(cmd|cwd), P(cmd|previousCmd), and P(cmd|cwd, previousCmd).
+// This can be thought of as a Bayesian inference (E(P(cmd|a)) where a is the context).
 func ComputeCommandProbabilities(ctx context.Context, settings *Settings, queries *Queries, cwd string, processedPreviousCmd string) (map[string]float64, error) {
 	chanCwd := make(chan error)
 	chanPrevCmd := make(chan error)
