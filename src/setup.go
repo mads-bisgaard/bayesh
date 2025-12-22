@@ -72,7 +72,7 @@ func defaultSettings(fs FileSystem) *Settings {
 		BayeshDir:         bayeshDir,
 		Database:          bayeshDb,
 		LogLevel:          slog.LevelError,
-		MinRequiredEvents: 1,
+		MinRequiredEvents: 2,
 	}
 }
 
