@@ -2,6 +2,7 @@ package bayesh
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync"
 )
@@ -21,7 +22,9 @@ func addConditionalProbabilities(
 
 	eventCounts, err := queries.ConditionalEventCounts(ctx, cwd, processedPreviousCmd, &settings.MinRequiredEvents)
 	if err != nil {
-		slog.Error("Failed to compute conditional events:" + err.Error())
+		if !errors.Is(err, context.Canceled) {
+			slog.Error("Failed to compute conditional events: " + err.Error())
+		}
 		channel <- err
 		return
 	}
@@ -30,9 +33,9 @@ func addConditionalProbabilities(
 	for _, count := range eventCounts {
 		totalCount += count
 	}
-	// weight * conditional probability
 	mu.Lock()
 	defer mu.Unlock()
+	// weight * conditional probability
 	for cmd, count := range eventCounts {
 		result[cmd] += probabilityWeight * (float64(count) / float64(totalCount))
 	}
@@ -44,6 +47,10 @@ func addConditionalProbabilities(
 // This can be thought of as a Bayesian inference (E(P(cmd|a)) where a is the context).
 func ComputeCommandProbabilities(ctx context.Context, settings *Settings, queries *Queries, cwd string, processedPreviousCmd string) (map[string]float64, error) {
 	nGoRoutines := 3
+	// Create a cancellable context to ensure resources are cleaned up if an error occurs
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	errCh := make(chan error, nGoRoutines)
 	result := make(map[string]float64)
 	var mu sync.Mutex
@@ -52,10 +59,18 @@ func ComputeCommandProbabilities(ctx context.Context, settings *Settings, querie
 	go addConditionalProbabilities(ctx, settings, queries, errCh, result, &mu, nil, &processedPreviousCmd)
 	go addConditionalProbabilities(ctx, settings, queries, errCh, result, &mu, &cwd, &processedPreviousCmd)
 
+	var firstErr error
 	for ii := 0; ii < nGoRoutines; ii++ {
 		if err := <-errCh; err != nil {
-			return nil, err
+			if firstErr == nil {
+				firstErr = err
+				cancel() // Cancel other goroutines immediately to save resources
+			}
 		}
+	}
+
+	if firstErr != nil {
+		return nil, firstErr
 	}
 
 	return result, nil
