@@ -3,7 +3,6 @@ package bayesh
 import (
 	"context"
 	"math"
-	"sync"
 	"testing"
 )
 
@@ -28,17 +27,15 @@ func TestAddConditionalProbabilities(t *testing.T) {
 		},
 	}
 	result := make(map[string]float64)
-	mu := sync.Mutex{}
-	errCh := make(chan error, 1)
 
-	addConditionalProbabilities(context.Background(), settings, queries, errCh, result, &mu, nil, nil)
+	result, err := ComputeCommandProbabilities(context.Background(), settings, queries, "/home/user/project", "git status")
 
-	if err := <-errCh; err != nil {
-		t.Fatalf("addConditionalProbabilities returned error: %v", err)
+	if err != nil {
+		t.Fatalf("ComputeCommandProbabilities returned error: %v", err)
 	}
 
-	expectedCmd1Prob := probabilityWeight * (3.0 / 4.0)
-	expectedCmd2Prob := probabilityWeight * (1.0 / 4.0)
+	expectedCmd1Prob := (3.0 / 4.0)
+	expectedCmd2Prob := (1.0 / 4.0)
 
 	if prob, ok := result["cmd1"]; !ok || math.Abs(prob-expectedCmd1Prob) > testErrorMargin {
 		t.Errorf("Expected cmd1 probability %v, got %v", expectedCmd1Prob, prob)
