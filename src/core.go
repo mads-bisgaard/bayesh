@@ -55,19 +55,27 @@ func (c *Core) Close() error {
 }
 
 func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
+
 	queries := New(c.db)
 	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
-	inferredCmdsMap, err := queries.ConditionalEventCounts(ctx, &cwd, &processedPreviousCmd, nil)
+
+	cmdProbabilities, err := ComputeCommandProbabilities(ctx, c.Settings, queries, cwd, processedPreviousCmd)
 	if err != nil {
 		return nil, err
 	}
 
-	keys := make([]string, 0, len(inferredCmdsMap))
-	for key := range inferredCmdsMap {
-		keys = append(keys, key)
+	keys := make([]string, 0, len(cmdProbabilities))
+	for cmd := range cmdProbabilities {
+		keys = append(keys, cmd)
 	}
-	slices.SortStableFunc(keys, func(a, b string) int {
-		return inferredCmdsMap[b] - inferredCmdsMap[a]
+
+	slices.SortFunc(keys, func(a, b string) int {
+		if cmdProbabilities[a] > cmdProbabilities[b] {
+			return -1
+		} else if cmdProbabilities[a] < cmdProbabilities[b] {
+			return 1
+		}
+		return 0
 	})
 
 	return keys, nil

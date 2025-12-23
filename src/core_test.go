@@ -131,6 +131,7 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 
 func TestInferCommands(t *testing.T) {
 	core, dbPath := setupCoreWithTempDB(t)
+	core.Settings.MinRequiredEvents = 0
 	defer func() {
 		if err := core.Close(); err != nil {
 			t.Errorf("core.Close() failed: %v", err)
@@ -154,14 +155,22 @@ func TestInferCommands(t *testing.T) {
 	}()
 
 	queries := New(db)
-	insertRow := Row{
+	if err := queries.InsertRow(ctx, Row{
 		Cwd:          cwd,
 		PreviousCmd:  ProcessCmd(OsFs{}, previousCmd),
 		CurrentCmd:   expectedCurrentCmd,
+		EventCounter: 10,
+		LastModified: time.Now(),
+	}); err != nil {
+		t.Fatalf("Failed to insert test row: %v", err)
+	}
+	if err := queries.InsertRow(ctx, Row{
+		Cwd:          cwd,
+		PreviousCmd:  ProcessCmd(OsFs{}, previousCmd),
+		CurrentCmd:   "my other command",
 		EventCounter: 1,
 		LastModified: time.Now(),
-	}
-	if err := queries.InsertRow(ctx, insertRow); err != nil {
+	}); err != nil {
 		t.Fatalf("Failed to insert test row: %v", err)
 	}
 
@@ -170,7 +179,7 @@ func TestInferCommands(t *testing.T) {
 		t.Fatalf("InferCommands failed: %v", err)
 	}
 
-	if len(inferredCmds) != 1 || inferredCmds[0] != expectedCurrentCmd {
+	if len(inferredCmds) != 2 || inferredCmds[0] != expectedCurrentCmd {
 		t.Errorf("expected inferred command [%q], but got %q", expectedCurrentCmd, inferredCmds)
 	}
 }
