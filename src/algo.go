@@ -23,7 +23,6 @@ func addConditionalProbabilities(
 	cwd *string,
 	processedPreviousCmd *string,
 ) {
-	slog.Debug("Adding conditional probability", *cwd, *processedPreviousCmd)
 
 	eventCounts, err := queries.ConditionalEventCounts(ctx, cwd, processedPreviousCmd, &settings.MinRequiredEvents)
 	if err != nil {
