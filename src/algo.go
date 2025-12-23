@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-const probabilityWeight float64 = (float64(1.0) / float64(3.0))
+const weight float64 = (float64(1.0) / float64(3.0))
 
 type DatabaseQuerer interface {
 	ConditionalEventCounts(ctx context.Context, cwd *string, previousCmd *string, minRequiredEvents *int) (map[string]int, error)
@@ -41,7 +41,7 @@ func addConditionalProbabilities(
 	defer mu.Unlock()
 	// weight * conditional probability
 	for cmd, count := range eventCounts {
-		result[cmd] += probabilityWeight * (float64(count) / float64(totalCount))
+		result[cmd] += weight * (float64(count) / float64(totalCount))
 	}
 	channel <- nil
 }
