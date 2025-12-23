@@ -168,7 +168,7 @@ func TestInferCommands(t *testing.T) {
 		Cwd:          cwd,
 		PreviousCmd:  ProcessCmd(OsFs{}, previousCmd),
 		CurrentCmd:   "my other command",
-		EventCounter: 10,
+		EventCounter: 1,
 		LastModified: time.Now(),
 	}); err != nil {
 		t.Fatalf("Failed to insert test row: %v", err)
