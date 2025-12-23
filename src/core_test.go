@@ -131,6 +131,7 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 
 func TestInferCommands(t *testing.T) {
 	core, dbPath := setupCoreWithTempDB(t)
+	core.Settings.MinRequiredEvents = 0
 	defer func() {
 		if err := core.Close(); err != nil {
 			t.Errorf("core.Close() failed: %v", err)
