@@ -117,20 +117,15 @@ func (q *Queries) ConditionalEventCounts(ctx context.Context, cwd *string, previ
 		conditions = append(conditions, colPreviousCmd+" = ?")
 		args = append(args, *previousCmd)
 	}
-	if minEventCount != nil {
-		conditions = append(conditions, colEventCounter+" >= ?")
-		args = append(args, *minEventCount)
-	}
 	if len(conditions) > 0 {
 		query.WriteString("WHERE " + strings.Join(conditions, " AND ") + newLine)
 	}
 	query.WriteString("GROUP BY " + colCurrentCmd + newLine)
 
-	slog.Debug("Inferring current command with",
-		"query", query.String(),
-		"cwd", cwd,
-		"previousCmd", previousCmd,
-	)
+	if minEventCount != nil {
+		query.WriteString("HAVING SUM(" + colEventCounter + ") >= ?" + newLine)
+		args = append(args, *minEventCount)
+	}
 
 	rows, err := q.db.QueryContext(ctx, query.String(), args...)
 	if err != nil {

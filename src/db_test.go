@@ -400,10 +400,14 @@ func TestConditionalEventCount(t *testing.T) {
 			for _, row := range testData.allRows {
 				matchesCwd := !input.targetCwd || row.Cwd == testData.targetCwd
 				matchesPrevCmd := !input.targetPrevCmd || row.PreviousCmd == testData.targetPrevCmd
-				matchesMinEventCount := !input.minEventCount || row.EventCounter >= testData.targetMinEventCount
 
-				if matchesCwd && matchesPrevCmd && matchesMinEventCount {
+				if matchesCwd && matchesPrevCmd {
 					expectedData[row.CurrentCmd] += row.EventCounter
+				}
+			}
+			for cmd, count := range expectedData {
+				if input.minEventCount && count < testData.targetMinEventCount {
+					delete(expectedData, cmd)
 				}
 			}
 
