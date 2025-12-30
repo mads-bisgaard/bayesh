@@ -43,9 +43,7 @@ function bayesh_start_or_kill_server() {
         fi
     fi
     config=$(_fzf_tmux_server_start)
-    fifo=$(mktemp -u)
-    mkfifo "$fifo"    
-    BAYESH_SERVER_CONFIG=$(echo "$config" | jq -Mc ". + { \"client_pid\": $$, \"fifo\": \"$fifo\" }")
+    BAYESH_SERVER_CONFIG=$(echo "$config" | jq -Mc ". + { \"client_pid\": $$ }")
     export BAYESH_SERVER_CONFIG
     zle-line-init
 }
@@ -55,11 +53,12 @@ bindkey '^E' start_or_kill_server
 
 function zle-line-init() {
     if _bayesh_is_active; then
-        fifo=$(echo "$BAYESH_SERVER_CONFIG" | jq -r .fifo)
+        fifo=$(mktemp -u)
+        mkfifo "$fifo"
         (
             bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}" > "$fifo" &
             echo "search()" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
-            echo "reload(sed -u -n '/__EOF__/q;p' $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+            echo "reload(cat $fifo; rm $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
         )
     fi
 }
@@ -89,6 +88,12 @@ function bayesh_select() {
         BUFFER=$(echo "${cmd}" | sed -E "s/(${token_regex})//g")
         zle -R
         CURSOR="$p"
+        (
+            local fifo=$(mktemp -u)
+            mkfifo "$fifo"
+            ~/Development/zsh-capture-completion/capture.zsh "$BUFFER" > "$fifo" &
+            echo "reload(cat $fifo; rm $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+        )
     fi    
 }
 zle -N select bayesh_select
