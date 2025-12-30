@@ -57,7 +57,7 @@ function zle-line-init() {
         mkfifo "$fifo"
         (
             bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}" > "$fifo" &
-            echo "search()" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+            echo "search()+first" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
             echo "reload(cat $fifo; rm $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
         )
     fi
