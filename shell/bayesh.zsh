@@ -43,7 +43,9 @@ function bayesh_start_or_kill_server() {
         fi
     fi
     config=$(_fzf_tmux_server_start)
-    BAYESH_SERVER_CONFIG=$(echo "$config" | jq -Mc ". + { \"client_pid\": $$ }")
+    fifo=$(mktemp -u)
+    mkfifo "$fifo"    
+    BAYESH_SERVER_CONFIG=$(echo "$config" | jq -Mc ". + { \"client_pid\": $$, \"fifo\": \"$fifo\" }")
     export BAYESH_SERVER_CONFIG
     zle-line-init
 }
@@ -53,12 +55,11 @@ bindkey '^E' start_or_kill_server
 
 function zle-line-init() {
     if _bayesh_is_active; then
-        fifo=$(mktemp -u)
-        mkfifo "$fifo"
+        fifo=$(echo "$BAYESH_SERVER_CONFIG" | jq -r .fifo)
         (
             bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}" > "$fifo" &
             echo "search()" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
-            echo "reload(cat $fifo; rm $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
+            echo "reload(sed -u -n '/__EOF__/q;p' $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
         )
     fi
 }
