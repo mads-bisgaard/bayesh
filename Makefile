@@ -25,6 +25,11 @@ build:
 	rm -rf build && mkdir -p build
 	go build -ldflags="-X 'main.version=${VERSION}'" -o ./build/bayesh ./main.go
 
+.PHONY: install
+install: build
+	sudo rm -f /usr/local/bin/bayesh
+	sudo cp ./build/bayesh /usr/local/bin/bayesh
+
 # supported architectures
 ARCH := amd64 arm
 
