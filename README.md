@@ -14,7 +14,7 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
 2. **Install Bayesh:**  
   To install Bayesh run  
   ```sh
-  curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | bash
+  curl -sL https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | sh
   ```
   
 3. **Go!**  
