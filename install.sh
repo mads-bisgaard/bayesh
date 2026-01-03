@@ -1,11 +1,10 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 set -e
-set -o pipefail
 
 version=v0.0.1
 _sudo="sudo"
-command -v sudo &> /dev/null || _sudo=""
+command -v sudo > /dev/null 2>&1 || _sudo=""
 target_dir="/usr/local/bin"
 [ -d "$target_dir" ] || target_dir="/usr/bin"
 [ -d "$target_dir" ] || { echo "- Error: Could not find /usr/local/bin nor /usr/bin directories." >&2; exit 1; }
@@ -24,7 +23,7 @@ case "$arch" in
         ;;
 esac
 
-function _usage() {
+_usage() {
     echo "Usage: install.sh [--help] [--url <url>]"
     echo "Install Bayesh." 
     echo "Options:"
@@ -34,7 +33,7 @@ function _usage() {
 }
 
 url="https://github.com/mads-bisgaard/bayesh/releases/download/${version}/bayesh-${version}-linux-${goarch}.tar.gz"
-while [[ $# -gt 0 ]]; do
+while [ $# -gt 0 ]; do
     case $1 in
         --help)
             _usage
@@ -52,22 +51,22 @@ while [[ $# -gt 0 ]]; do
 done
 
 
-function _check_dependency() {
-    command -v "$1" &> /dev/null || { echo "- Error: Required dependency $1 is not installed." >&2; exit 1; }
+_check_dependency() {
+    command -v "$1" > /dev/null 2>&1 || { echo "- Error: Required dependency $1 is not installed." >&2; exit 1; }
 }
 
-function _install_bayesh(){
+_install_bayesh(){
     echo "- downloading Bayesh ${version} for architecture ${goarch} to ${target_dir}/bayesh"
     ${_sudo} curl -sSL "$url" | ${_sudo} tar -xzf - -C "${target_dir}"
     ${_sudo} chmod +x "${target_dir}/bayesh"
-    command -v "bayesh" &> /dev/null || { echo "- Error: bayesh could not be found after installation." >&2; exit 1; }
+    command -v "bayesh" > /dev/null 2>&1 || { echo "- Error: bayesh could not be found after installation." >&2; exit 1; }
 }
 
-function _print_bayesh() {
+_print_bayesh() {
     CYAN="\033[94m"
     RESET="\033[0m"
 
-    echo -e "${CYAN}"
+    printf "%b\n" "${CYAN}"
     echo "░████████                                               ░██        "
     echo "░██    ░██                                              ░██        "
     echo "░██    ░██   ░██████   ░██    ░██  ░███████   ░███████  ░████████  "
@@ -77,7 +76,7 @@ function _print_bayesh() {
     echo "░█████████   ░█████░██  ░█████░██  ░███████   ░███████  ░██    ░██ "
     echo "                              ░██                                  "
     echo "                        ░███████                                    "
-    echo -e "${RESET}"
+    printf "%b\n" "${RESET}"
     echo "- For documentation, see https://github.com/mads-bisgaard/bayesh"    
 }
 

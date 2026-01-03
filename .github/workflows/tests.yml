@@ -26,6 +26,18 @@ jobs:
         with:
           name: build
           path: build/ 
+  test-install-script:
+    name: Test install script
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: sudo apt-get install -y fzf
+      - name: Test install script
+        run: |
+          curl -sSLf https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/install.sh | sh -s -- --url "https://github.com/mads-bisgaard/bayesh/releases/download/v0.0.1/bayesh-v0.0.1-linux-amd64.tar.gz"
+          bayesh --version
   bats-tests:
     name: Bats tests
     runs-on: ubuntu-latest
