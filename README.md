@@ -20,7 +20,7 @@ Bayesh is an autosuggestion feature for your Zsh shell. Bayesh suggests shell co
 Make sure to [integrate](#shell-integration) Bayesh into your shell.
 
 ## Shell integration
-  - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by running
+  - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by executing the following command in your shell:
   ```sh
   echo "command -v bayesh > /dev/null && source <(bayesh --zsh)" >> ~/.zshrc
   ```
