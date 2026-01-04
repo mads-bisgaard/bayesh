@@ -4,7 +4,11 @@
 ![Bayesh Demo](assets/demo.gif)
 
 ## What is Bayesh?  
-Bayesh is an autosuggestion feature for your Zsh shell. Bayesh suggests shell commands to you in real time, based on your current context and your shell history. Bayesh is lightening fast ⚡ (written in Go) and powered by [fzf](https://github.com/junegunn/fzf) for great UX. 
+Bayesh is an autosuggestion feature for your Zsh shell. Based on your shell history and current context, Bayesh suggests shell commands to you in real time. Bayesh is an attempt to apply the core idea of [z](https://github.com/rupa/z), not only to the `cd` command, but to your full shell history.
+
+The plan is for Bayesh to integrate many "autosuggestion/autocompletion" tools in the near future.
+
+Bayesh is lightening fast ⚡ (written in Go) and powered by [fzf](https://github.com/junegunn/fzf) for great UX. 
 
 ## Installation 
 
