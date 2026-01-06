@@ -1,23 +1,27 @@
 #!/bin/zsh
 
-zmodload zsh/zpty || { echo 'error: missing module zsh/zpty' >&2; exit 1 }
+capture() {
+    local buf="$1"
+    local pty_name="z_capture_$$"
 
-# spawn shell
-zpty z zsh -f -i
+    zmodload zsh/zpty || { echo 'error: missing module zsh/zpty' >&2; return 1 }
 
-# line buffer for pty output
-local line
+    # spawn shell
+    zpty $pty_name zsh -f -i || return 1
 
-setopt rcquotes
-() {
-    zpty -w z source $1
-    repeat 4; do
-        zpty -r z line
-        [[ $line == ok* ]] && return
-    done
-    echo 'error initializing.' >&2
-    exit 2
-} =( <<< '
+    # line buffer for pty output
+    local line
+
+    setopt rcquotes
+    () {
+        zpty -w $pty_name source $1
+        repeat 4; do
+            zpty -r $pty_name line
+            [[ $line == ok* ]] && return
+        done
+        echo 'error initializing.' >&2
+        return 1
+    } =( <<< '
 # no prompt!
 PROMPT=
 LISTMAX=-1
@@ -126,22 +130,26 @@ compadd () {
 # signal success!
 echo ok
 
-')
+') || { zpty -d $pty_name 2>/dev/null; return 2; }
 
-capture() {
-    local buf="$1"
-    zpty -w z "$buf"$'\t'
+    zpty -w $pty_name "$buf"$'\t'
 
     integer tog=0
     # read from the pty, and parse linewise
-    while zpty -r z; do :; done | tr -d '\r' | while IFS= read -r line; do
-        if [[ $line == *$'\0' ]]; then
-            (( tog++ )) && return 0 || continue
-        fi
-        # display between toggles
-        (( tog )) && echo -E - $line
-    done
+    {
+        while zpty -r $pty_name; do :; done | tr -d '\r' | while IFS= read -r line; do
+            if [[ $line == *$'\0' ]]; then
+                (( tog++ )) && return 0 || continue
+            fi
+            # display between toggles
+            (( tog )) && echo -E - $line
+        done
+    } always {
+        zpty -d $pty_name 2>/dev/null
+    }
     return 2
 }
 
-capture "$@"
+if [[ $ZSH_EVAL_CONTEXT == 'toplevel' ]]; then
+    capture "$@"
+fi
