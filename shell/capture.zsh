@@ -24,13 +24,13 @@ capture() {
     } =( <<< '
 # no prompt!
 PROMPT=
-LISTMAX=-1
-stty rows 10000 cols 10000
 
 # load completion system
 autoload compinit
-compinit -C -d ~/.zcompdump_capture
-[[ ~/.zcompdump_capture.zwc -nt ~/.zcompdump_capture ]] || zcompile ~/.zcompdump_capture
+# NOTE: possible to compile cache for performance boost (but requires cache invalidation)
+# compinit -C -d ~/.zcompdump_capture
+# [[ ~/.zcompdump_capture.zwc -nt ~/.zcompdump_capture ]] || zcompile ~/.zcompdump_capture
+compinit -C
 
 # never run a command
 bindkey ''^M'' undefined
