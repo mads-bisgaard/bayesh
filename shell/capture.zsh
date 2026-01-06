@@ -20,6 +20,8 @@ setopt rcquotes
 } =( <<< '
 # no prompt!
 PROMPT=
+LISTMAX=-1
+stty rows 10000 cols 10000
 
 # load completion system
 autoload compinit
@@ -127,7 +129,8 @@ echo ok
 ')
 
 capture() {
-    zpty -w z "$*"$'\t'
+    local buf="$1"
+    zpty -w z "$buf"$'\t'
 
     integer tog=0
     # read from the pty, and parse linewise
