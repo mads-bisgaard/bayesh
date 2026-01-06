@@ -2,7 +2,7 @@
 
 set -e
 
-version=v0.0.1
+version=v0.0.2
 _sudo="sudo"
 command -v sudo > /dev/null 2>&1 || _sudo=""
 target_dir="/usr/local/bin"
