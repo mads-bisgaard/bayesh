@@ -4,12 +4,16 @@
 ![Bayesh Demo](assets/demo.gif)
 
 ## What is Bayesh?  
-Bayesh is the auto-suggestion feature on your phone when you write messages — but for your terminal! Bayesh suggests shell commands to you in real time, based on your shell history. Bayesh is lightening fast ⚡ (written in Go) and powered by [fzf](https://github.com/junegunn/fzf) for great UX. Bayesh supports Bash and Zsh shells. Zsh in [tmux](https://github.com/tmux/tmux) is where Bayesh really shines ☀️.
+Bayesh is an auto-suggestion feature for your Zsh shell. Bayesh keeps track of your shell history and based on the current context, suggests shell commands to you in real time. Bayesh is an attempt to apply the core idea of [z](https://github.com/rupa/z), not only to the `cd` command, but to your full shell history.
+
+The plan is for Bayesh to integrate many "autosuggestion/autocompletion" tools in the near future.
+
+Bayesh is lightening fast ⚡ (written in Go) and powered by [fzf](https://github.com/junegunn/fzf) for great UX. 
 
 ## Installation 
 
 1. **Install Dependencies:**  
-  Ensure you have the following installed: [fzf](https://github.com/junegunn/fzf?tab=readme-ov-file#installation), [jq](https://jqlang.org/download/), [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) (tmux is only required for the Zsh shell)
+  Ensure you have the following installed: [fzf](https://github.com/junegunn/fzf?tab=readme-ov-file#installation), [jq](https://jqlang.org/download/), [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux)
   
 2. **Install Bayesh:**  
   To install Bayesh run  
@@ -17,29 +21,20 @@ Bayesh is the auto-suggestion feature on your phone when you write messages — 
   curl -sSLf https://raw.githubusercontent.com/mads-bisgaard/bayesh/refs/heads/main/install.sh | sh
   ```
   
-3. **Go!**  
-   Make sure to [integrate](#shell-integration) Bayesh into your shell. Close and reopen your shell and hit `Ctrl-e` to open bayesh.
+Make sure to [integrate](#shell-integration) Bayesh into your shell.
 
 ## Shell integration
-  - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by running
+  - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by executing the following command in your shell:
   ```sh
   echo "command -v bayesh > /dev/null && source <(bayesh --zsh)" >> ~/.zshrc
   ```
-  - To integrate Bayesh into Bash, add `source <(bayesh --bash)` to your configuration file. You can do so by running
-  ```sh
-  echo "command -v bayesh > /dev/null && source <(bayesh --bash)" >> ~/.bashrc
-  ```
 
 ## How to Use Bayesh 
-Bayesh is triggered by hitting `Ctrl-e` in your shell.  
-
-When using Zsh shell in tmux you
+Once inside a [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) session (achieved by running `tmux` in your zsh shell), you open/close Bayesh by hitting `Ctrl-e` in your shell. Once open, 
 - toggle the fzf pane with `Ctrl-<up arrow>` and `Ctrl-<down arrow>`.  
 - select a suggestion with `Ctrl-<right arrow>`.  
 
 At first Bayesh has a short "learning phase" before it will start suggesting you commands.
-
-
 
 
 ## Inspirations 
