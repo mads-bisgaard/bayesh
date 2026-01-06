@@ -131,8 +131,7 @@ capture() {
 
     integer tog=0
     # read from the pty, and parse linewise
-    while zpty -r z; do :; done | while IFS= read -r line; do
-        line="${line%$'\r'}"
+    while zpty -r z; do :; done | tr -d '\r' | while IFS= read -r line; do
         if [[ $line == *$'\0' ]]; then
             (( tog++ )) && return 0 || continue
         fi
