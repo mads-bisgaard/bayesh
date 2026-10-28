@@ -91,7 +91,7 @@ function bayesh_select() {
         (
             local fifo=$(mktemp -u)
             mkfifo "$fifo"
-            ~/Development/zsh-capture-completion/capture.zsh "$BUFFER" > "$fifo" &
+            ~/Development/bayesh/shell/capture.zsh "$BUFFER" > "$fifo" &
             echo "reload(cat $fifo; rm $fifo)" | _fzf_tmux_server_post -c "$BAYESH_SERVER_CONFIG" 2> /dev/null &
         )        
     fi    
