@@ -38,9 +38,7 @@ To run the image directly instead of using VS Code:
 ```sh
 docker run --rm -it \
   -v "$PWD:/workspaces/bayesh" \
-  -v bayesh-logseq-graph:/home/work/logseq \
   -w /workspaces/bayesh \
-  -e LOGSEQ_GRAPH=bayesh-wiki \
   bayesh-dev
 ```
 
