@@ -40,7 +40,12 @@ ENV BATS_LIB_PATH=/batslib
 RUN chown -R work:work /home/work
 
 USER work
+RUN git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git "${HOME}/.oh-my-zsh" \
+    && cp "${HOME}/.oh-my-zsh/templates/zshrc.zsh-template" "${HOME}/.zshrc"
+
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
+RUN git config --global --add safe.directory /workspaces/bayesh
+
 WORKDIR /workspaces/bayesh
-CMD ["/bin/bash"]
+CMD ["/bin/zsh"]
