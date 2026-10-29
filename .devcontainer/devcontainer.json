@@ -1,0 +1,21 @@
+{
+  "name": "Bayesh development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "work",
+  "containerEnv": {
+    "LOGSEQ_GRAPH": "bayesh-wiki"
+  },
+  "mounts": [
+    "source=bayesh-logseq-graph,target=/home/work/logseq,type=volume"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  }
+}
