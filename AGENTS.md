@@ -12,7 +12,7 @@ the implementation and its tests.
 - Always prefer simple solutions.
 - Use test driven development. 
 - Keep changes focused and update tests when behavior changes.
-
+- For implementations in go, follow design patterns and pilosophy of https://github.com/junegunn/fzf.
 
 ## Validation
 
