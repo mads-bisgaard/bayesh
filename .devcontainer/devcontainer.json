@@ -1,0 +1,16 @@
+{
+  "name": "Bayesh development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "updateRemoteUserUID": true,
+  "remoteUser": "ubuntu",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go"
+      ]
+    }
+  }
+}
