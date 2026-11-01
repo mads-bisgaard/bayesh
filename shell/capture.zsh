@@ -20,6 +20,9 @@ function _bayesh_compadd() {
     local -a __bayesh_hits
     builtin compadd -A __bayesh_hits "$@"
     (( $#__bayesh_hits )) || return 0
+    # The completion system retries with the next tag, matcher and completer until
+    # matches have been added, which would print them again
+    builtin compadd "$@"
 
     setopt localoptions norcexpandparam extendedglob
     local -A apre hpre hsuf asuf

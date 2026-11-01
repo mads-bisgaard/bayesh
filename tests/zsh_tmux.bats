@@ -144,6 +144,40 @@ open_bayesh() {
     [[ ! -e "${TEST_DIR}/zdot/.zcompdump" ]]
 }
 
+# Completers, matchers and file tags are tried in turn until one of them adds a match
+assert_single_completion() {
+    run_cmd one "$1"
+    run_cmd one "$1"
+    open_bayesh one "$1"
+
+    t send-keys -t bayesh:one.0 C-Right
+    wait_for_pane bayesh:one.1 "$2"
+    sleep 0.3
+
+    run grep -c -- "$2" <(t capture-pane -p -t bayesh:one.1)
+    assert_output '1'
+}
+
+@test "a completion is listed once with several matchers" {
+    echo "zstyle ':completion:*' matcher-list '' 'm:{a-z}={A-Z}'" >> "${TEST_DIR}/zdot/.zshrc"
+    touch "${TEST_DIR}/work/somefile"
+    start_tmux
+    assert_single_completion 'ls some' 'ls somefile'
+}
+
+@test "a completion is listed once with several completers" {
+    echo "zstyle ':completion:*' completer _complete _approximate" >> "${TEST_DIR}/zdot/.zshrc"
+    touch "${TEST_DIR}/work/somefile"
+    start_tmux
+    assert_single_completion 'ls some' 'ls somefile'
+}
+
+@test "a completion is listed once when files are matched by several tags" {
+    touch "${TEST_DIR}/work/archive.tar"
+    start_tmux
+    assert_single_completion 'tar xf arch' 'tar xf archive.tar'
+}
+
 @test "completion happens at the cursor, not at the end of the line" {
     start_tmux
     run_cmd one 'fpathtool "x y" --flag'
