@@ -32,7 +32,7 @@ Make sure to [integrate](#shell-integration) Bayesh into your shell.
 ## How to Use Bayesh 
 Once inside a [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) session (achieved by running `tmux` in your zsh shell), you open/close Bayesh by hitting `Ctrl-e` in your shell. Once open, 
 - toggle the fzf pane with `Ctrl-<up arrow>` and `Ctrl-<down arrow>`.  
-- select a suggestion with `Ctrl-<right arrow>`.  
+- select a suggestion with `Ctrl-<right arrow>`. The fzf pane then shows your shell's native completions for the selected command, and selecting again continues from there.  
 
 At first Bayesh has a short "learning phase" before it will start suggesting you commands.
 

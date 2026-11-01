@@ -1,155 +1,61 @@
-#!/bin/zsh
+#!/usr/bin/env zsh
 
-capture() {
-    local buf="$1"
-    local pty_name="z_capture_$$"
+# Native completion runs in a process forked from the user's shell, so that it
+# sees the user's completions, styles, aliases and functions, and so that a slow
+# completion function can't block the prompt.
 
-    zmodload zsh/zpty || { echo 'error: missing module zsh/zpty' >&2; return 1 }
-
-    # spawn shell
-    zpty $pty_name zsh -f -i || return 1
-
-    # line buffer for pty output
-    local line
-
-    setopt rcquotes
-    () {
-        zpty -w $pty_name source $1
-        repeat 4; do
-            zpty -r $pty_name line
-            [[ $line == ok* ]] && return
-        done
-        echo 'error initializing.' >&2
-        return 1
-    } =( <<< '
-# no prompt!
-PROMPT=
-
-# load completion system
-autoload compinit
-# NOTE: possible to compile cache for performance boost (but requires cache invalidation)
-# compinit -C -d ~/.zcompdump_capture
-# [[ ~/.zcompdump_capture.zwc -nt ~/.zcompdump_capture ]] || zcompile ~/.zcompdump_capture
-compinit -C
-
-# never run a command
-bindkey ''^M'' undefined
-bindkey ''^J'' undefined
-bindkey ''^I'' complete-word
-
-# send a line with null-byte at the end before and after completions are output
-null-line () {
-    echo -E - $''\0''
-}
-compprefuncs=( null-line )
-comppostfuncs=( null-line exit )
-
-# never group stuff!
-zstyle '':completion:*'' list-grouped false
-# don''t insert tab when attempting completion on empty line
-zstyle '':completion:*'' insert-tab false
-# no list separator, this saves some stripping later on
-zstyle '':completion:*'' list-separator ''''
-
-# we use zparseopts
 zmodload zsh/zutil
 
-# override compadd (this our hook)
-compadd () {
-
-    # check if any of -O, -A or -D are given
+# Replaces compadd in the forked process: prints each match as a complete
+# command line instead of adding it to the list of matches.
+function _bayesh_compadd() {
+    # these options are used for querying matches, not for adding them
     if [[ ${@[1,(i)(-|--)]} == *-(O|A|D)\ * ]]; then
-        # if that is the case, just delegate and leave
         builtin compadd "$@"
         return $?
     fi
 
-    # ok, this concerns us!
-    # echo -E - got this: "$@"
+    # the options can refer to array parameters by name, so nothing else may be
+    # declared before calling compadd
+    local -a __bayesh_hits
+    builtin compadd -A __bayesh_hits "$@"
+    (( $#__bayesh_hits )) || return 0
 
-    # be careful with namespacing here, we don''t want to mess with stuff that
-    # should be passed to compadd!
-    typeset -a __hits __dscr __tmp
-
-    # do we have a description parameter?
-    # note we don''t use zparseopts here because of combined option parameters
-    # with arguments like -default- confuse it.
-    if (( $@[(I)-d] )); then # kind of a hack, $+@[(r)-d] doesn''t work because of line noise overload
-        # next param after -d
-        __tmp=${@[$[${@[(i)-d]}+1]]}
-        # description can be given as an array parameter name, or inline () array
-        if [[ $__tmp == \(* ]]; then
-            eval "__dscr=$__tmp"
-        else
-            __dscr=( "${(@P)__tmp}" )
-        fi
-    fi
-
-    # capture completions by injecting -A parameter into the compadd call.
-    # this takes care of matching for us.
-    builtin compadd -A __hits -D __dscr "$@"
-
-    # JESUS CHRIST IT TOOK ME FOREVER TO FIGURE OUT THIS OPTION WAS SET AND WAS MESSING WITH MY SHIT HERE
     setopt localoptions norcexpandparam extendedglob
-
-    # extract prefixes and suffixes from compadd call. we can''t do zsh''s cool
-    # -r remove-func magic, but it''s better than nothing.
-    typeset -A apre hpre hsuf asuf
+    local -A apre hpre hsuf asuf
     zparseopts -E P:=apre p:=hpre S:=asuf s:=hsuf
 
-    # append / to directories? we are only emulating -f in a half-assed way
-    # here, but it''s better than nothing.
-    integer dirsuf=0
-    # don''t be fooled by -default- >.>
+    # -f means that the matches are files. Don't be fooled by -default-
+    local -i dirsuf=0
     if [[ -z $hsuf && -z $asuf && "${${@//-default-/}% -# *}" == *-[[:alnum:]]#f* ]]; then
         dirsuf=1
     fi
 
-    # just drop
-    [[ -n $__hits ]] || return
-
-    # this is the point where we have all matches in $__hits and all
-    # descriptions in $__dscr!
-
-    # display all matches
-    local dsuf pre post
-    pre=${LBUFFER%${(b)IPREFIX}${(b)PREFIX}}
-    post=${RBUFFER#${(b)SUFFIX}${(b)ISUFFIX}}
-
-    for i in {1..$#__hits}; do
-
-        # add a dir suffix?
-        (( dirsuf )) && [[ -d $__hits[$i] ]] && dsuf=/ || dsuf=
-
-        echo -E - $pre$IPREFIX$apre$hpre$__hits[$i]$dsuf$hsuf$asuf$ISUFFIX$post
-
+    local hit dsuf
+    local pre=${LBUFFER%${(b)IPREFIX}${(b)PREFIX}}
+    local post=${RBUFFER#${(b)SUFFIX}${(b)ISUFFIX}}
+    for hit in "${__bayesh_hits[@]}"; do
+        (( dirsuf )) && [[ -d $hit ]] && dsuf=/ || dsuf=
+        print -r -- "$pre$QIPREFIX$IPREFIX$apre$hpre$hit$dsuf$hsuf$asuf$ISUFFIX$QISUFFIX$post"
     done
-
+    return 0
 }
 
-# signal success!
-echo ok
-
-') || { zpty -d $pty_name 2>/dev/null; return 2; }
-
-    zpty -w $pty_name "$buf"$'\t'
-
-    integer tog=0
-    # read from the pty, and parse linewise
-    {
-        while zpty -r $pty_name; do :; done | tr -d '\r' | while IFS= read -r line; do
-            if [[ $line == *$'\0' ]]; then
-                (( tog++ )) && return 0 || continue
-            fi
-            # display between toggles
-            (( tog )) && echo -E - $line
-        done
-    } always {
-        zpty -d $pty_name 2>/dev/null
-    }
-    return 2
+function _bayesh_capture() {
+    exec < /dev/null > "$_BAYESH_FIFO" 2> /dev/null
+    if (( ! ${+_comps} )); then
+        autoload -Uz compinit
+        compinit -u -D
+    fi
+    function compadd() { _bayesh_compadd "$@"; }
+    _main_complete
 }
 
-if [[ $ZSH_EVAL_CONTEXT == 'toplevel' ]]; then
-    capture "$@"
-fi
+# Writes the completions of the current command line to $_BAYESH_FIFO
+function _bayesh_capture_widget() {
+    _bayesh_capture &!
+    _BAYESH_WRITER_PID=$!
+    compstate[insert]=''
+    compstate[list]=''
+}
+zle -C _bayesh_capture_completions complete-word _bayesh_capture_widget
