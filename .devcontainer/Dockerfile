@@ -4,10 +4,13 @@ FROM ubuntu:24.04
 
 COPY --from=go-toolchain /usr/local/go /usr/local/go
 
+# TERM: docker exec otherwise sets TERM=xterm, and tmux then limits itself to
+# 8 colours, which hides fzf's grey border
 ENV PATH="/usr/local/go/bin:/usr/local/bin:/home/ubuntu/.local/bin:/home/ubuntu/.claude/bin:${PATH}" \
     HOME=/home/ubuntu \
     LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8
+    LC_ALL=en_US.UTF-8 \
+    TERM=xterm-256color
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bats \
