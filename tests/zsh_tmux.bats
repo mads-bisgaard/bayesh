@@ -80,6 +80,11 @@ wait_for_pane() {
     }
 }
 
+# prompt_is <pane> <regex>: the line being edited matches the regex
+prompt_is() {
+    t capture-pane -p -t "$1" 2> /dev/null | grep -v '^$' | tail -n 1 | grep -qE -- "$2"
+}
+
 pane_count() {
     [[ $(t list-panes -t "$1" 2> /dev/null | wc -l) -eq "$2" ]]
 }
@@ -99,6 +104,61 @@ open_bayesh() {
     t send-keys -t "bayesh:$1.0" C-e
     wait_until pane_count "bayesh:$1" 2
     wait_for_pane "bayesh:$1.1" "$2"
+}
+
+@test "the bayesh pane opens to the right of the shell" {
+    start_tmux
+    open_bayesh one '│'
+
+    run t display-message -p -t bayesh:one.1 '#{pane_at_right} #{pane_at_top} #{pane_at_bottom}'
+    assert_output '1 1 1'
+    run t display-message -p -t bayesh:one.0 '#{pane_at_left} #{pane_at_right}'
+    assert_output '1 0'
+    # a side panel, narrower than the shell
+    (( $(t display-message -p -t bayesh:one.1 '#{pane_width}') * 100 <= 35 * $(t display-message -p -t bayesh:one '#{window_width}') ))
+}
+
+@test "selecting a suggestion puts it in the prompt" {
+    start_tmux
+    run_cmd one 'echo one'
+    run_cmd one 'echo one'
+    open_bayesh one 'echo one'
+
+    t send-keys -t bayesh:one.0 C-Right
+
+    wait_until prompt_is bayesh:one.0 '^% echo one$'
+}
+
+@test "Ctrl-Left offers completions for the current buffer" {
+    start_tmux
+    open_bayesh one '│'
+    t send-keys -t bayesh:one.0 -l 'fntool f'
+
+    t send-keys -t bayesh:one.0 C-Left
+
+    wait_for_pane bayesh:one.1 'fntool fn_one'
+}
+
+@test "Ctrl-Left completes at the cursor" {
+    start_tmux
+    open_bayesh one '│'
+    t send-keys -t bayesh:one.0 -l 'fntool f --flag'
+    t send-keys -t bayesh:one.0 Left Left Left Left Left Left Left
+
+    t send-keys -t bayesh:one.0 C-Left
+
+    wait_for_pane bayesh:one.1 'fntool fn_one --flag'
+}
+
+@test "Ctrl-Left leaves the prompt unchanged" {
+    start_tmux
+    open_bayesh one '│'
+    t send-keys -t bayesh:one.0 -l 'fntool f'
+
+    t send-keys -t bayesh:one.0 C-Left
+    wait_for_pane bayesh:one.1 'fntool fn_one'
+
+    prompt_is bayesh:one.0 '^% fntool f$'
 }
 
 @test "selecting a suggestion offers completions from the user's shell" {

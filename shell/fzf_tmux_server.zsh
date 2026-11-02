@@ -2,8 +2,9 @@
 
 zmodload zsh/net/tcp zsh/system
 
-# Starts the fzf-tmux server next to the current pane and prints its config to
-# stdout. Pass the config to the other functions in order to access the server.
+# Starts the fzf-tmux server in a pane to the right of the current one and prints
+# its config to stdout. Pass the config to the other functions in order to access
+# the server.
 _fzf_tmux_server_start() {
     local fifo
     fifo=$(mktemp -u)
@@ -32,7 +33,7 @@ _fzf_tmux_server_start() {
         "--no-scrollbar"
     )
 
-    tmux split-window -t "$TMUX_PANE" -l 5 -d "${script[*]}"
+    tmux split-window -t "$TMUX_PANE" -h -l 35% -d "${script[*]}"
 
     cat "$fifo"
     rm "$fifo"
