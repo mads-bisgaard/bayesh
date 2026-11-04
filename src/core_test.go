@@ -58,7 +58,7 @@ func TestRecordEvent_NewEvent(t *testing.T) {
 	}()
 
 	var eventCounter int
-	err = db.QueryRow("SELECT event_counter FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, ProcessCmd(OsFs{}, previousCmd), ProcessCmd(OsFs{}, currentCmd)).Scan(&eventCounter)
+	err = db.QueryRow("SELECT event_counter FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, previousCmd, currentCmd).Scan(&eventCounter)
 	if err != nil {
 		t.Fatalf("Failed to query for new event: %v", err)
 	}
@@ -98,9 +98,7 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 	}()
 
 	var initialTimestamp time.Time
-	processedPrevCmd := ProcessCmd(OsFs{}, previousCmd)
-	processedCurrCmd := ProcessCmd(OsFs{}, currentCmd)
-	err = db.QueryRow("SELECT last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, processedPrevCmd, processedCurrCmd).Scan(&initialTimestamp)
+	err = db.QueryRow("SELECT last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, previousCmd, currentCmd).Scan(&initialTimestamp)
 	if err != nil {
 		t.Fatalf("Failed to query for initial timestamp: %v", err)
 	}
@@ -116,7 +114,7 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 	// Verify the event was updated
 	var updatedCounter int
 	var updatedTimestamp time.Time
-	err = db.QueryRow("SELECT event_counter, last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, processedPrevCmd, processedCurrCmd).Scan(&updatedCounter, &updatedTimestamp)
+	err = db.QueryRow("SELECT event_counter, last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, previousCmd, currentCmd).Scan(&updatedCounter, &updatedTimestamp)
 	if err != nil {
 		t.Fatalf("Failed to query for updated event: %v", err)
 	}
@@ -157,7 +155,7 @@ func TestInferCommands(t *testing.T) {
 	queries := New(db)
 	if err := queries.InsertRow(ctx, Row{
 		Cwd:          cwd,
-		PreviousCmd:  ProcessCmd(OsFs{}, previousCmd),
+		PreviousCmd:  previousCmd,
 		CurrentCmd:   expectedCurrentCmd,
 		EventCounter: 10,
 		LastModified: time.Now(),
@@ -166,7 +164,7 @@ func TestInferCommands(t *testing.T) {
 	}
 	if err := queries.InsertRow(ctx, Row{
 		Cwd:          cwd,
-		PreviousCmd:  ProcessCmd(OsFs{}, previousCmd),
+		PreviousCmd:  previousCmd,
 		CurrentCmd:   "my other command",
 		EventCounter: 1,
 		LastModified: time.Now(),

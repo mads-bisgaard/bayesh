@@ -1,89 +1,66 @@
 package bayesh
 
 import (
-	"context"
-	"errors"
-	"log/slog"
-	"sync"
+	"cmp"
+	"slices"
 )
 
 const weight float64 = (float64(1.0) / float64(3.0))
 
-type DatabaseQuerer interface {
-	ConditionalEventCounts(ctx context.Context, cwd *string, previousCmd *string, minRequiredEvents *int) (map[string]int, error)
-}
+// RankCommands ranks command templates by the average of P(cmd|cwd), P(cmd|previousCmd)
+// and P(cmd|cwd, previousCmd). This can be thought of as a Bayesian inference
+// (E(P(cmd|a)) where a is the context). Commands are compared by their templates,
+// which are learned from the recorded events.
+func RankCommands(events []Row, cwd string, previousCmd string, minRequiredEvents int) []string {
+	runs := map[string]int{}
+	for _, e := range events {
+		runs[e.CurrentCmd] += e.EventCounter
+	}
+	templater := newTemplater(runs)
+	previous := templater.Template(previousCmd)
 
-func addConditionalProbabilities(
-	ctx context.Context,
-	settings *Settings,
-	queries DatabaseQuerer,
-	channel chan error,
-	result map[string]float64,
-	mu *sync.Mutex,
-	cwd *string,
-	processedPreviousCmd *string,
-) {
-
-	eventCounts, err := queries.ConditionalEventCounts(ctx, cwd, processedPreviousCmd, &settings.MinRequiredEvents)
-	if err != nil {
-		if !errors.Is(err, context.Canceled) {
-			slog.Error("Failed to compute conditional events: " + err.Error())
+	byCwd, byPrevious, byBoth := map[string]int{}, map[string]int{}, map[string]int{}
+	for _, e := range events {
+		cmd := templater.Template(e.CurrentCmd)
+		sameCwd := e.Cwd == cwd
+		samePrevious := templater.Template(e.PreviousCmd) == previous
+		if sameCwd {
+			byCwd[cmd] += e.EventCounter
 		}
-		channel <- err
-		return
-	}
-
-	totalCount := 0
-	for _, count := range eventCounts {
-		totalCount += count
-	}
-	mu.Lock()
-	defer mu.Unlock()
-	// weight * conditional probability
-	for cmd, count := range eventCounts {
-		result[cmd] += weight * (float64(count) / float64(totalCount))
-	}
-	channel <- nil
-}
-
-// Computes a weighted average of conditional probabilities.
-// I.e. it computes the average of P(cmd|cwd), P(cmd|previousCmd), and P(cmd|cwd, previousCmd).
-// This can be thought of as a Bayesian inference (E(P(cmd|a)) where a is the context).
-func ComputeCommandProbabilities(ctx context.Context, settings *Settings, queries DatabaseQuerer, cwd string, processedPreviousCmd string) (map[string]float64, error) {
-	var mu sync.Mutex
-	var firstErr error
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	inputs := []struct {
-		cwd *string
-		cmd *string
-	}{
-		{&cwd, nil},
-		{nil, &processedPreviousCmd},
-		{&cwd, &processedPreviousCmd},
-	}
-
-	errCh := make(chan error, len(inputs))
-	result := make(map[string]float64)
-
-	for _, input := range inputs {
-		go addConditionalProbabilities(ctx, settings, queries, errCh, result, &mu, input.cwd, input.cmd)
-	}
-
-	for range len(inputs) {
-		if err := <-errCh; err != nil {
-			if firstErr == nil {
-				firstErr = err
-				cancel() // Cancel other goroutines on first error
-			}
+		if samePrevious {
+			byPrevious[cmd] += e.EventCounter
+		}
+		if sameCwd && samePrevious {
+			byBoth[cmd] += e.EventCounter
 		}
 	}
 
-	if firstErr != nil {
-		return nil, firstErr
+	scores := map[string]float64{}
+	for _, counts := range []map[string]int{byCwd, byPrevious, byBoth} {
+		addProbabilities(scores, counts, minRequiredEvents)
 	}
 
-	return result, nil
+	cmds := make([]string, 0, len(scores))
+	for cmd := range scores {
+		cmds = append(cmds, cmd)
+	}
+	slices.SortFunc(cmds, func(a, b string) int {
+		return cmp.Or(cmp.Compare(scores[b], scores[a]), cmp.Compare(a, b))
+	})
+	return cmds
+}
+
+// addProbabilities adds weight * P(cmd) for the commands which occur at least minRequiredEvents times.
+func addProbabilities(scores map[string]float64, counts map[string]int, minRequiredEvents int) {
+	total := 0
+	for cmd, count := range counts {
+		if count < minRequiredEvents {
+			delete(counts, cmd)
+			continue
+		}
+		total += count
+	}
+	for cmd, count := range counts {
+		scores[cmd] += weight * float64(count) / float64(total)
+	}
 }

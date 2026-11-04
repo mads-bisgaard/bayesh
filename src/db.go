@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 )
 
@@ -99,35 +98,13 @@ func (q *Queries) UpdateRow(ctx context.Context, arg Row) error {
 	return err
 }
 
-func (q *Queries) ConditionalEventCounts(ctx context.Context, cwd *string, previousCmd *string, minEventCount *int) (map[string]int, error) {
-	newLine := "\n"
+// Events returns all recorded events.
+func (q *Queries) Events(ctx context.Context) ([]Row, error) {
+	query := `
+    SELECT ` + colCwd + `, ` + colPreviousCmd + `, ` + colCurrentCmd + `, ` + colEventCounter + `, ` + colLastModified + `
+    FROM ` + eventsTable
 
-	query := strings.Builder{}
-	query.WriteString("SELECT " + colCurrentCmd + ", SUM(" + colEventCounter + ")" + newLine)
-	query.WriteString("FROM " + eventsTable + newLine)
-
-	conditions := []string{}
-	args := []interface{}{}
-
-	if cwd != nil {
-		conditions = append(conditions, colCwd+" = ?")
-		args = append(args, *cwd)
-	}
-	if previousCmd != nil {
-		conditions = append(conditions, colPreviousCmd+" = ?")
-		args = append(args, *previousCmd)
-	}
-	if len(conditions) > 0 {
-		query.WriteString("WHERE " + strings.Join(conditions, " AND ") + newLine)
-	}
-	query.WriteString("GROUP BY " + colCurrentCmd + newLine)
-
-	if minEventCount != nil {
-		query.WriteString("HAVING SUM(" + colEventCounter + ") >= ?" + newLine)
-		args = append(args, *minEventCount)
-	}
-
-	rows, err := q.db.QueryContext(ctx, query.String(), args...)
+	rows, err := q.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -137,17 +114,13 @@ func (q *Queries) ConditionalEventCounts(ctx context.Context, cwd *string, previ
 		}
 	}()
 
-	result := make(map[string]int)
+	var events []Row
 	for rows.Next() {
-		var currentCmd string
-		var eventCounter int
-		if err := rows.Scan(&currentCmd, &eventCounter); err != nil {
+		var i Row
+		if err := rows.Scan(&i.Cwd, &i.PreviousCmd, &i.CurrentCmd, &i.EventCounter, &i.LastModified); err != nil {
 			return nil, err
 		}
-		result[currentCmd] = eventCounter
+		events = append(events, i)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return result, nil
+	return events, rows.Err()
 }

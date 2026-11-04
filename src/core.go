@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	"slices"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -55,30 +54,11 @@ func (c *Core) Close() error {
 }
 
 func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
-
-	queries := New(c.db)
-	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
-
-	cmdProbabilities, err := ComputeCommandProbabilities(ctx, c.Settings, queries, cwd, processedPreviousCmd)
+	events, err := New(c.db).Events(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	keys := make([]string, 0, len(cmdProbabilities))
-	for cmd := range cmdProbabilities {
-		keys = append(keys, cmd)
-	}
-
-	slices.SortFunc(keys, func(a, b string) int {
-		if cmdProbabilities[a] > cmdProbabilities[b] {
-			return -1
-		} else if cmdProbabilities[a] < cmdProbabilities[b] {
-			return 1
-		}
-		return 0
-	})
-
-	return keys, nil
+	return RankCommands(events, cwd, previousCmd, c.Settings.MinRequiredEvents), nil
 }
 
 func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, currentCmd string) error {
@@ -92,17 +72,15 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 		}
 	}()
 
+	// Commands are stored as typed, since templates are learned from them
 	queries := New(c.db).WithTx(tx)
-	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
-	processedCurrentCmd := ProcessCmd(OsFs{}, currentCmd)
-
-	row, err := queries.GetRow(ctx, cwd, processedPreviousCmd, processedCurrentCmd)
+	row, err := queries.GetRow(ctx, cwd, previousCmd, currentCmd)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			newRow := Row{
 				Cwd:          cwd,
-				PreviousCmd:  processedPreviousCmd,
-				CurrentCmd:   processedCurrentCmd,
+				PreviousCmd:  previousCmd,
+				CurrentCmd:   currentCmd,
 				EventCounter: 1,
 				LastModified: time.Now(),
 			}

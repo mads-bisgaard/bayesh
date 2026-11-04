@@ -1,88 +1,71 @@
 package bayesh
 
 import (
-	"bufio"
-	"encoding/json"
-	"math"
-	"os"
-	"path/filepath"
+	"slices"
 	"testing"
+
+	"mvdan.cc/sh/v3/syntax"
 )
 
-// Helper for tests: a FileSystem implementation using a function
-
-type mockStatFileSystem struct {
-	statFunc func(string) (os.FileInfo, error)
-}
-
-func (m mockStatFileSystem) Stat(name string) (os.FileInfo, error) {
-	if m.statFunc == nil {
-		return nil, os.ErrInvalid
-	}
-	return m.statFunc(name)
-}
-
-func TestNoPermission(t *testing.T) {
-	fs := mockStatFileSystem{
-		statFunc: func(path string) (os.FileInfo, error) {
-			return nil, os.ErrPermission
-		},
-	}
-	ProcessCmd(fs, "echo ./myfile.txt")
-}
-
 func TestAnsiColorTokens(t *testing.T) {
-	input := "echo <PATH> <STRING>"
-	expected := "echo \033[94m<PATH>\033[0m \033[94m<STRING>\033[0m"
-	result := AnsiColorTokens(input)
-	if result != expected {
+	input := "echo <ARG> <STRING> <PATH>"
+	expected := "echo \033[94m<ARG>\033[0m \033[94m<STRING>\033[0m \033[94m<PATH>\033[0m"
+	if result := AnsiColorTokens(input); result != expected {
 		t.Errorf("AnsiColorTokens failed: got %q, want %q", result, expected)
 	}
 }
 
-func TestProcessCmd_Parametrized(t *testing.T) {
-	dataFile := filepath.Join("..", "tests", "data", "processed_bash_commands")
-	f, err := os.Open(dataFile)
-	if err != nil {
-		t.Fatalf("Failed to open test data file: %v", err)
+func TestTemplate(t *testing.T) {
+	tests := []struct {
+		name    string
+		history map[string]int // command -> number of runs
+		cmd     string
+		want    string
+	}{
+		{"plain command", nil, "git status", "git status"},
+		{"quoted string with spaces", nil, `git commit -m "fix the bug"`, `git commit -m "<STRING>"`},
+		{"partly quoted string", nil, `run --msg="a b"`, "run <STRING>"},
+		{"quoted string without spaces", nil, `echo "hello"`, `echo "hello"`},
+		{"string in command substitution", nil, `log=$(git commit -m 'a message' ; git push)`, "log=$(git commit -m '<STRING>' ; git push)"},
+		{"string containing a command", nil, `echo "$(date) is now"`, `echo "<STRING>"`},
+		{"unparsable command", nil, "git add <PATH>", "git add <PATH>"},
+		{"slot with few values", map[string]int{"cd a": 1, "cd b": 1}, "cd c", "cd c"},
+		{"variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd d", "cd <ARG>"},
+		{"seen value in variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd a", "cd <ARG>"},
+		{"frequent value stays literal", map[string]int{"make build": 8, "make x": 1, "make y": 1}, "make build", "make build"},
+		{"less frequent value is folded", map[string]int{"make build": 7, "make x": 1, "make y": 1}, "make build", "make <ARG>"},
+		{"rare value is folded", map[string]int{"make build": 8, "make x": 1, "make y": 1}, "make z", "make <ARG>"},
+		{"value contained in other words", map[string]int{"ls a": 1, "ls b": 1, "ls c": 1}, "ls s", "ls <ARG>"},
+		{"slots are per position", map[string]int{"cp a x": 1, "cp b x": 1, "cp c x": 1}, "cp d x", "cp <ARG> x"},
+		{"flags are never folded", map[string]int{"ls -a": 1, "ls -b": 1, "ls -c": 1}, "ls -d", "ls -d"},
+		{"command names are never folded", map[string]int{"a": 1, "b": 1, "c": 1}, "d", "d"},
+		{"flag value after =", map[string]int{"run --id=1": 1, "run --id=2": 1, "run --id=3": 1}, "run --id=4", "run --id=<ARG>"},
+		{"variable after =", map[string]int{"make U=1": 1, "make U=2": 1, "make U=3": 1}, "make U=4 all", "make U=<ARG> all"},
+		{"assignment", map[string]int{"P=1 serve": 1, "P=2 serve": 1, "P=3 serve": 1}, "P=4 serve", "P=<ARG> serve"},
+		{"pipeline", map[string]int{"cat a": 1, "cat b": 1, "cat c": 1}, "cat d | sort", "cat <ARG> | sort"},
 	}
-	defer f.Close()
-
-	type CommandPairTestData struct {
-		RawCmd        string   `json:"raw_cmd"`
-		SanitizedCmd  string   `json:"sanitized_cmd"`
-		RequiredPaths []string `json:"required_paths"`
-	}
-
-	scanner := bufio.NewScanner(f)
-	idx := 0
-	for scanner.Scan() {
-		var testCase CommandPairTestData
-		if err := json.Unmarshal([]byte(scanner.Text()), &testCase); err != nil {
-			t.Errorf("Failed to parse JSON on line %d: %v", idx+1, err)
-			continue
-		}
-
-		fs := mockStatFileSystem{
-			statFunc: func(path string) (os.FileInfo, error) {
-				for _, p := range testCase.RequiredPaths {
-					if p == path {
-						return os.FileInfo(nil), nil
-					}
-				}
-				return nil, os.ErrNotExist
-			},
-		}
-
-		t.Run(testCase.RawCmd[:int(math.Min(10, float64(len(testCase.RawCmd))))], func(t *testing.T) {
-			result := ProcessCmd(fs, testCase.RawCmd)
-			if result != testCase.SanitizedCmd {
-				t.Errorf("Raw: %q\nGot: %q\nWant: %q", testCase.RawCmd, result, testCase.SanitizedCmd)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := newTemplater(tt.history).Template(tt.cmd); got != tt.want {
+				t.Errorf("Template(%q) = %q, want %q", tt.cmd, got, tt.want)
 			}
 		})
-		idx++
 	}
-	if err := scanner.Err(); err != nil {
-		t.Fatalf("Error reading test data file: %v", err)
+}
+
+func TestPlainArgsMatchShellArgs(t *testing.T) {
+	parser := syntax.NewParser()
+	for _, cmd := range []string{"git status", "cd ~/a/b", "ls -la  src", "make build-all", "ssh me@host:22", "cp a.go b,c x+y 50%", "vim æøå.txt"} {
+		if !isPlain(cmd) {
+			t.Errorf("%q should be plain", cmd)
+		}
+		if plain, shell := plainArgs(cmd), shellArgs(parser, cmd); !slices.Equal(plain, shell) {
+			t.Errorf("%q: plainArgs = %+v, shellArgs = %+v", cmd, plain, shell)
+		}
+	}
+	for _, cmd := range []string{"a | b", "a; b", "a=1 b", "a --b=1", `a "b"`, "a $B", "a *.go", "a\tb", "a # b", "a!"} {
+		if isPlain(cmd) {
+			t.Errorf("%q should not be plain", cmd)
+		}
 	}
 }

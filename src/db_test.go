@@ -3,9 +3,6 @@ package bayesh
 import (
 	"context"
 	"database/sql"
-	"fmt"
-	"maps"
-	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -281,177 +278,39 @@ func TestUpdateRow(t *testing.T) {
 	}
 }
 
-type conditionalEventCountTestSetup struct {
-	targetCwd           string
-	targetPrevCmd       string
-	targetMinEventCount int
-	allRows             []Row
-}
+func TestEvents(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
 
-func setupDataForConditionalEventCountTest(t *testing.T, ctx context.Context, queries *Queries) *conditionalEventCountTestSetup {
-	t.Helper()
-
-	// 1. Setup data
-	var allRows []Row
-	// Create and add some noise data
-	for ii := 0; ii < 50; ii++ {
-		noiseRow := Row{
-			Cwd:          fmt.Sprintf("/tmp/noise/%d", ii),
-			PreviousCmd:  fmt.Sprintf("noise_prev_%d", ii),
-			CurrentCmd:   fmt.Sprintf("noise_curr_%d", ii),
-			EventCounter: rand.Intn(1000),
-			LastModified: time.Now(),
-		}
-		allRows = append(allRows, noiseRow)
+	events, err := queries.Events(ctx)
+	if err != nil {
+		t.Fatalf("Events failed on empty database: %v", err)
+	}
+	if len(events) != 0 {
+		t.Fatalf("Expected no events, got %d", len(events))
 	}
 
-	// Create and add the rows we care about
-	targetCwd := "/home/user/project"
-	targetPrevCmd := "git status"
-	for ii := 0; ii < 10; ii++ {
-		row := Row{
-			Cwd:          targetCwd,
-			PreviousCmd:  targetPrevCmd,
-			CurrentCmd:   fmt.Sprintf("git add file%d.txt", ii),
-			EventCounter: ii,
-			LastModified: time.Now(),
-		}
-		allRows = append(allRows, row)
+	rows := []Row{
+		{Cwd: "/a", PreviousCmd: "ls", CurrentCmd: "cd b", EventCounter: 2, LastModified: time.Now().UTC()},
+		{Cwd: "/b", PreviousCmd: "cd b", CurrentCmd: `git commit -m "a b"`, EventCounter: 1, LastModified: time.Now().UTC()},
 	}
-	for ii := 0; ii < 10; ii++ {
-		row := Row{
-			Cwd:          targetCwd,
-			PreviousCmd:  fmt.Sprintf("git add file%d.txt", ii),
-			CurrentCmd:   "foo bar",
-			EventCounter: ii,
-			LastModified: time.Now(),
-		}
-		allRows = append(allRows, row)
-	}
-
-	// Shuffle and insert all rows together
-	rand.Shuffle(len(allRows), func(i, j int) {
-		allRows[i], allRows[j] = allRows[j], allRows[i]
-	})
-
-	for _, row := range allRows {
+	for _, row := range rows {
 		if err := queries.InsertRow(ctx, row); err != nil {
 			t.Fatalf("Failed to insert row: %v", err)
 		}
 	}
 
-	return &conditionalEventCountTestSetup{
-		targetCwd:           targetCwd,
-		targetPrevCmd:       targetPrevCmd,
-		targetMinEventCount: 5,
-		allRows:             allRows,
-	}
-
-}
-
-func TestConditionalEventCount(t *testing.T) {
-
-	inputs := []struct {
-		targetCwd     bool
-		targetPrevCmd bool
-		minEventCount bool
-	}{
-		{
-			targetCwd:     true,
-			targetPrevCmd: true,
-			minEventCount: true,
-		},
-		{
-			targetCwd:     false,
-			targetPrevCmd: true,
-			minEventCount: true,
-		},
-		{
-			targetCwd:     true,
-			targetPrevCmd: false,
-			minEventCount: true,
-		},
-		{
-			targetCwd:     false,
-			targetPrevCmd: false,
-			minEventCount: true,
-		},
-		{
-			targetCwd:     true,
-			targetPrevCmd: true,
-			minEventCount: false,
-		},
-		{
-			targetCwd:     false,
-			targetPrevCmd: false,
-			minEventCount: false,
-		},
-	}
-
-	for _, input := range inputs {
-		t.Run(fmt.Sprintf("ConditionalEventCount%v%v%v", input.targetCwd, input.targetPrevCmd, input.minEventCount), func(t *testing.T) {
-
-			queries, _ := setupTestDB(t)
-			ctx := context.Background()
-
-			testData := setupDataForConditionalEventCountTest(t, ctx, queries)
-
-			expectedData := map[string]int{}
-			for _, row := range testData.allRows {
-				matchesCwd := !input.targetCwd || row.Cwd == testData.targetCwd
-				matchesPrevCmd := !input.targetPrevCmd || row.PreviousCmd == testData.targetPrevCmd
-
-				if matchesCwd && matchesPrevCmd {
-					expectedData[row.CurrentCmd] += row.EventCounter
-				}
-			}
-			for cmd, count := range expectedData {
-				if input.minEventCount && count < testData.targetMinEventCount {
-					delete(expectedData, cmd)
-				}
-			}
-
-			var cwd *string = nil
-			if input.targetCwd {
-				cwd = &testData.targetCwd
-			}
-			var prevCmd *string = nil
-			if input.targetPrevCmd {
-				prevCmd = &testData.targetPrevCmd
-			}
-			var minEventCount *int = nil
-			if input.minEventCount {
-				minEventCount = &testData.targetMinEventCount
-			}
-
-			eventCounts, err := queries.ConditionalEventCounts(ctx, cwd, prevCmd, minEventCount)
-			if err != nil {
-				t.Fatalf("Expected no error, but got %v", err)
-			}
-			if !maps.Equal(eventCounts, expectedData) {
-				t.Errorf("Inferred commands do not match expected commands.\nExpected: %v\nGot:      %v", expectedData, eventCounts)
-			}
-		})
-	}
-}
-
-func TestInferCurrentCmdNoResults(t *testing.T) {
-	queries, _ := setupTestDB(t)
-	ctx := context.Background()
-
-	// Call InferCurrentCmd on an empty database
-	cwd := "some_cwd"
-	prevCmd := "some_prev_cmd"
-	result, err := queries.ConditionalEventCounts(ctx, &cwd, &prevCmd, nil)
+	events, err = queries.Events(ctx)
 	if err != nil {
-		t.Fatalf("Expected no error, but got %v", err)
+		t.Fatalf("Events failed: %v", err)
 	}
-
-	if result == nil {
-		t.Fatal("Expected an empty slice, but got nil")
+	if len(events) != len(rows) {
+		t.Fatalf("Expected %d events, got %d", len(rows), len(events))
 	}
-
-	if len(result) != 0 {
-		t.Errorf("Expected an empty slice, but got a slice with length %d", len(result))
+	for i, row := range rows {
+		got := events[i]
+		if got.Cwd != row.Cwd || got.PreviousCmd != row.PreviousCmd || got.CurrentCmd != row.CurrentCmd || got.EventCounter != row.EventCounter {
+			t.Errorf("Event %d: got %+v, want %+v", i, got, row)
+		}
 	}
 }
