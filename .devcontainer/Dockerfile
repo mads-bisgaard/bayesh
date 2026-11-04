@@ -4,17 +4,19 @@ FROM ubuntu:24.04
 
 COPY --from=go-toolchain /usr/local/go /usr/local/go
 
+# TERM: docker exec otherwise sets TERM=xterm, and tmux then limits itself to
+# 8 colours, which hides fzf's grey border
 ENV PATH="/usr/local/go/bin:/usr/local/bin:/home/ubuntu/.local/bin:/home/ubuntu/.claude/bin:${PATH}" \
     HOME=/home/ubuntu \
     LANG=en_US.UTF-8 \
-    LC_ALL=en_US.UTF-8
+    LC_ALL=en_US.UTF-8 \
+    TERM=xterm-256color
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bats \
     build-essential \
     ca-certificates \
     curl \
-    fzf \
     git \
     inotify-tools \
     jq \
@@ -31,6 +33,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && sed -i 's/^# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen \
     && locale-gen \
     && rm -rf /var/lib/apt/lists/*
+
+# Bayesh needs a newer fzf than the one packaged by apt
+RUN version=$(curl -fsSLo /dev/null -w '%{url_effective}' https://github.com/junegunn/fzf/releases/latest) \
+    && version=${version##*/v} \
+    && asset="fzf-${version}-linux_$(dpkg --print-architecture).tar.gz" \
+    && url="https://github.com/junegunn/fzf/releases/download/v${version}" \
+    && cd /tmp \
+    && curl -fsSLO "${url}/${asset}" \
+    && curl -fsSL "${url}/fzf_${version}_checksums.txt" | grep -F "${asset}" | sha256sum -c - \
+    && tar -xzf "${asset}" -C /usr/local/bin fzf \
+    && rm "${asset}"
 
 RUN usermod --shell /usr/bin/zsh ubuntu \
     && echo "ubuntu ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/ubuntu \

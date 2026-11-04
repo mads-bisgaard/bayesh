@@ -25,6 +25,9 @@ var bayeshSh string
 //go:embed shell/fzf_tmux_server.zsh
 var fzfTmuxServerZsh string
 
+//go:embed shell/capture.zsh
+var captureZsh string
+
 // version is set at build time using ldflags.
 var version = "development"
 
@@ -74,6 +77,7 @@ func main() {
 			} else if zsh {
 				fmt.Print(bayeshSh)
 				fmt.Print(fzfTmuxServerZsh)
+				fmt.Print(captureZsh)
 				fmt.Print(bayeshZsh)
 			} else {
 				if err := cli.ShowAppHelp(cmd); err != nil {

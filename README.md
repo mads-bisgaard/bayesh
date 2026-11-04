@@ -23,25 +23,6 @@ Bayesh is lightening fast ⚡ (written in Go) and powered by [fzf](https://githu
   
 Make sure to [integrate](#shell-integration) Bayesh into your shell.
 
-## Development container
-
-Open the repository in VS Code and choose **Reopen in
-Container** to build and use it. The image can also be built separately from
-the repository root:
-
-```sh
-docker build -f .devcontainer/Dockerfile -t bayesh-dev .
-```
-
-To run the image directly instead of using VS Code:
-
-```sh
-docker run --rm -it \
-  -v "$PWD:/workspaces/bayesh" \
-  -w /workspaces/bayesh \
-  bayesh-dev
-```
-
 ## Shell integration
   - To integrate Bayesh into Zsh, add `source <(bayesh --zsh)` to your configuration file. You can do so by executing the following command in your shell:
   ```sh
@@ -49,9 +30,10 @@ docker run --rm -it \
   ```
 
 ## How to Use Bayesh 
-Once inside a [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) session (achieved by running `tmux` in your zsh shell), you open/close Bayesh by hitting `Ctrl-e` in your shell. Once open, 
-- toggle the fzf pane with `Ctrl-<up arrow>` and `Ctrl-<down arrow>`.  
-- select a suggestion with `Ctrl-<right arrow>`.  
+Once inside a [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) session (achieved by running `tmux` in your zsh shell), you open/close Bayesh by hitting `Ctrl-e` in your shell. Bayesh opens an fzf pane to the right of your shell. Once open, 
+- move through the fzf pane with `Ctrl-<up arrow>` and `Ctrl-<down arrow>`.  
+- select a suggestion with `Ctrl-<right arrow>`. The fzf pane then shows your shell's native completions for the selected command, and selecting again continues from there.  
+- show your shell's native completions for the current command line, at the cursor, with `Ctrl-<left arrow>`.  
 
 At first Bayesh has a short "learning phase" before it will start suggesting you commands.
 
