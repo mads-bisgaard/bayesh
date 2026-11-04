@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: ["main", "main-ai"]
   push:
+    branches: ["main", "main-ai"]
     tags:
       - 'v*'
 
