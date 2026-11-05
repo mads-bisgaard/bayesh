@@ -94,7 +94,7 @@ teardown() {
     previous_cmd="previous command ${RANDOM}"
     current_cmd="current command ${RANDOM}"
 
-    run bash -c "sqlite3 ${db} \"insert into events (cwd, previous_cmd, current_cmd, event_counter, last_modified) values ('${cwd}', '${previous_cmd}', '${current_cmd}', 1, '$(date)')\""
+    run bash -c "sqlite3 ${db} \"insert into events (cwd, previous_cmd, current_cmd, previous_template, current_template, event_counter, last_modified) values ('${cwd}', '${previous_cmd}', '${current_cmd}', '${previous_cmd}', '${current_cmd}', 1, '$(date)')\""
     [ "$status" -eq 0 ]
 
     run bash -c "sqlite3 ${db} 'select count(*) from events'"

@@ -3,13 +3,17 @@ package bayesh
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"maps"
+	"math/rand"
+	"slices"
 	"testing"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func setupCoreWithTempDB(t *testing.T) (*Core, string) {
+func setupCoreWithTempDB(t testing.TB) (*Core, string) {
 	t.Helper()
 
 	tempDir := t.TempDir()
@@ -128,56 +132,146 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 }
 
 func TestInferCommands(t *testing.T) {
-	core, dbPath := setupCoreWithTempDB(t)
+	core, _ := setupCoreWithTempDB(t)
 	core.Settings.MinRequiredEvents = 0
-	defer func() {
-		if err := core.Close(); err != nil {
-			t.Errorf("core.Close() failed: %v", err)
-		}
-	}()
-
 	ctx := context.Background()
-	cwd := "/home/user/project"
-	previousCmd := "git status"
-	expectedCurrentCmd := "git add ."
-
-	// Manually insert a row for testing inference
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		t.Fatalf("Failed to open DB for data insertion: %v", err)
-	}
-	defer func() {
-		if err := db.Close(); err != nil {
-			t.Errorf("db.Close() failed: %v", err)
+	record := func(cwd, previous, current string, n int) {
+		for range n {
+			if err := core.RecordEvent(ctx, cwd, previous, current); err != nil {
+				t.Fatal(err)
+			}
 		}
-	}()
-
-	queries := New(db)
-	if err := queries.InsertRow(ctx, Row{
-		Cwd:          cwd,
-		PreviousCmd:  previousCmd,
-		CurrentCmd:   expectedCurrentCmd,
-		EventCounter: 10,
-		LastModified: time.Now(),
-	}); err != nil {
-		t.Fatalf("Failed to insert test row: %v", err)
 	}
-	if err := queries.InsertRow(ctx, Row{
-		Cwd:          cwd,
-		PreviousCmd:  previousCmd,
-		CurrentCmd:   "my other command",
-		EventCounter: 1,
-		LastModified: time.Now(),
-	}); err != nil {
-		t.Fatalf("Failed to insert test row: %v", err)
-	}
-
-	inferredCmds, err := core.InferCommands(ctx, cwd, previousCmd)
+	record("/a", "git status", "git add .", 3)
+	record("/a", "git status", "git diff", 1)
+	record("/b", "ls", "git diff", 4)
+	// P(add|/a)=3/4, P(add|status)=3/4, P(add|/a,status)=3/4 => 3/4
+	// P(diff|/a)=1/4, P(diff|status)=1/4, P(diff|/a,status)=1/4 => 1/4
+	got, err := core.InferCommands(ctx, "/a", "git status")
 	if err != nil {
-		t.Fatalf("InferCommands failed: %v", err)
+		t.Fatal(err)
+	}
+	if want := []string{"git add .", "git diff"}; !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
 	}
 
-	if len(inferredCmds) != 2 || inferredCmds[0] != expectedCurrentCmd {
-		t.Errorf("expected inferred command [%q], but got %q", expectedCurrentCmd, inferredCmds)
+	core.Settings.MinRequiredEvents = 4
+	got, err = core.InferCommands(ctx, "/b", "ls")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"git diff"}; !slices.Equal(got, want) {
+		t.Errorf("with min required events: got %q, want %q", got, want)
+	}
+}
+
+func TestInferCommandsTemplates(t *testing.T) {
+	core, _ := setupCoreWithTempDB(t)
+	core.Settings.MinRequiredEvents = 2
+	ctx := context.Background()
+	for _, e := range [][2]string{
+		{"git checkout x", "vim a.go"},
+		{"vim a.go", "git checkout y"},
+		{"git checkout y", "vim b.go"},
+		{"vim b.go", "git checkout z"},
+		{"git checkout z", "vim c.go"},
+		{"vim c.go", "git checkout x"},
+	} {
+		if err := core.RecordEvent(ctx, "/a", e[0], e[1]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// The varying arguments are folded, also in the events recorded before
+	// the slots became variable, so the counts of each template add up, and
+	// a never seen previous command still matches its template.
+	got, err := core.InferCommands(ctx, "/elsewhere", "git checkout new")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"vim <ARG>"}; !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestRecordEventKeepsTemplatesUpToDate checks that the templates and slot
+// statistics stored while recording equal those learned from all events at once.
+func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {
+	core, _ := setupCoreWithTempDB(t)
+	ctx := context.Background()
+	rng := rand.New(rand.NewSource(1))
+	pick := func(values ...string) string { return values[rng.Intn(len(values))] }
+	newCmd := func() string {
+		v := fmt.Sprint(rng.Intn(6))
+		return pick(
+			"cd "+pick("a", "b", "c", "d", v),
+			"git checkout "+pick("main", "main", "main", v),
+			"git status",
+			"cat "+v+" | grep "+pick("x", "y", v),
+			"make U="+v+" all",
+			`git commit -m "message `+v+`"`,
+			"P="+v+" serve",
+		)
+	}
+	previous := ""
+	for range 300 {
+		current := newCmd()
+		if err := core.RecordEvent(ctx, "/"+pick("a", "b"), previous, current); err != nil {
+			t.Fatal(err)
+		}
+		previous = current
+	}
+
+	rows, err := core.db.Query("SELECT previous_cmd, current_cmd, previous_template, current_template, event_counter FROM events")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var events []TemplatedRow
+	want := newTemplater()
+	for rows.Next() {
+		var r TemplatedRow
+		var n int
+		if err := rows.Scan(&r.PreviousCmd, &r.CurrentCmd, &r.PreviousTemplate, &r.CurrentTemplate, &n); err != nil {
+			t.Fatal(err)
+		}
+		events = append(events, r)
+		want.add(r.CurrentCmd, n)
+	}
+	folded := 0
+	for _, r := range events {
+		if p, c := want.Template(r.PreviousCmd), want.Template(r.CurrentCmd); p != r.PreviousTemplate || c != r.CurrentTemplate {
+			t.Errorf("%q -> %q: stored templates %q -> %q, want %q -> %q", r.PreviousCmd, r.CurrentCmd, r.PreviousTemplate, r.CurrentTemplate, p, c)
+		}
+		if r.CurrentTemplate != r.CurrentCmd {
+			folded++
+		}
+	}
+	if folded == 0 {
+		t.Error("expected some templates to fold arguments")
+	}
+	stored := map[string]map[string]int{}
+	slots, err := core.db.Query("SELECT slot, value, runs FROM slots")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer slots.Close()
+	for slots.Next() {
+		var slot, value string
+		var n int
+		if err := slots.Scan(&slot, &value, &n); err != nil {
+			t.Fatal(err)
+		}
+		if stored[slot] == nil {
+			stored[slot] = map[string]int{}
+		}
+		stored[slot][value] = n
+	}
+	if len(stored) != len(want.slots) {
+		t.Errorf("stored %d slots, want %d", len(stored), len(want.slots))
+	}
+	for slot, s := range want.slots {
+		if !maps.Equal(stored[slot], s.runs) || len(stored[slot]) != s.distinct {
+			t.Errorf("slot %q: stored %v, want %+v", slot, stored[slot], s)
+		}
 	}
 }

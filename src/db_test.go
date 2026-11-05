@@ -3,6 +3,7 @@ package bayesh
 import (
 	"context"
 	"database/sql"
+	"maps"
 	"os"
 	"testing"
 	"time"
@@ -67,7 +68,7 @@ func TestCreateDB(t *testing.T) {
 	}()
 
 	expected := map[string]bool{
-		colCwd: true, colPreviousCmd: true, colCurrentCmd: true, colEventCounter: true, colLastModified: true,
+		colCwd: true, colPreviousCmd: true, colCurrentCmd: true, colPreviousTemplate: true, colCurrentTemplate: true, colEventCounter: true, colLastModified: true,
 	}
 	for cols.Next() {
 		var cid, notnull, pk int
@@ -252,11 +253,13 @@ func TestUpdateRow(t *testing.T) {
 	// 2. Update the row with new data
 
 	updatedRow := Row{
-		Cwd:          rowToInsert.Cwd,
-		PreviousCmd:  rowToInsert.PreviousCmd,
-		CurrentCmd:   rowToInsert.CurrentCmd,
-		EventCounter: 456,
-		LastModified: time.Now().Truncate(time.Second).Add(time.Hour),
+		Cwd:              rowToInsert.Cwd,
+		PreviousCmd:      rowToInsert.PreviousCmd,
+		CurrentCmd:       rowToInsert.CurrentCmd,
+		PreviousTemplate: "ls -l",
+		CurrentTemplate:  "cat <ARG>",
+		EventCounter:     456,
+		LastModified:     time.Now().Truncate(time.Second).Add(time.Hour),
 	}
 	if err := queries.UpdateRow(ctx, updatedRow); err != nil {
 		t.Fatalf("Failed to update row: %v", err)
@@ -272,45 +275,110 @@ func TestUpdateRow(t *testing.T) {
 	if fetchedRow.EventCounter != updatedRow.EventCounter {
 		t.Errorf("Expected EventCounter to be %d, got %d", updatedRow.EventCounter, fetchedRow.EventCounter)
 	}
+	if fetchedRow.PreviousTemplate != updatedRow.PreviousTemplate || fetchedRow.CurrentTemplate != updatedRow.CurrentTemplate {
+		t.Errorf("Expected templates %q, %q, got %q, %q", updatedRow.PreviousTemplate, updatedRow.CurrentTemplate, fetchedRow.PreviousTemplate, fetchedRow.CurrentTemplate)
+	}
 
 	if !fetchedRow.LastModified.Equal(updatedRow.LastModified) {
 		t.Errorf("Expected LastModified to be %v, got %v", updatedRow.LastModified, fetchedRow.LastModified)
 	}
 }
 
-func TestEvents(t *testing.T) {
+func TestTemplateCounts(t *testing.T) {
 	queries, _ := setupTestDB(t)
 	ctx := context.Background()
-
-	events, err := queries.Events(ctx)
-	if err != nil {
-		t.Fatalf("Events failed on empty database: %v", err)
-	}
-	if len(events) != 0 {
-		t.Fatalf("Expected no events, got %d", len(events))
-	}
-
-	rows := []Row{
-		{Cwd: "/a", PreviousCmd: "ls", CurrentCmd: "cd b", EventCounter: 2, LastModified: time.Now().UTC()},
-		{Cwd: "/b", PreviousCmd: "cd b", CurrentCmd: `git commit -m "a b"`, EventCounter: 1, LastModified: time.Now().UTC()},
-	}
-	for _, row := range rows {
+	for _, row := range []Row{
+		{Cwd: "/a", PreviousCmd: "cd x", CurrentCmd: "ls", PreviousTemplate: "cd <ARG>", CurrentTemplate: "ls", EventCounter: 2},
+		{Cwd: "/a", PreviousCmd: "vim y", CurrentCmd: "cd y", PreviousTemplate: "vim <ARG>", CurrentTemplate: "cd <ARG>", EventCounter: 1},
+		{Cwd: "/a", PreviousCmd: "vim z", CurrentCmd: "cd z", PreviousTemplate: "vim <ARG>", CurrentTemplate: "cd <ARG>", EventCounter: 1},
+		{Cwd: "/b", PreviousCmd: "cd w", CurrentCmd: "ls", PreviousTemplate: "cd <ARG>", CurrentTemplate: "ls", EventCounter: 1},
+	} {
 		if err := queries.InsertRow(ctx, row); err != nil {
 			t.Fatalf("Failed to insert row: %v", err)
 		}
 	}
-
-	events, err = queries.Events(ctx)
-	if err != nil {
-		t.Fatalf("Events failed: %v", err)
+	a, cd, vim := "/a", "cd <ARG>", "vim <ARG>"
+	tests := []struct {
+		name     string
+		cwd      *string
+		previous *string
+		min      int
+		want     map[string]int
+	}{
+		{"by cwd", &a, nil, 0, map[string]int{"ls": 2, "cd <ARG>": 2}},
+		{"by previous", nil, &cd, 0, map[string]int{"ls": 3}},
+		{"by both", &a, &vim, 0, map[string]int{"cd <ARG>": 2}},
+		{"min events", &a, nil, 2, map[string]int{"ls": 2, "cd <ARG>": 2}},
+		{"too few events", &a, &vim, 3, map[string]int{}},
 	}
-	if len(events) != len(rows) {
-		t.Fatalf("Expected %d events, got %d", len(rows), len(events))
-	}
-	for i, row := range rows {
-		got := events[i]
-		if got.Cwd != row.Cwd || got.PreviousCmd != row.PreviousCmd || got.CurrentCmd != row.CurrentCmd || got.EventCounter != row.EventCounter {
-			t.Errorf("Event %d: got %+v, want %+v", i, got, row)
+	for _, tt := range tests {
+		got, err := queries.TemplateCounts(ctx, tt.cwd, tt.previous, tt.min)
+		if err != nil {
+			t.Fatalf("%s: %v", tt.name, err)
 		}
+		if !maps.Equal(got, tt.want) {
+			t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestSlotStatistics(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+	if n, err := queries.SlotDistinct(ctx, "cd#1"); err != nil || n != 0 {
+		t.Fatalf("SlotDistinct of an unseen slot = %d, %v", n, err)
+	}
+	if n, err := queries.SlotRuns(ctx, "cd#1", "a"); err != nil || n != 0 {
+		t.Fatalf("SlotRuns of an unseen value = %d, %v", n, err)
+	}
+	for _, v := range []struct {
+		slot, value string
+		n           int
+	}{{"cd#1", "a", 1}, {"cd#1", "b", 1}, {"cd#1", "a", 2}, {"vim#1", "a", 1}} {
+		if err := queries.AddSlotRuns(ctx, v.slot, v.value, v.n); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, v := range []struct {
+		slot, value string
+		want        int
+	}{{"cd#1", "a", 3}, {"cd#1", "b", 1}, {"cd#1", "c", 0}, {"vim#1", "a", 1}} {
+		if n, err := queries.SlotRuns(ctx, v.slot, v.value); err != nil || n != v.want {
+			t.Errorf("SlotRuns(%q, %q) = %d, %v, want %d", v.slot, v.value, n, err, v.want)
+		}
+	}
+	if n, err := queries.SlotDistinct(ctx, "cd#1"); err != nil || n != 2 {
+		t.Errorf("SlotDistinct(cd#1) = %d, %v, want 2", n, err)
+	}
+}
+
+func TestRowsMentioningAndSetTemplates(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+	for _, row := range []Row{
+		{Cwd: "/a", PreviousCmd: "ls", CurrentCmd: "cd x", PreviousTemplate: "ls", CurrentTemplate: "cd x"},
+		{Cwd: "/a", PreviousCmd: "cd y", CurrentCmd: "ls", PreviousTemplate: "cd y", CurrentTemplate: "ls"},
+		{Cwd: "/a", PreviousCmd: "ls", CurrentCmd: "vim z", PreviousTemplate: "ls", CurrentTemplate: "vim z"},
+	} {
+		if err := queries.InsertRow(ctx, row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := queries.RowsMentioning(ctx, []string{"cd"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].CurrentCmd != "cd x" || rows[1].PreviousCmd != "cd y" {
+		t.Fatalf("got %+v, want the two rows with cd", rows)
+	}
+	if err := queries.SetTemplates(ctx, rows[0].ID, "ls", "cd <ARG>"); err != nil {
+		t.Fatal(err)
+	}
+	row, err := queries.GetRow(ctx, "/a", "ls", "cd x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.PreviousTemplate != "ls" || row.CurrentTemplate != "cd <ARG>" {
+		t.Errorf("templates not set: %+v", row)
 	}
 }

@@ -1,6 +1,7 @@
 package bayesh
 
 import (
+	"context"
 	"math"
 	"os"
 	"slices"
@@ -60,7 +61,7 @@ func TestReplay(t *testing.T) {
 		{"slot 3, literal 10", 3, 10},
 	} {
 		minSlotValues, minLiteralCount = s.slotValues, s.literalCount
-		r := replay(cmds)
+		r := replay(t, cmds)
 		t.Logf("%-24s %6.1f%% %6.1f%% %7.3f %6.1f%% %9.1f%%", s.name, r.top1, r.top5, r.mrr, r.exact5, r.suggested)
 	}
 }
@@ -70,22 +71,32 @@ type replayResult struct {
 	suggested               float64 // how often the next command is suggested at all
 }
 
-func replay(cmds []string) replayResult {
-	events := map[[2]string]int{} // previous and current command -> runs
+// replay records cmds in a new database and ranks the suggestions at up to 500 points.
+func replay(t *testing.T, cmds []string) replayResult {
+	core, _ := setupCoreWithTempDB(t)
+	core.Settings.MinRequiredEvents = 2
+	// A single connection, so the pragma applies to all queries. The database is thrown away.
+	core.db.SetMaxOpenConns(1)
+	if _, err := core.db.Exec("PRAGMA synchronous = OFF"); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
 	step := max(1, len(cmds)/500)
 	var points, top1, top5, exact5, suggested int
 	var reciprocalRanks float64
 	for i := 1; i < len(cmds); i++ {
 		previous, current := cmds[i-1], cmds[i]
 		if i%step == 0 {
-			rows, runs := []Row{}, map[string]int{}
-			for cmds, n := range events {
-				rows = append(rows, Row{PreviousCmd: cmds[0], CurrentCmd: cmds[1], EventCounter: n})
-				runs[cmds[1]] += n
+			ranked, err := core.InferCommands(ctx, "", previous)
+			if err != nil {
+				t.Fatal(err)
 			}
-			ranked := RankCommands(rows, "", previous, 2)
+			target, err := core.template(ctx, current)
+			if err != nil {
+				t.Fatal(err)
+			}
 			points++
-			if rank := slices.Index(ranked, newTemplater(runs).Template(current)); rank >= 0 {
+			if rank := slices.Index(ranked, target); rank >= 0 {
 				suggested++
 				reciprocalRanks += 1 / float64(rank+1)
 				if rank == 0 {
@@ -99,7 +110,9 @@ func replay(cmds []string) replayResult {
 				exact5++
 			}
 		}
-		events[[2]string{previous, current}]++
+		if err := core.RecordEvent(ctx, "", previous, current); err != nil {
+			t.Fatal(err)
+		}
 	}
 	percent := func(n int) float64 { return 100 * float64(n) / float64(points) }
 	return replayResult{

@@ -46,10 +46,45 @@ func TestTemplate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := newTemplater(tt.history).Template(tt.cmd); got != tt.want {
+			templater := newTemplater()
+			for cmd, n := range tt.history {
+				templater.add(cmd, n)
+			}
+			if got := templater.Template(tt.cmd); got != tt.want {
 				t.Errorf("Template(%q) = %q, want %q", tt.cmd, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestAddReportsChangedFolding(t *testing.T) {
+	templater := newTemplater()
+	steps := []struct {
+		cmd  string
+		want []string
+	}{
+		{"cd a", nil},
+		{"cd b", nil},
+		{"cd c", []string{"cd"}}, // cd#1 becomes variable
+		{"cd d", nil},
+		{"git status && cd e", nil}, // git#1 has one value, cd#1 stays variable
+		{"ls", nil},
+	}
+	for _, s := range steps {
+		if got := templater.add(s.cmd, 1); !slices.Equal(got, s.want) {
+			t.Errorf("add(%q) = %q, want %q", s.cmd, got, s.want)
+		}
+	}
+	for range minLiteralCount - 2 {
+		if got := templater.add("cd a", 1); got != nil {
+			t.Fatalf("add(%q) = %q before cd a is frequent", "cd a", got)
+		}
+	}
+	if got := templater.add("cd a", 1); !slices.Equal(got, []string{"cd"}) {
+		t.Errorf("add(%q) = %q when it becomes frequent, want [cd]", "cd a", got)
+	}
+	if got := templater.Template("cd a"); got != "cd a" {
+		t.Errorf("Template(%q) = %q after add", "cd a", got)
 	}
 }
 

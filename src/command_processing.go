@@ -41,38 +41,62 @@ func AnsiColorTokens(cmds string) string {
 // arg is an argument in a command which may be replaced by a token.
 type arg struct {
 	start, end int    // byte offsets into the command
+	name       string // the name of the command the argument is given to
 	slot       string // where the argument occurs, e.g. "git#2"; empty for quoted strings
 	value      string
 }
 
-// templater replaces the arguments of commands which vary between runs with tokens.
-type templater struct {
-	parser    *syntax.Parser
-	args      map[string][]arg          // command -> its arguments
-	values    map[string]map[string]int // slot -> value -> number of runs
-	templates map[string]string         // command -> its template
+// slotStats is what templating needs to know about an argument slot.
+type slotStats struct {
+	distinct int            // the number of distinct values seen
+	runs     map[string]int // the number of runs of each known value
 }
 
-// newTemplater learns which argument slots vary from the number of runs of each command.
-func newTemplater(runs map[string]int) *templater {
-	t := &templater{
+// templater replaces the arguments of commands which vary between runs with tokens.
+// It decides from the statistics of their slots, which are either counted with
+// add or loaded into slots. Templating a command requires its slots and the
+// runs of its values to be known.
+type templater struct {
+	parser    *syntax.Parser
+	args      map[string][]arg      // command -> its arguments
+	slots     map[string]*slotStats // slot -> its statistics
+	templates map[string]string     // command -> its template
+}
+
+func newTemplater() *templater {
+	return &templater{
 		parser:    syntax.NewParser(),
 		args:      map[string][]arg{},
-		values:    map[string]map[string]int{},
+		slots:     map[string]*slotStats{},
 		templates: map[string]string{},
 	}
-	for cmd, n := range runs {
-		for _, a := range t.parse(cmd) {
-			if a.slot == "" {
-				continue
-			}
-			if t.values[a.slot] == nil {
-				t.values[a.slot] = map[string]int{}
-			}
-			t.values[a.slot][a.value] += n
+}
+
+// add counts n runs of cmd. It returns the names of the commands for which an
+// argument slot changed whether it is folded, i.e. the commands whose templates may change.
+func (t *templater) add(cmd string, n int) []string {
+	var changed []string
+	for _, a := range t.parse(cmd) {
+		if a.slot == "" {
+			continue
+		}
+		s := t.slots[a.slot]
+		if s == nil {
+			s = &slotStats{runs: map[string]int{}}
+			t.slots[a.slot] = s
+		}
+		wasVariable, wasLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= minLiteralCount
+		if s.runs[a.value] == 0 {
+			s.distinct++
+		}
+		s.runs[a.value] += n
+		isVariable, isLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= minLiteralCount
+		if (wasVariable != isVariable || (isVariable && wasLiteral != isLiteral)) && !slices.Contains(changed, a.name) {
+			changed = append(changed, a.name)
 		}
 	}
-	return t
+	clear(t.templates)
+	return changed
 }
 
 func (t *templater) Template(cmd string) string {
@@ -102,8 +126,8 @@ func (t *templater) fold(a arg) bool {
 	if a.slot == "" {
 		return true
 	}
-	values := t.values[a.slot]
-	return len(values) >= minSlotValues && values[a.value] < minLiteralCount
+	s := t.slots[a.slot]
+	return s != nil && s.distinct >= minSlotValues && s.runs[a.value] < minLiteralCount
 }
 
 func (t *templater) parse(cmd string) []arg {
@@ -136,7 +160,7 @@ func plainArgs(cmd string) []arg {
 		if i == 0 {
 			name = field
 		} else if !strings.HasPrefix(field, "-") {
-			args = append(args, arg{start: start, end: offset, slot: name + "#" + strconv.Itoa(i), value: field})
+			args = append(args, arg{start: start, end: offset, name: name, slot: name + "#" + strconv.Itoa(i), value: field})
 		}
 	}
 	return args
@@ -150,8 +174,10 @@ func shellArgs(parser *syntax.Parser, cmd string) []arg {
 		return nil
 	}
 	var args []arg
+	var name string
 	add := func(w *syntax.Word, skip int, slot string) {
 		if a, ok := newArg(cmd, w, skip, slot); ok {
+			a.name = name
 			args = append(args, a)
 		}
 	}
@@ -160,7 +186,7 @@ func shellArgs(parser *syntax.Parser, cmd string) []arg {
 		if !ok {
 			return true
 		}
-		name := ""
+		name = ""
 		if len(call.Args) > 0 {
 			name = source(cmd, call.Args[0])
 		}
