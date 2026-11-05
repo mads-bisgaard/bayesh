@@ -275,3 +275,53 @@ func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {
 		}
 	}
 }
+
+// TestInferCommandsDuringLargeWrite checks that opening Bayesh is not blocked
+// while record-event re-templates many rows. Here the writer's transaction
+// outgrows its page cache, which in SQLite's default rollback journal mode
+// locks out readers until it commits.
+func TestInferCommandsDuringLargeWrite(t *testing.T) {
+	core, dbPath := setupCoreWithTempDB(t)
+	core.Settings.MinRequiredEvents = 0
+	ctx := context.Background()
+	if err := core.RecordEvent(ctx, "/a", "ls", "git status"); err != nil {
+		t.Fatal(err)
+	}
+
+	writerDB, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writerDB.Close()
+	writer, err := writerDB.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	for _, stmt := range []string{"PRAGMA cache_size = 1", "BEGIN IMMEDIATE"} {
+		if _, err := writer.ExecContext(ctx, stmt); err != nil {
+			t.Fatal(err)
+		}
+	}
+	defer writer.ExecContext(ctx, "ROLLBACK")
+	for i := range 2000 {
+		if _, err := writer.ExecContext(ctx, "INSERT INTO slots VALUES (?, ?, 1)", fmt.Sprintf("slot%d", i), "value"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// A reader without a busy timeout fails at once instead of waiting
+	readerDB, err := sql.Open("sqlite3", dbPath+"?_busy_timeout=0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer readerDB.Close()
+	reader := &Core{Settings: core.Settings, db: readerDB}
+	got, err := reader.InferCommands(ctx, "/a", "ls")
+	if err != nil {
+		t.Fatalf("InferCommands during a large write: %v", err)
+	}
+	if want := []string{"git status"}; !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

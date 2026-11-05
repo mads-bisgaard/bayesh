@@ -47,7 +47,10 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 }
 
 func (q *Queries) CreateSchema(ctx context.Context) error {
+	// In WAL mode readers never wait for a writer, so opening Bayesh is not
+	// blocked while record-event re-templates rows. The mode is stored in the database.
 	schema := `
+    PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS ` + eventsTable + ` (
         ` + colCwd + ` TEXT,
         ` + colPreviousCmd + ` TEXT,
