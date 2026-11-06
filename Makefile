@@ -31,6 +31,7 @@ MANUAL_TEST_TMUX := tmux -L bayesh-manual-test -f /dev/null
 # start a detached tmux session running the local build with a fresh database
 .PHONY: manual-test
 manual-test: manual-test-stop build
+	rm -rf $(MANUAL_TEST_DIR)
 	mkdir -p $(MANUAL_TEST_DIR)
 	cp tests/manual-test.zshrc $(MANUAL_TEST_DIR)/.zshrc
 	PATH="$(CURDIR)/build:$$PATH" \
