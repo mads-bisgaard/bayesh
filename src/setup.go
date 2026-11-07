@@ -5,24 +5,50 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
-
-	"github.com/asaskevich/govalidator"
+	"slices"
 )
 
 const BayeshDirEnvVar = "BAYESH_DIR"
 const LogLevelEnvVar = "BAYESH_LOG_LEVEL"
-const MinRequiredEventsEnvVar = "BAYESH_MIN_REQUIRED_EVENTS"
 
 type Settings struct {
-	BayeshDir         string     `json:"BAYESH_DIR" validate:"required,dir"`
-	Database          string     `json:"BAYESH_DATABASE" validate:"required,file"`
-	LogLevel          slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
-	MinRequiredEvents int        `json:"BAYESH_MIN_REQUIRED_EVENTS" validate:"required,min=0"`
+	BayeshDir string     `json:"BAYESH_DIR"`
+	Database  string     `json:"BAYESH_DATABASE"`
+	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL"`
+	// When a transaction takes the write lock. WAL mode lets readers run
+	// alongside a writer, but writers still take turns. A transaction which
+	// starts reading and then writes can't wait for another writer which
+	// committed in between, so writers take the lock when they begin.
+	DatabaseTxLock string `json:"BAYESH_DATABASE_TX_LOCK"`
+	// How long, in milliseconds, to wait for another writer before failing
+	DatabaseBusyTimeout int `json:"BAYESH_DATABASE_BUSY_TIMEOUT"`
+}
+
+// validate checks that the directory and database exist and that the database options are valid.
+func (s *Settings) validate(fs FileSystem) error {
+	if info, err := fs.Stat(s.BayeshDir); err != nil || !info.IsDir() {
+		return fmt.Errorf("BAYESH_DIR %q is not a directory", s.BayeshDir)
+	}
+	if info, err := fs.Stat(s.Database); err != nil || !info.Mode().IsRegular() {
+		return fmt.Errorf("BAYESH_DATABASE %q is not a file", s.Database)
+	}
+	if !slices.Contains([]string{"deferred", "immediate", "exclusive"}, s.DatabaseTxLock) {
+		return fmt.Errorf("BAYESH_DATABASE_TX_LOCK %q is not deferred, immediate or exclusive", s.DatabaseTxLock)
+	}
+	if s.DatabaseBusyTimeout < 0 {
+		return fmt.Errorf("BAYESH_DATABASE_BUSY_TIMEOUT %d is negative", s.DatabaseBusyTimeout)
+	}
+	return nil
+}
+
+// DataSourceName returns the name to open the database with, including its options.
+func (s *Settings) DataSourceName() string {
+	return fmt.Sprintf("%s?_txlock=%s&_busy_timeout=%d", s.Database, s.DatabaseTxLock, s.DatabaseBusyTimeout)
 }
 
 func (s *Settings) setupDatabase() error {
@@ -69,10 +95,11 @@ func defaultSettings(fs FileSystem) *Settings {
 	}
 
 	return &Settings{
-		BayeshDir:         bayeshDir,
-		Database:          bayeshDb,
-		LogLevel:          slog.LevelError,
-		MinRequiredEvents: 2,
+		BayeshDir:           bayeshDir,
+		Database:            bayeshDb,
+		LogLevel:            slog.LevelError,
+		DatabaseTxLock:      "immediate",
+		DatabaseBusyTimeout: 5000,
 	}
 }
 
@@ -85,14 +112,6 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 			return nil, err
 		}
 		settings.LogLevel = logLevel
-	}
-
-	if minRequiredEventsStr := fs.Getenv(MinRequiredEventsEnvVar); minRequiredEventsStr != "" {
-		minRequiredEvents, err := strconv.Atoi(minRequiredEventsStr)
-		if err != nil {
-			return nil, err
-		}
-		settings.MinRequiredEvents = minRequiredEvents
 	}
 
 	if bayeshDir := fs.Getenv(BayeshDirEnvVar); bayeshDir != "" {
@@ -111,12 +130,8 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 		}
 	}
 
-	result, err := govalidator.ValidateStruct(settings)
-	if err != nil {
+	if err := settings.validate(fs); err != nil {
 		return nil, err
-	}
-	if !result {
-		return nil, errors.New("Could not validate settings: " + govalidator.ToString(&settings))
 	}
 	logHandler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: settings.LogLevel})
 	slog.SetDefault(slog.New(logHandler))

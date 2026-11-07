@@ -51,7 +51,7 @@ t() {
 
 start_tmux() {
     env ZDOTDIR="${TEST_DIR}/zdot" BAYESH_DIR="${TEST_DIR}/bayesh" \
-        BAYESH_MIN_REQUIRED_EVENTS=0 TMPDIR="${TEST_DIR}/tmp" \
+        TMPDIR="${TEST_DIR}/tmp" \
         tmux -L "${SOCKET}" -f /dev/null new-session -d -s bayesh -n one \
         -x 120 -y 30 -c "${TEST_DIR}/work" "zsh -i"
     wait_for_pane bayesh:one.0 '^%'

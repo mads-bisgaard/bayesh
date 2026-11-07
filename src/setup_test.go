@@ -2,11 +2,13 @@ package bayesh
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -161,17 +163,19 @@ func TestCreateSettings_UserHomeDirError(t *testing.T) {
 
 func TestSettings_ToJSON(t *testing.T) {
 	settings := &Settings{
-		BayeshDir:         "/path/to/bayesh",
-		Database:          "/path/to/bayesh/bayesh.db",
-		LogLevel:          slog.LevelError,
-		MinRequiredEvents: 0,
+		BayeshDir:           "/path/to/bayesh",
+		Database:            "/path/to/bayesh/bayesh.db",
+		LogLevel:            slog.LevelError,
+		DatabaseTxLock:      "immediate",
+		DatabaseBusyTimeout: 5000,
 	}
 
 	expectedJSON := `{
   "BAYESH_DIR": "/path/to/bayesh",
   "BAYESH_DATABASE": "/path/to/bayesh/bayesh.db",
   "BAYESH_LOG_LEVEL": "ERROR",
-  "BAYESH_MIN_REQUIRED_EVENTS": 0
+  "BAYESH_DATABASE_TX_LOCK": "immediate",
+  "BAYESH_DATABASE_BUSY_TIMEOUT": 5000
 }`
 
 	jsonString, err := settings.ToJSON()
@@ -181,5 +185,100 @@ func TestSettings_ToJSON(t *testing.T) {
 
 	if jsonString != expectedJSON {
 		t.Errorf("Expected JSON %s, got %s", expectedJSON, jsonString)
+	}
+}
+
+func TestDataSourceName(t *testing.T) {
+	settings := defaultSettings(mockFileSystem{homeDir: "/home/me"})
+	want := "/home/me/.bayesh/bayesh.db?_txlock=immediate&_busy_timeout=5000"
+	if got := settings.DataSourceName(); got != want {
+		t.Errorf("DataSourceName() = %q, want %q", got, want)
+	}
+}
+
+func TestValidate(t *testing.T) {
+	dir := t.TempDir()
+	db := filepath.Join(dir, "bayesh.db")
+	if err := os.WriteFile(db, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	valid := func() *Settings {
+		return &Settings{BayeshDir: dir, Database: db, LogLevel: slog.LevelInfo, DatabaseTxLock: "immediate", DatabaseBusyTimeout: 0}
+	}
+	if err := valid().validate(OsFs{}); err != nil {
+		t.Fatalf("valid settings: %v", err)
+	}
+	tests := []struct {
+		name   string
+		modify func(*Settings)
+		want   string
+	}{
+		{"missing dir", func(s *Settings) { s.BayeshDir = filepath.Join(dir, "missing") }, "BAYESH_DIR"},
+		{"dir is a file", func(s *Settings) { s.BayeshDir = db }, "BAYESH_DIR"},
+		{"missing database", func(s *Settings) { s.Database = filepath.Join(dir, "missing.db") }, "BAYESH_DATABASE"},
+		{"database is a dir", func(s *Settings) { s.Database = dir }, "BAYESH_DATABASE"},
+		{"unknown tx lock", func(s *Settings) { s.DatabaseTxLock = "bogus" }, "BAYESH_DATABASE_TX_LOCK"},
+		{"negative busy timeout", func(s *Settings) { s.DatabaseBusyTimeout = -1 }, "BAYESH_DATABASE_BUSY_TIMEOUT"},
+	}
+	for _, tt := range tests {
+		s := valid()
+		tt.modify(s)
+		if err := s.validate(OsFs{}); err == nil || !strings.Contains(err.Error(), tt.want) {
+			t.Errorf("%s: got %v, want an error about %s", tt.name, err, tt.want)
+		}
+	}
+}
+
+func TestSetupAcceptsLogLevelInfo(t *testing.T) {
+	mockFS := mockFileSystem{homeDir: t.TempDir(), envVars: map[string]string{LogLevelEnvVar: "INFO"}}
+	if _, err := Setup(context.Background(), mockFS); err != nil {
+		t.Fatalf("Setup with log level INFO: %v", err)
+	}
+}
+
+// TestSetupFirstRun checks that the first run creates the directory and a
+// database with the schema, in WAL mode.
+func TestSetupFirstRun(t *testing.T) {
+	homeDir := t.TempDir()
+	settings, err := Setup(context.Background(), mockFileSystem{homeDir: homeDir})
+	if err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+	if want := filepath.Join(homeDir, ".bayesh"); settings.BayeshDir != want {
+		t.Errorf("BayeshDir = %q, want %q", settings.BayeshDir, want)
+	}
+	if info, err := os.Stat(settings.BayeshDir); err != nil || !info.IsDir() {
+		t.Fatalf("%s was not created as a directory: %v", settings.BayeshDir, err)
+	}
+	if info, err := os.Stat(settings.Database); err != nil || !info.Mode().IsRegular() {
+		t.Fatalf("%s was not created as a file: %v", settings.Database, err)
+	}
+
+	db, err := sql.Open("sqlite3", settings.Database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, table := range []string{eventsTable, slotsTable} {
+		var name string
+		if err := db.QueryRow("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", table).Scan(&name); err != nil {
+			t.Errorf("table %s was not created: %v", table, err)
+		}
+	}
+	var mode string
+	if err := db.QueryRow("PRAGMA journal_mode").Scan(&mode); err != nil || mode != "wal" {
+		t.Errorf("journal_mode = %q, %v, want wal", mode, err)
+	}
+
+	// A second run keeps the existing database
+	if _, err := db.Exec("INSERT INTO " + slotsTable + " (slot, value, runs) VALUES ('cd#1', 'a', 1)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Setup(context.Background(), mockFileSystem{homeDir: homeDir}); err != nil {
+		t.Fatalf("second Setup: %v", err)
+	}
+	var runs int
+	if err := db.QueryRow("SELECT runs FROM " + slotsTable).Scan(&runs); err != nil || runs != 1 {
+		t.Errorf("the second run lost the data: runs = %d, %v", runs, err)
 	}
 }

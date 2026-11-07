@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"log"
 	"os"
-	"slices"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -35,7 +34,7 @@ type Core struct {
 }
 
 func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
-	db, err := sql.Open("sqlite3", settings.Database)
+	db, err := sql.Open("sqlite3", settings.DataSourceName())
 	if err != nil {
 		return nil, err
 	}
@@ -55,30 +54,33 @@ func (c *Core) Close() error {
 }
 
 func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
-
 	queries := New(c.db)
-	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
-
-	cmdProbabilities, err := ComputeCommandProbabilities(ctx, c.Settings, queries, cwd, processedPreviousCmd)
+	previous, err := c.template(ctx, previousCmd)
 	if err != nil {
 		return nil, err
 	}
-
-	keys := make([]string, 0, len(cmdProbabilities))
-	for cmd := range cmdProbabilities {
-		keys = append(keys, cmd)
+	byCwd, err := queries.TemplateCounts(ctx, &cwd, nil)
+	if err != nil {
+		return nil, err
 	}
+	byPrevious, err := queries.TemplateCounts(ctx, nil, &previous)
+	if err != nil {
+		return nil, err
+	}
+	byBoth, err := queries.TemplateCounts(ctx, &cwd, &previous)
+	if err != nil {
+		return nil, err
+	}
+	return RankCommands(byCwd, byPrevious, byBoth), nil
+}
 
-	slices.SortFunc(keys, func(a, b string) int {
-		if cmdProbabilities[a] > cmdProbabilities[b] {
-			return -1
-		} else if cmdProbabilities[a] < cmdProbabilities[b] {
-			return 1
-		}
-		return 0
-	})
-
-	return keys, nil
+// template returns the template of cmd given the recorded events.
+func (c *Core) template(ctx context.Context, cmd string) (string, error) {
+	t := newTemplater()
+	if err := loadSlots(ctx, New(c.db), t, cmd); err != nil {
+		return "", err
+	}
+	return t.Template(cmd), nil
 }
 
 func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, currentCmd string) error {
@@ -91,34 +93,93 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 			log.Fatalf("Error rolling back transaction: %v", err)
 		}
 	}()
+	if err := recordEvent(ctx, New(c.db).WithTx(tx), cwd, previousCmd, currentCmd); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
 
-	queries := New(c.db).WithTx(tx)
-	processedPreviousCmd := ProcessCmd(OsFs{}, previousCmd)
-	processedCurrentCmd := ProcessCmd(OsFs{}, currentCmd)
-
-	row, err := queries.GetRow(ctx, cwd, processedPreviousCmd, processedCurrentCmd)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			newRow := Row{
-				Cwd:          cwd,
-				PreviousCmd:  processedPreviousCmd,
-				CurrentCmd:   processedCurrentCmd,
-				EventCounter: 1,
-				LastModified: time.Now(),
-			}
-			if err := queries.InsertRow(ctx, newRow); err != nil {
-				return err
-			}
-		} else {
-			return err
+// recordEvent stores the commands as typed together with their templates. When
+// the new run changes whether an argument slot is folded, the stored templates
+// of the commands with that slot are updated too.
+func recordEvent(ctx context.Context, queries *Queries, cwd string, previousCmd string, currentCmd string) error {
+	now := time.Now()
+	t := newTemplater()
+	if err := loadSlots(ctx, queries, t, previousCmd, currentCmd); err != nil {
+		return err
+	}
+	changed := t.add(currentCmd, 1)
+	for _, a := range t.parse(currentCmd) {
+		if a.slot == "" {
+			continue
 		}
-	} else {
-		row.EventCounter += 1
-		row.LastModified = time.Now()
-		if err := queries.UpdateRow(ctx, row); err != nil {
+		if err := queries.AddSlotRuns(ctx, a.slot, a.value, 1, now); err != nil {
 			return err
 		}
 	}
 
-	return tx.Commit()
+	row, err := queries.GetRow(ctx, cwd, previousCmd, currentCmd)
+	exists := err == nil
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	row.Cwd, row.PreviousCmd, row.CurrentCmd = cwd, previousCmd, currentCmd
+	row.PreviousTemplate, row.CurrentTemplate = t.Template(previousCmd), t.Template(currentCmd)
+	row.EventCounter++
+	row.LastModified = now
+	if exists {
+		err = queries.UpdateRow(ctx, row)
+	} else {
+		err = queries.InsertRow(ctx, row)
+	}
+	if err != nil || len(changed) == 0 {
+		return err
+	}
+
+	// Every command with an argument given to one of the changed commands contains its name
+	rows, err := queries.RowsMentioning(ctx, changed)
+	if err != nil {
+		return err
+	}
+	for _, r := range rows {
+		if err := loadSlots(ctx, queries, t, r.PreviousCmd, r.CurrentCmd); err != nil {
+			return err
+		}
+		previous, current := t.Template(r.PreviousCmd), t.Template(r.CurrentCmd)
+		if previous != r.PreviousTemplate || current != r.CurrentTemplate {
+			if err := queries.SetTemplates(ctx, r.ID, previous, current); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// loadSlots loads the statistics of the argument slots of cmds, and the runs of
+// their values, which t doesn't have yet.
+func loadSlots(ctx context.Context, queries *Queries, t *templater, cmds ...string) error {
+	for _, cmd := range cmds {
+		for _, a := range t.parse(cmd) {
+			if a.slot == "" {
+				continue
+			}
+			s, ok := t.slots[a.slot]
+			if !ok {
+				distinct, err := queries.SlotDistinct(ctx, a.slot)
+				if err != nil {
+					return err
+				}
+				s = &slotStats{distinct: distinct, runs: map[string]int{}}
+				t.slots[a.slot] = s
+			}
+			if _, ok := s.runs[a.value]; !ok {
+				runs, err := queries.SlotRuns(ctx, a.slot, a.value)
+				if err != nil {
+					return err
+				}
+				s.runs[a.value] = runs
+			}
+		}
+	}
+	return nil
 }
