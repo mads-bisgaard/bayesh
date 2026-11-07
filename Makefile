@@ -37,7 +37,6 @@ manual-test: manual-test-stop build
 	PATH="$(CURDIR)/build:$$PATH" \
 	ZDOTDIR=$(MANUAL_TEST_DIR) \
 	BAYESH_DIR=$(MANUAL_TEST_DIR) \
-	BAYESH_MIN_REQUIRED_EVENTS=0 \
 	$(MANUAL_TEST_TMUX) new-session -d -s bayesh -x 120 -y 30 zsh -i
 
 .PHONY: manual-test-stop

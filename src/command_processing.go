@@ -11,11 +11,8 @@ import (
 
 type Token string
 
-const (
-	ARG    Token = "<ARG>"
-	STRING Token = "<STRING>"
-	PATH   Token = "<PATH>" // only found in databases recorded by older versions
-)
+// ARG replaces an argument which varies between runs, or a quoted string with whitespace
+const ARG Token = "<ARG>"
 
 const (
 	CYAN  Token = "\033[94m"
@@ -24,18 +21,16 @@ const (
 
 // An argument slot is folded into <ARG> once it has seen minSlotValues
 // distinct values. Values run at least minLiteralCount times stay literal.
-// They are variables so the replay test (replay_test.go) can compare settings;
-// on a real history top-5 and MRR stopped improving at minLiteralCount = 8.
+// They are variables so the replay test (replay_test.go) can compare settings.
+// minLiteralCount = 6 was chosen from manual use: values become suggestable as
+// typed sooner, for a small cost in the replay's top-5 (see ARGUMENT_TEMPLATES.md).
 var (
 	minSlotValues   = 3
-	minLiteralCount = 8
+	minLiteralCount = 6
 )
 
 func AnsiColorTokens(cmds string) string {
-	for _, token := range []Token{ARG, STRING, PATH} {
-		cmds = strings.ReplaceAll(cmds, string(token), string(CYAN+token+RESET))
-	}
-	return cmds
+	return strings.ReplaceAll(cmds, string(ARG), string(CYAN+ARG+RESET))
 }
 
 // arg is an argument in a command which may be replaced by a token.
@@ -110,11 +105,7 @@ func (t *templater) Template(cmd string) string {
 			continue
 		}
 		b.WriteString(cmd[last:a.start])
-		if a.slot == "" {
-			b.WriteString(string(STRING))
-		} else {
-			b.WriteString(string(ARG))
-		}
+		b.WriteString(string(ARG))
 		last = a.end
 	}
 	b.WriteString(cmd[last:])

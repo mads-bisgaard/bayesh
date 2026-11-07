@@ -34,9 +34,11 @@ type Core struct {
 }
 
 func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
-	// Recording an event may re-template many rows, so writers take the lock up
-	// front and others wait for it instead of failing
-	db, err := sql.Open("sqlite3", settings.Database+"?_busy_timeout=5000&_txlock=immediate")
+	// WAL mode lets readers run alongside a writer, but writers still take
+	// turns. A transaction which starts reading and then writes can't wait for
+	// another writer which committed in between, so writers take the lock up
+	// front; the driver's default busy timeout (5 s) then makes them wait.
+	db, err := sql.Open("sqlite3", settings.Database+"?_txlock=immediate")
 	if err != nil {
 		return nil, err
 	}
@@ -61,16 +63,15 @@ func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string
 	if err != nil {
 		return nil, err
 	}
-	minEvents := c.Settings.MinRequiredEvents
-	byCwd, err := queries.TemplateCounts(ctx, &cwd, nil, minEvents)
+	byCwd, err := queries.TemplateCounts(ctx, &cwd, nil)
 	if err != nil {
 		return nil, err
 	}
-	byPrevious, err := queries.TemplateCounts(ctx, nil, &previous, minEvents)
+	byPrevious, err := queries.TemplateCounts(ctx, nil, &previous)
 	if err != nil {
 		return nil, err
 	}
-	byBoth, err := queries.TemplateCounts(ctx, &cwd, &previous, minEvents)
+	byBoth, err := queries.TemplateCounts(ctx, &cwd, &previous)
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +107,7 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 // the new run changes whether an argument slot is folded, the stored templates
 // of the commands with that slot are updated too.
 func recordEvent(ctx context.Context, queries *Queries, cwd string, previousCmd string, currentCmd string) error {
+	now := time.Now()
 	t := newTemplater()
 	if err := loadSlots(ctx, queries, t, previousCmd, currentCmd); err != nil {
 		return err
@@ -115,7 +117,7 @@ func recordEvent(ctx context.Context, queries *Queries, cwd string, previousCmd 
 		if a.slot == "" {
 			continue
 		}
-		if err := queries.AddSlotRuns(ctx, a.slot, a.value, 1); err != nil {
+		if err := queries.AddSlotRuns(ctx, a.slot, a.value, 1, now); err != nil {
 			return err
 		}
 	}
@@ -128,7 +130,7 @@ func recordEvent(ctx context.Context, queries *Queries, cwd string, previousCmd 
 	row.Cwd, row.PreviousCmd, row.CurrentCmd = cwd, previousCmd, currentCmd
 	row.PreviousTemplate, row.CurrentTemplate = t.Template(previousCmd), t.Template(currentCmd)
 	row.EventCounter++
-	row.LastModified = time.Now()
+	row.LastModified = now
 	if exists {
 		err = queries.UpdateRow(ctx, row)
 	} else {

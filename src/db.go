@@ -68,6 +68,7 @@ func (q *Queries) CreateSchema(ctx context.Context) error {
         ` + colSlot + ` TEXT,
         ` + colValue + ` TEXT,
         ` + colRuns + ` INTEGER,
+        ` + colLastModified + ` DATETIME,
         PRIMARY KEY (` + colSlot + `, ` + colValue + `)
     );`
 
@@ -127,9 +128,8 @@ func (q *Queries) UpdateRow(ctx context.Context, arg Row) error {
 }
 
 // TemplateCounts returns the number of events of each current template, given
-// the cwd and/or the previous template if not nil. Templates with fewer than
-// minEventCount events are left out.
-func (q *Queries) TemplateCounts(ctx context.Context, cwd *string, previousTemplate *string, minEventCount int) (map[string]int, error) {
+// the cwd and/or the previous template if not nil.
+func (q *Queries) TemplateCounts(ctx context.Context, cwd *string, previousTemplate *string) (map[string]int, error) {
 	var conditions []string
 	var args []any
 	if cwd != nil {
@@ -144,8 +144,7 @@ func (q *Queries) TemplateCounts(ctx context.Context, cwd *string, previousTempl
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
-	query += " GROUP BY " + colCurrentTemplate + " HAVING SUM(" + colEventCounter + ") >= ?"
-	args = append(args, minEventCount)
+	query += " GROUP BY " + colCurrentTemplate
 
 	rows, err := q.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -181,12 +180,12 @@ func (q *Queries) SlotRuns(ctx context.Context, slot, value string) (int, error)
 	return n, err
 }
 
-// AddSlotRuns adds n runs of value in slot.
-func (q *Queries) AddSlotRuns(ctx context.Context, slot, value string, n int) error {
+// AddSlotRuns adds n runs of value in slot, run at time now.
+func (q *Queries) AddSlotRuns(ctx context.Context, slot, value string, n int, now time.Time) error {
 	query := `
-    INSERT INTO ` + slotsTable + ` (` + colSlot + `, ` + colValue + `, ` + colRuns + `) VALUES (?, ?, ?)
-    ON CONFLICT (` + colSlot + `, ` + colValue + `) DO UPDATE SET ` + colRuns + ` = ` + colRuns + ` + excluded.` + colRuns
-	_, err := q.db.ExecContext(ctx, query, slot, value, n)
+    INSERT INTO ` + slotsTable + ` (` + colSlot + `, ` + colValue + `, ` + colRuns + `, ` + colLastModified + `) VALUES (?, ?, ?, ?)
+    ON CONFLICT (` + colSlot + `, ` + colValue + `) DO UPDATE SET ` + colRuns + ` = ` + colRuns + ` + excluded.` + colRuns + `, ` + colLastModified + ` = excluded.` + colLastModified
+	_, err := q.db.ExecContext(ctx, query, slot, value, n, now)
 	return err
 }
 

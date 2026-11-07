@@ -302,17 +302,15 @@ func TestTemplateCounts(t *testing.T) {
 		name     string
 		cwd      *string
 		previous *string
-		min      int
 		want     map[string]int
 	}{
-		{"by cwd", &a, nil, 0, map[string]int{"ls": 2, "cd <ARG>": 2}},
-		{"by previous", nil, &cd, 0, map[string]int{"ls": 3}},
-		{"by both", &a, &vim, 0, map[string]int{"cd <ARG>": 2}},
-		{"min events", &a, nil, 2, map[string]int{"ls": 2, "cd <ARG>": 2}},
-		{"too few events", &a, &vim, 3, map[string]int{}},
+		{"by cwd", &a, nil, map[string]int{"ls": 2, "cd <ARG>": 2}},
+		{"by previous", nil, &cd, map[string]int{"ls": 3}},
+		{"by both", &a, &vim, map[string]int{"cd <ARG>": 2}},
+		{"no events", &a, &cd, map[string]int{"ls": 2}},
 	}
 	for _, tt := range tests {
-		got, err := queries.TemplateCounts(ctx, tt.cwd, tt.previous, tt.min)
+		got, err := queries.TemplateCounts(ctx, tt.cwd, tt.previous)
 		if err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
@@ -331,11 +329,12 @@ func TestSlotStatistics(t *testing.T) {
 	if n, err := queries.SlotRuns(ctx, "cd#1", "a"); err != nil || n != 0 {
 		t.Fatalf("SlotRuns of an unseen value = %d, %v", n, err)
 	}
-	for _, v := range []struct {
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	for i, v := range []struct {
 		slot, value string
 		n           int
 	}{{"cd#1", "a", 1}, {"cd#1", "b", 1}, {"cd#1", "a", 2}, {"vim#1", "a", 1}} {
-		if err := queries.AddSlotRuns(ctx, v.slot, v.value, v.n); err != nil {
+		if err := queries.AddSlotRuns(ctx, v.slot, v.value, v.n, start.Add(time.Duration(i)*time.Hour)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -349,6 +348,17 @@ func TestSlotStatistics(t *testing.T) {
 	}
 	if n, err := queries.SlotDistinct(ctx, "cd#1"); err != nil || n != 2 {
 		t.Errorf("SlotDistinct(cd#1) = %d, %v, want 2", n, err)
+	}
+	// last_modified is when a value was last run, so stale values can be cleaned up
+	for _, v := range []struct {
+		slot, value string
+		want        time.Time
+	}{{"cd#1", "a", start.Add(2 * time.Hour)}, {"cd#1", "b", start.Add(time.Hour)}} {
+		var got time.Time
+		err := queries.db.QueryRowContext(ctx, "SELECT "+colLastModified+" FROM "+slotsTable+" WHERE "+colSlot+" = ? AND "+colValue+" = ?", v.slot, v.value).Scan(&got)
+		if err != nil || !got.Equal(v.want) {
+			t.Errorf("last_modified of %q in %q = %v, %v, want %v", v.value, v.slot, got, err, v.want)
+		}
 	}
 }
 

@@ -95,7 +95,7 @@ zle -N zle-line-pre-redraw
 
 function bayesh_select() {
     local cmd
-    local token='<(ARG|STRING|PATH)>'
+    local token='<ARG>'
 
     if _bayesh_is_active; then
         cmd=$(_fzf_tmux_server_get "$BAYESH_SERVER_CONFIG" | jq -r '.current.text // empty')

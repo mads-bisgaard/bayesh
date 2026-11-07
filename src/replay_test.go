@@ -57,6 +57,7 @@ func TestReplay(t *testing.T) {
 		{"slot 5, literal 2", 5, 2},
 		{"slot 3, literal 3", 3, 3},
 		{"slot 3, literal 5", 3, 5},
+		{"slot 3, literal 6", 3, 6},
 		{"slot 3, literal 8", 3, 8},
 		{"slot 3, literal 10", 3, 10},
 	} {
@@ -74,7 +75,6 @@ type replayResult struct {
 // replay records cmds in a new database and ranks the suggestions at up to 500 points.
 func replay(t *testing.T, cmds []string) replayResult {
 	core, _ := setupCoreWithTempDB(t)
-	core.Settings.MinRequiredEvents = 2
 	// A single connection, so the pragma applies to all queries. The database is thrown away.
 	core.db.SetMaxOpenConns(1)
 	if _, err := core.db.Exec("PRAGMA synchronous = OFF"); err != nil {

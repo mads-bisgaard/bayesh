@@ -9,20 +9,17 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/asaskevich/govalidator"
 )
 
 const BayeshDirEnvVar = "BAYESH_DIR"
 const LogLevelEnvVar = "BAYESH_LOG_LEVEL"
-const MinRequiredEventsEnvVar = "BAYESH_MIN_REQUIRED_EVENTS"
 
 type Settings struct {
-	BayeshDir         string     `json:"BAYESH_DIR" validate:"required,dir"`
-	Database          string     `json:"BAYESH_DATABASE" validate:"required,file"`
-	LogLevel          slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
-	MinRequiredEvents int        `json:"BAYESH_MIN_REQUIRED_EVENTS" validate:"required,min=0"`
+	BayeshDir string     `json:"BAYESH_DIR" validate:"required,dir"`
+	Database  string     `json:"BAYESH_DATABASE" validate:"required,file"`
+	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
 }
 
 func (s *Settings) setupDatabase() error {
@@ -69,10 +66,9 @@ func defaultSettings(fs FileSystem) *Settings {
 	}
 
 	return &Settings{
-		BayeshDir:         bayeshDir,
-		Database:          bayeshDb,
-		LogLevel:          slog.LevelError,
-		MinRequiredEvents: 2,
+		BayeshDir: bayeshDir,
+		Database:  bayeshDb,
+		LogLevel:  slog.LevelError,
 	}
 }
 
@@ -85,14 +81,6 @@ func Setup(context context.Context, fs FileSystem) (*Settings, error) {
 			return nil, err
 		}
 		settings.LogLevel = logLevel
-	}
-
-	if minRequiredEventsStr := fs.Getenv(MinRequiredEventsEnvVar); minRequiredEventsStr != "" {
-		minRequiredEvents, err := strconv.Atoi(minRequiredEventsStr)
-		if err != nil {
-			return nil, err
-		}
-		settings.MinRequiredEvents = minRequiredEvents
 	}
 
 	if bayeshDir := fs.Getenv(BayeshDirEnvVar); bayeshDir != "" {

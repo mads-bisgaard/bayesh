@@ -161,17 +161,15 @@ func TestCreateSettings_UserHomeDirError(t *testing.T) {
 
 func TestSettings_ToJSON(t *testing.T) {
 	settings := &Settings{
-		BayeshDir:         "/path/to/bayesh",
-		Database:          "/path/to/bayesh/bayesh.db",
-		LogLevel:          slog.LevelError,
-		MinRequiredEvents: 0,
+		BayeshDir: "/path/to/bayesh",
+		Database:  "/path/to/bayesh/bayesh.db",
+		LogLevel:  slog.LevelError,
 	}
 
 	expectedJSON := `{
   "BAYESH_DIR": "/path/to/bayesh",
   "BAYESH_DATABASE": "/path/to/bayesh/bayesh.db",
-  "BAYESH_LOG_LEVEL": "ERROR",
-  "BAYESH_MIN_REQUIRED_EVENTS": 0
+  "BAYESH_LOG_LEVEL": "ERROR"
 }`
 
 	jsonString, err := settings.ToJSON()

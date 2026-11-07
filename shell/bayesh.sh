@@ -21,7 +21,7 @@ _bayesh_update() {
 
 _bayesh_infer_cmd() {
     
-    token_regex="<ARG>|<STRING>|<PATH>"
+    token_regex="<ARG>"
     chosen_cmd=$( 
     inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
     

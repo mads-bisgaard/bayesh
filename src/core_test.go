@@ -133,7 +133,6 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 
 func TestInferCommands(t *testing.T) {
 	core, _ := setupCoreWithTempDB(t)
-	core.Settings.MinRequiredEvents = 0
 	ctx := context.Background()
 	record := func(cwd, previous, current string, n int) {
 		for range n {
@@ -154,20 +153,10 @@ func TestInferCommands(t *testing.T) {
 	if want := []string{"git add .", "git diff"}; !slices.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
-
-	core.Settings.MinRequiredEvents = 4
-	got, err = core.InferCommands(ctx, "/b", "ls")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want := []string{"git diff"}; !slices.Equal(got, want) {
-		t.Errorf("with min required events: got %q, want %q", got, want)
-	}
 }
 
 func TestInferCommandsTemplates(t *testing.T) {
 	core, _ := setupCoreWithTempDB(t)
-	core.Settings.MinRequiredEvents = 2
 	ctx := context.Background()
 	for _, e := range [][2]string{
 		{"git checkout x", "vim a.go"},
@@ -282,7 +271,6 @@ func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {
 // locks out readers until it commits.
 func TestInferCommandsDuringLargeWrite(t *testing.T) {
 	core, dbPath := setupCoreWithTempDB(t)
-	core.Settings.MinRequiredEvents = 0
 	ctx := context.Background()
 	if err := core.RecordEvent(ctx, "/a", "ls", "git status"); err != nil {
 		t.Fatal(err)
@@ -305,7 +293,7 @@ func TestInferCommandsDuringLargeWrite(t *testing.T) {
 	}
 	defer writer.ExecContext(ctx, "ROLLBACK")
 	for i := range 2000 {
-		if _, err := writer.ExecContext(ctx, "INSERT INTO slots VALUES (?, ?, 1)", fmt.Sprintf("slot%d", i), "value"); err != nil {
+		if _, err := writer.ExecContext(ctx, "INSERT INTO slots (slot, value, runs) VALUES (?, ?, 1)", fmt.Sprintf("slot%d", i), "value"); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -323,5 +311,51 @@ func TestInferCommandsDuringLargeWrite(t *testing.T) {
 	}
 	if want := []string{"git status"}; !slices.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// TestConcurrentRecordEvents checks that record-events running at the same
+// time, as they do when commands finish in several shells, wait for each other
+// instead of failing. WAL mode lets readers run alongside a writer, but
+// writers still take turns.
+func TestConcurrentRecordEvents(t *testing.T) {
+	_, dbPath := setupCoreWithTempDB(t)
+	ctx := context.Background()
+	const writers, events = 8, 20
+	errs := make(chan error, writers)
+	for w := range writers {
+		go func() {
+			// One core per writer, like separate record-event processes
+			core, err := NewCore(ctx, &Settings{Database: dbPath})
+			if err != nil {
+				errs <- err
+				return
+			}
+			defer core.Close()
+			for i := range events {
+				if err := core.RecordEvent(ctx, "/a", fmt.Sprintf("cd %d", w), fmt.Sprintf("cd %d", i)); err != nil {
+					errs <- err
+					return
+				}
+			}
+			errs <- nil
+		}()
+	}
+	for range writers {
+		if err := <-errs; err != nil {
+			t.Fatal(err)
+		}
+	}
+	db, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var total int
+	if err := db.QueryRow("SELECT SUM(" + colEventCounter + ") FROM " + eventsTable).Scan(&total); err != nil {
+		t.Fatal(err)
+	}
+	if total != writers*events {
+		t.Errorf("recorded %d events, want %d", total, writers*events)
 	}
 }

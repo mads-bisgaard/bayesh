@@ -8,8 +8,8 @@ import (
 )
 
 func TestAnsiColorTokens(t *testing.T) {
-	input := "echo <ARG> <STRING> <PATH>"
-	expected := "echo \033[94m<ARG>\033[0m \033[94m<STRING>\033[0m \033[94m<PATH>\033[0m"
+	input := "echo <ARG> <ARG>"
+	expected := "echo \033[94m<ARG>\033[0m \033[94m<ARG>\033[0m"
 	if result := AnsiColorTokens(input); result != expected {
 		t.Errorf("AnsiColorTokens failed: got %q, want %q", result, expected)
 	}
@@ -23,18 +23,18 @@ func TestTemplate(t *testing.T) {
 		want    string
 	}{
 		{"plain command", nil, "git status", "git status"},
-		{"quoted string with spaces", nil, `git commit -m "fix the bug"`, `git commit -m "<STRING>"`},
-		{"partly quoted string", nil, `run --msg="a b"`, "run <STRING>"},
+		{"quoted string with spaces", nil, `git commit -m "fix the bug"`, `git commit -m "<ARG>"`},
+		{"partly quoted string", nil, `run --msg="a b"`, "run <ARG>"},
 		{"quoted string without spaces", nil, `echo "hello"`, `echo "hello"`},
-		{"string in command substitution", nil, `log=$(git commit -m 'a message' ; git push)`, "log=$(git commit -m '<STRING>' ; git push)"},
-		{"string containing a command", nil, `echo "$(date) is now"`, `echo "<STRING>"`},
-		{"unparsable command", nil, "git add <PATH>", "git add <PATH>"},
+		{"string in command substitution", nil, `log=$(git commit -m 'a message' ; git push)`, "log=$(git commit -m '<ARG>' ; git push)"},
+		{"string containing a command", nil, `echo "$(date) is now"`, `echo "<ARG>"`},
+		{"unparsable command", nil, "cat 'a b' > (x", "cat 'a b' > (x"},
 		{"slot with few values", map[string]int{"cd a": 1, "cd b": 1}, "cd c", "cd c"},
 		{"variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd d", "cd <ARG>"},
 		{"seen value in variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd a", "cd <ARG>"},
-		{"frequent value stays literal", map[string]int{"make build": 8, "make x": 1, "make y": 1}, "make build", "make build"},
-		{"less frequent value is folded", map[string]int{"make build": 7, "make x": 1, "make y": 1}, "make build", "make <ARG>"},
-		{"rare value is folded", map[string]int{"make build": 8, "make x": 1, "make y": 1}, "make z", "make <ARG>"},
+		{"frequent value stays literal", map[string]int{"make build": 6, "make x": 1, "make y": 1}, "make build", "make build"},
+		{"less frequent value is folded", map[string]int{"make build": 5, "make x": 1, "make y": 1}, "make build", "make <ARG>"},
+		{"rare value is folded", map[string]int{"make build": 6, "make x": 1, "make y": 1}, "make z", "make <ARG>"},
 		{"value contained in other words", map[string]int{"ls a": 1, "ls b": 1, "ls c": 1}, "ls s", "ls <ARG>"},
 		{"slots are per position", map[string]int{"cp a x": 1, "cp b x": 1, "cp c x": 1}, "cp d x", "cp <ARG> x"},
 		{"flags are never folded", map[string]int{"ls -a": 1, "ls -b": 1, "ls -c": 1}, "ls -d", "ls -d"},

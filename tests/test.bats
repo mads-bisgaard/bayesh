@@ -86,7 +86,6 @@ teardown() {
 @test "test inference function (no tokens)" {
     #shellcheck source=./shell/bayesh.bash
     source <(bayesh --bash)
-    export BAYESH_MIN_REQUIRED_EVENTS=0
 
     db=$(bayesh settings | jq -r .BAYESH_DATABASE)
 
