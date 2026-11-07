@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -191,5 +192,45 @@ func TestDataSourceName(t *testing.T) {
 	want := "/home/me/.bayesh/bayesh.db?_txlock=immediate&_busy_timeout=5000"
 	if got := settings.DataSourceName(); got != want {
 		t.Errorf("DataSourceName() = %q, want %q", got, want)
+	}
+}
+
+func TestValidate(t *testing.T) {
+	dir := t.TempDir()
+	db := filepath.Join(dir, "bayesh.db")
+	if err := os.WriteFile(db, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	valid := func() *Settings {
+		return &Settings{BayeshDir: dir, Database: db, LogLevel: slog.LevelInfo, DatabaseTxLock: "immediate", DatabaseBusyTimeout: 0}
+	}
+	if err := valid().validate(OsFs{}); err != nil {
+		t.Fatalf("valid settings: %v", err)
+	}
+	tests := []struct {
+		name   string
+		modify func(*Settings)
+		want   string
+	}{
+		{"missing dir", func(s *Settings) { s.BayeshDir = filepath.Join(dir, "missing") }, "BAYESH_DIR"},
+		{"dir is a file", func(s *Settings) { s.BayeshDir = db }, "BAYESH_DIR"},
+		{"missing database", func(s *Settings) { s.Database = filepath.Join(dir, "missing.db") }, "BAYESH_DATABASE"},
+		{"database is a dir", func(s *Settings) { s.Database = dir }, "BAYESH_DATABASE"},
+		{"unknown tx lock", func(s *Settings) { s.DatabaseTxLock = "bogus" }, "BAYESH_DATABASE_TX_LOCK"},
+		{"negative busy timeout", func(s *Settings) { s.DatabaseBusyTimeout = -1 }, "BAYESH_DATABASE_BUSY_TIMEOUT"},
+	}
+	for _, tt := range tests {
+		s := valid()
+		tt.modify(s)
+		if err := s.validate(OsFs{}); err == nil || !strings.Contains(err.Error(), tt.want) {
+			t.Errorf("%s: got %v, want an error about %s", tt.name, err, tt.want)
+		}
+	}
+}
+
+func TestSetupAcceptsLogLevelInfo(t *testing.T) {
+	mockFS := mockFileSystem{homeDir: t.TempDir(), envVars: map[string]string{LogLevelEnvVar: "INFO"}}
+	if _, err := Setup(context.Background(), mockFS); err != nil {
+		t.Fatalf("Setup with log level INFO: %v", err)
 	}
 }
