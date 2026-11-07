@@ -45,6 +45,6 @@ interactively, run `tmux -L bayesh-manual-test attach`.
 
 
 # Documentation of software arcitechture and design
-Under <REPO ROOT>/bayesh-dev-notes is an Obsidean vault with software design and architecture docs.
+Under [bayesh-dev-notes](./bayesh-dev-notes) is an Obsidean vault with software design and architecture docs.
 Make sure to keep this up to date as you develop. If it is not already there, create it. 
 Keep design notes concise and precise.
