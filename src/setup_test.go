@@ -2,6 +2,7 @@ package bayesh
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -232,5 +233,52 @@ func TestSetupAcceptsLogLevelInfo(t *testing.T) {
 	mockFS := mockFileSystem{homeDir: t.TempDir(), envVars: map[string]string{LogLevelEnvVar: "INFO"}}
 	if _, err := Setup(context.Background(), mockFS); err != nil {
 		t.Fatalf("Setup with log level INFO: %v", err)
+	}
+}
+
+// TestSetupFirstRun checks that the first run creates the directory and a
+// database with the schema, in WAL mode.
+func TestSetupFirstRun(t *testing.T) {
+	homeDir := t.TempDir()
+	settings, err := Setup(context.Background(), mockFileSystem{homeDir: homeDir})
+	if err != nil {
+		t.Fatalf("Setup: %v", err)
+	}
+	if want := filepath.Join(homeDir, ".bayesh"); settings.BayeshDir != want {
+		t.Errorf("BayeshDir = %q, want %q", settings.BayeshDir, want)
+	}
+	if info, err := os.Stat(settings.BayeshDir); err != nil || !info.IsDir() {
+		t.Fatalf("%s was not created as a directory: %v", settings.BayeshDir, err)
+	}
+	if info, err := os.Stat(settings.Database); err != nil || !info.Mode().IsRegular() {
+		t.Fatalf("%s was not created as a file: %v", settings.Database, err)
+	}
+
+	db, err := sql.Open("sqlite3", settings.Database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	for _, table := range []string{eventsTable, slotsTable} {
+		var name string
+		if err := db.QueryRow("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", table).Scan(&name); err != nil {
+			t.Errorf("table %s was not created: %v", table, err)
+		}
+	}
+	var mode string
+	if err := db.QueryRow("PRAGMA journal_mode").Scan(&mode); err != nil || mode != "wal" {
+		t.Errorf("journal_mode = %q, %v, want wal", mode, err)
+	}
+
+	// A second run keeps the existing database
+	if _, err := db.Exec("INSERT INTO " + slotsTable + " (slot, value, runs) VALUES ('cd#1', 'a', 1)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Setup(context.Background(), mockFileSystem{homeDir: homeDir}); err != nil {
+		t.Fatalf("second Setup: %v", err)
+	}
+	var runs int
+	if err := db.QueryRow("SELECT runs FROM " + slotsTable).Scan(&runs); err != nil || runs != 1 {
+		t.Errorf("the second run lost the data: runs = %d, %v", runs, err)
 	}
 }
