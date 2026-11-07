@@ -34,11 +34,7 @@ type Core struct {
 }
 
 func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
-	// WAL mode lets readers run alongside a writer, but writers still take
-	// turns. A transaction which starts reading and then writes can't wait for
-	// another writer which committed in between, so writers take the lock up
-	// front; the driver's default busy timeout (5 s) then makes them wait.
-	db, err := sql.Open("sqlite3", settings.Database+"?_txlock=immediate")
+	db, err := sql.Open("sqlite3", settings.DataSourceName())
 	if err != nil {
 		return nil, err
 	}

@@ -319,14 +319,14 @@ func TestInferCommandsDuringLargeWrite(t *testing.T) {
 // instead of failing. WAL mode lets readers run alongside a writer, but
 // writers still take turns.
 func TestConcurrentRecordEvents(t *testing.T) {
-	_, dbPath := setupCoreWithTempDB(t)
+	first, dbPath := setupCoreWithTempDB(t)
 	ctx := context.Background()
 	const writers, events = 8, 20
 	errs := make(chan error, writers)
 	for w := range writers {
 		go func() {
 			// One core per writer, like separate record-event processes
-			core, err := NewCore(ctx, &Settings{Database: dbPath})
+			core, err := NewCore(ctx, first.Settings)
 			if err != nil {
 				errs <- err
 				return

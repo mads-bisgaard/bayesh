@@ -161,15 +161,19 @@ func TestCreateSettings_UserHomeDirError(t *testing.T) {
 
 func TestSettings_ToJSON(t *testing.T) {
 	settings := &Settings{
-		BayeshDir: "/path/to/bayesh",
-		Database:  "/path/to/bayesh/bayesh.db",
-		LogLevel:  slog.LevelError,
+		BayeshDir:           "/path/to/bayesh",
+		Database:            "/path/to/bayesh/bayesh.db",
+		LogLevel:            slog.LevelError,
+		DatabaseTxLock:      "immediate",
+		DatabaseBusyTimeout: 5000,
 	}
 
 	expectedJSON := `{
   "BAYESH_DIR": "/path/to/bayesh",
   "BAYESH_DATABASE": "/path/to/bayesh/bayesh.db",
-  "BAYESH_LOG_LEVEL": "ERROR"
+  "BAYESH_LOG_LEVEL": "ERROR",
+  "BAYESH_DATABASE_TX_LOCK": "immediate",
+  "BAYESH_DATABASE_BUSY_TIMEOUT": 5000
 }`
 
 	jsonString, err := settings.ToJSON()
@@ -179,5 +183,13 @@ func TestSettings_ToJSON(t *testing.T) {
 
 	if jsonString != expectedJSON {
 		t.Errorf("Expected JSON %s, got %s", expectedJSON, jsonString)
+	}
+}
+
+func TestDataSourceName(t *testing.T) {
+	settings := defaultSettings(mockFileSystem{homeDir: "/home/me"})
+	want := "/home/me/.bayesh/bayesh.db?_txlock=immediate&_busy_timeout=5000"
+	if got := settings.DataSourceName(); got != want {
+		t.Errorf("DataSourceName() = %q, want %q", got, want)
 	}
 }

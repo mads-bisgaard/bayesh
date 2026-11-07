@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -20,6 +21,18 @@ type Settings struct {
 	BayeshDir string     `json:"BAYESH_DIR" validate:"required,dir"`
 	Database  string     `json:"BAYESH_DATABASE" validate:"required,file"`
 	LogLevel  slog.Level `json:"BAYESH_LOG_LEVEL" validate:"required"`
+	// When a transaction takes the write lock. WAL mode lets readers run
+	// alongside a writer, but writers still take turns. A transaction which
+	// starts reading and then writes can't wait for another writer which
+	// committed in between, so writers take the lock when they begin.
+	DatabaseTxLock string `json:"BAYESH_DATABASE_TX_LOCK" validate:"required"`
+	// How long, in milliseconds, to wait for another writer before failing
+	DatabaseBusyTimeout int `json:"BAYESH_DATABASE_BUSY_TIMEOUT" validate:"required"`
+}
+
+// DataSourceName returns the name to open the database with, including its options.
+func (s *Settings) DataSourceName() string {
+	return fmt.Sprintf("%s?_txlock=%s&_busy_timeout=%d", s.Database, s.DatabaseTxLock, s.DatabaseBusyTimeout)
 }
 
 func (s *Settings) setupDatabase() error {
@@ -66,9 +79,11 @@ func defaultSettings(fs FileSystem) *Settings {
 	}
 
 	return &Settings{
-		BayeshDir: bayeshDir,
-		Database:  bayeshDb,
-		LogLevel:  slog.LevelError,
+		BayeshDir:           bayeshDir,
+		Database:            bayeshDb,
+		LogLevel:            slog.LevelError,
+		DatabaseTxLock:      "immediate",
+		DatabaseBusyTimeout: 5000,
 	}
 }
 
