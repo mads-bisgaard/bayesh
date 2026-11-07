@@ -42,3 +42,9 @@ make manual-test-stop
 
 Give Bayesh a moment to respond before capturing a pane. To use the session
 interactively, run `tmux -L bayesh-manual-test attach`.
+
+
+# Documentation of software arcitechture and design
+Under [bayesh-dev-notes](./bayesh-dev-notes) is an Obsidean vault with software design and architecture docs.
+Make sure to keep this up to date as you develop. If it is not already there, create it. 
+Keep design notes concise and precise.

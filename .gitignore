@@ -7,3 +7,4 @@ dist/*
 bayesh.egg-info/*
 bin/bayesh
 coverage*
+bayesh-dev-notes*
