@@ -59,6 +59,7 @@ if [[ ! -n "$TMUX" ]]; then
             --margin=0 \
             --padding=0 \
             --height=30% \
+            --color=alt-bg:235 \
             --no-mouse
         ) || return
 

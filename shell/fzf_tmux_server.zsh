@@ -32,6 +32,9 @@ _fzf_tmux_server_start() {
         "--border=rounded"
         "--style=minimal"
         "--no-scrollbar"
+        # Stripes every other item, so a multi-line command reads as one item.
+        # Unlike --gap, this costs no lines.
+        "--color=alt-bg:235"
     )
 
     tmux split-window -t "$TMUX_PANE" -h -l 35% -d "${script[*]}"

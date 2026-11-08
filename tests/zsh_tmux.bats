@@ -590,3 +590,34 @@ fntool fn_one'
     wait_until last_event_is 'fntool fn_one
 echo x'
 }
+
+# is_current <pane> <text>: the line showing <text> has fzf's pointer
+is_current() {
+    t capture-pane -p -t "$1" | grep -F -- "$2" | grep -q '▌'
+}
+
+# stripe_of <pane> <text>: the background escape of the line showing <text>,
+# or nothing when it has the default background
+stripe_of() {
+    t capture-pane -p -e -t "$1" | grep -F -- "$2" | grep -oE '\[48;5;[0-9]+m' | head -n 1
+}
+
+@test "every line of a multi-line suggestion shares one stripe" {
+    start_tmux
+    run_loop one
+    run_cmd one 'echo one'
+    run_loop one
+    run_cmd one 'echo two'
+    open_bayesh one 'echo two'
+    # Moves the highlight off the loop, the first item, to echo two, the third
+    t send-keys -t bayesh:one.0 C-Down
+    t send-keys -t bayesh:one.0 C-Down
+    wait_until is_current bayesh:one.1 'echo two'
+
+    # Items alternate between no stripe and a stripe, so the lines of the loop
+    # have none, where striping every line would give 'do true' one
+    [[ -z "$(stripe_of bayesh:one.1 'for f in x')" ]]
+    [[ -z "$(stripe_of bayesh:one.1 'do true')" ]]
+    [[ -z "$(stripe_of bayesh:one.1 'done')" ]]
+    [[ -n "$(stripe_of bayesh:one.1 'echo one')" ]]
+}
