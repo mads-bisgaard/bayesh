@@ -13,14 +13,8 @@ import (
 	bayesh "github.com/mads-bisgaard/bayesh/src"
 )
 
-//go:embed shell/bayesh.bash
-var bayeshBash string
-
 //go:embed shell/bayesh.zsh
 var bayeshZsh string
-
-//go:embed shell/bayesh.sh
-var bayeshSh string
 
 //go:embed shell/fzf_tmux_server.zsh
 var fzfTmuxServerZsh string
@@ -51,7 +45,6 @@ func main() {
 		}
 	}()
 
-	var bash bool
 	var zsh bool
 
 	cmd := &cli.Command{
@@ -60,22 +53,13 @@ func main() {
 		Version: version,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name:        "bash",
-				Usage:       "Print the bash shell integration script",
-				Destination: &bash,
-			},
-			&cli.BoolFlag{
 				Name:        "zsh",
 				Usage:       "Print the zsh shell integration script",
 				Destination: &zsh,
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			if bash {
-				fmt.Print(bayeshSh)
-				fmt.Print(bayeshBash)
-			} else if zsh {
-				fmt.Print(bayeshSh)
+			if zsh {
 				fmt.Print(fzfTmuxServerZsh)
 				fmt.Print(captureZsh)
 				fmt.Print(bayeshZsh)
@@ -100,8 +84,11 @@ func main() {
 				},
 			},
 			{
-				Name:  "infer-cmd",
-				Usage: "Infer command",
+				Name: "infer-cmd",
+				// commands are passed as typed: they may be empty, have surrounding
+				// whitespace or start with "-", which the flag parser would mangle
+				SkipFlagParsing: true,
+				Usage:           "Infer command",
 				Arguments: []cli.Argument{
 					&cli.StringArg{
 						Name: "cwd",
@@ -122,8 +109,11 @@ func main() {
 				},
 			},
 			{
-				Name:  "record-event",
-				Usage: "Record a command event",
+				Name: "record-event",
+				// commands are passed as typed: they may be empty, have surrounding
+				// whitespace or start with "-", which the flag parser would mangle
+				SkipFlagParsing: true,
+				Usage:           "Record a command event",
 				Arguments: []cli.Argument{
 					&cli.StringArg{
 						Name: "cwd",

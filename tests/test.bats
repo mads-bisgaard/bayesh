@@ -22,93 +22,24 @@ teardown() {
     [ "$status" -eq 0 ]
 }
 
-@test "test source script" {
-    run bash -i -c \
-    '
-    source <(bayesh --bash)
-    [[ -v BAYESH_PWD ]] && [[ -v BAYESH_CMD ]] && [[ -v BAYESH_LAST_HIST ]]
-    '
-    [ "$status" -eq 0 ]
-}
-
-@test "test only record new command" {
-    #shellcheck source=./shell/bayesh.bash
-    source <(bayesh --bash)
-    command="random command ${RANDOM}"
-    db=$(bayesh settings | jq -r .BAYESH_DATABASE)
-    
-    run bash -c "sqlite3 ${db} 'select count(*) from events'"
-    [ "$status" -eq 0 ]
-    assert_output '0'
-    
-    # simulate run command
-    history -s "${command}"
-    # wait for insertion into db (https://linux.die.net/man/1/inotifywait)
-    inotifywait --event modify --timeout 5 "${db}" &
-    monitor_pid=$!
-    _bayesh_update
-    [ "$status" -eq 0 ]
-    wait "$monitor_pid"
-
-    run bash -c "sqlite3 ${db} 'select count(*) from events'"
-    [ "$status" -eq 0 ]
-    assert_output '1'
-    run bash -c "sqlite3 ${db} 'select event_counter from events'"
-    [ "$status" -eq 0 ]
-    assert_output '1'
-
-    # simulate simply pressing 'enter' with no command
-    _bayesh_update && sleep 1
-
-    run bash -c "sqlite3 ${db} 'select count(*) from events'"
-    [ "$status" -eq 0 ]
-    assert_output '1'
-    run bash -c "sqlite3 ${db} 'select event_counter from events'"
-    [ "$status" -eq 0 ]
-    assert_output '1'    
-
-    # simulate running new command
-    inotifywait --event modify --timeout 5 "${db}" &
-    monitor_pid=$!
-    history -s "${command} ${RANDOM}"
-    _bayesh_update 
-    wait "$monitor_pid"
-
-    run bash -c "sqlite3 ${db} 'select count(*) from events'"
-    [ "$status" -eq 0 ]
-    assert_output '2'
-    run bash -c "sqlite3 ${db} 'select event_counter from events'"
-    [ "$status" -eq 0 ]
-    assert_output '1
-1'
-}
-
 @test "test inference function (no tokens)" {
-    #shellcheck source=./shell/bayesh.bash
-    source <(bayesh --bash)
-
     db=$(bayesh settings | jq -r .BAYESH_DATABASE)
 
     cwd=$(mktemp -d)
     previous_cmd="previous command ${RANDOM}"
     current_cmd="current command ${RANDOM}"
+    bayesh record-event "${cwd}" "${previous_cmd}" "${current_cmd}"
 
-    run bash -c "sqlite3 ${db} \"insert into events (cwd, previous_cmd, current_cmd, previous_template, current_template, event_counter, last_modified) values ('${cwd}', '${previous_cmd}', '${current_cmd}', '${previous_cmd}', '${current_cmd}', 1, '$(date)')\""
-    [ "$status" -eq 0 ]
-
-    run bash -c "sqlite3 ${db} 'select count(*) from events'"
-    [ "$status" -eq 0 ]
+    run sqlite3 "${db}" 'select count(*) from events'
     assert_output '1'
 
-    # setup
-    cd "${cwd}" 
-    export BAYESH_CMD="${previous_cmd}"
-    export FZF_DEFAULT_OPTS="--filter=\"${current_cmd}\"" 
-    run _bayesh_infer_cmd </dev/null
+    # the picker used outside tmux
+    export cwd previous_cmd
+    export FZF_DEFAULT_OPTS="--filter=\"${current_cmd}\""
+    run env -u TMUX zsh -i -c 'source <(bayesh --zsh); cd "${cwd}"; _bayesh_infer_cmd "${previous_cmd}"' </dev/null
     [ "$status" -eq 0 ]
     assert_output "${#current_cmd}
 ${current_cmd}"
-
 }
 
 
@@ -143,4 +74,30 @@ ${current_cmd}"
     _bayesh_is_active;
     '
     [ "$status" -eq 0 ]    
+}
+@test "record-event stores its arguments as given" {
+    db=$(bayesh settings | jq -r .BAYESH_DATABASE)
+
+    # an empty previous command, as for the first command of a shell
+    run bayesh record-event /work "" "echo one"
+    [ "$status" -eq 0 ]
+    # commands which look like flags, are empty or have surrounding whitespace
+    run bayesh record-event /work "--help" " -n x "
+    [ "$status" -eq 0 ]
+
+    run sqlite3 "${db}" "select quote(cwd), quote(previous_cmd), quote(current_cmd) from events order by last_modified"
+    assert_output "'/work'|''|'echo one'
+'/work'|'--help'|' -n x '"
+}
+
+@test "infer-cmd takes an empty or flag-like previous command" {
+    bayesh record-event /work "" "echo one"
+    bayesh record-event /work "-x" "echo two"
+
+    run bayesh infer-cmd /work ""
+    [ "$status" -eq 0 ]
+    assert_output --partial "echo one"
+    run bayesh infer-cmd /work "-x"
+    [ "$status" -eq 0 ]
+    assert_line --index 0 "echo two"
 }

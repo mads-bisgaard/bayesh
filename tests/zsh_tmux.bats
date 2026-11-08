@@ -24,7 +24,6 @@ compadd alpha beta
 EOF
     cat > "${TEST_DIR}/zdot/rc-common" <<'EOF'
 HISTSIZE=1000
-unsetopt HIST_IGNORE_DUPS
 PROMPT='%% '
 source <(bayesh --zsh)
 EOF
@@ -104,6 +103,104 @@ open_bayesh() {
     t send-keys -t "bayesh:$1.0" C-e
     wait_until pane_count "bayesh:$1" 2
     wait_for_pane "bayesh:$1.1" "$2"
+}
+
+# events: the recorded events as "previous -> current", oldest first
+events() {
+    sqlite3 "${TEST_DIR}/bayesh/bayesh.db" \
+        "select previous_cmd || ' -> ' || current_cmd from events order by last_modified" 2> /dev/null
+}
+
+events_equal() {
+    [[ "$(events)" == "$1" ]]
+}
+
+# events_are <expected>: waits for the recorded events to be exactly <expected>
+events_are() {
+    wait_until events_equal "$1" || {
+        echo "--- events:" >&2
+        events >&2
+        return 1
+    }
+}
+
+@test "commands are recorded with the previous command" {
+    start_tmux
+    run_cmd one 'echo one'
+    run_cmd one 'echo two'
+
+    events_are ' -> echo one
+echo one -> echo two'
+}
+
+@test "an empty line is not recorded" {
+    start_tmux
+    run_cmd one 'echo one'
+    t send-keys -t bayesh:one.0 Enter
+    sleep 0.2
+    run_cmd one 'echo two'
+
+    events_are ' -> echo one
+echo one -> echo two'
+}
+
+@test "a multi-line command is recorded as typed" {
+    start_tmux
+    t send-keys -t bayesh:one.0 -l "echo 'a"
+    t send-keys -t bayesh:one.0 Enter
+    run_cmd one "b'"
+
+    events_are " -> echo 'a
+b'"
+}
+
+@test "commands from other shells' shared history are not recorded" {
+    echo "HISTFILE=\$ZDOTDIR/.zsh_history; SAVEHIST=1000; setopt share_history" >> "${TEST_DIR}/zdot/rc-common"
+    start_tmux
+    t new-window -t bayesh -n two -c "${TEST_DIR}/work" "zsh -i"
+    wait_for_pane bayesh:two.0 '^%'
+    run_cmd one 'echo first'
+    run_cmd two 'echo a'
+    run_cmd two 'echo b'
+    t send-keys -t bayesh:one.0 Enter
+    sleep 0.2
+    run_cmd one 'echo after'
+
+    events_are ' -> echo first
+ -> echo a
+echo a -> echo b
+echo first -> echo after'
+}
+
+@test "repeated commands are recorded with hist_ignore_dups" {
+    echo "setopt hist_ignore_all_dups" >> "${TEST_DIR}/zdot/rc-common"
+    start_tmux
+    run_cmd one 'echo one'
+    run_cmd one 'echo one'
+
+    events_are ' -> echo one
+echo one -> echo one'
+}
+
+@test "commands kept out of history with hist_ignore_space are not recorded" {
+    echo "setopt hist_ignore_space" >> "${TEST_DIR}/zdot/rc-common"
+    start_tmux
+    run_cmd one 'echo one'
+    run_cmd one ' echo secret'
+    run_cmd one 'echo two'
+
+    events_are ' -> echo one
+echo one -> echo two'
+}
+
+@test "the recording state is not exported to child processes" {
+    start_tmux
+    run_cmd one 'echo one'
+    run_cmd one "env > ${TEST_DIR}/env"
+    wait_until test -s "${TEST_DIR}/env"
+
+    run grep -E '^_?BAYESH_' "${TEST_DIR}/env"
+    assert_output "BAYESH_DIR=${TEST_DIR}/bayesh"
 }
 
 @test "the bayesh pane opens to the right of the shell" {
@@ -299,7 +396,7 @@ assert_single_completion() {
     start_tmux
     run_cmd one 'echo æ'
     run_cmd one 'echo æøå'
-    run_cmd one 'echo x'
+    run_cmd one 'true' # a third echo would fold the two into echo <ARG>
     open_bayesh one 'echo'
 
     t send-keys -t bayesh:one.0 -l 'echo æøå'
