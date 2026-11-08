@@ -13,8 +13,9 @@ _fzf_tmux_server_start() {
     # before it has finished the initial load can get lost.
     # shellcheck disable=SC2016
     script=(
-        'echo "" | fzf '
+        'true | fzf '
         "--listen "
+        "--read0 "
         '--bind='\''load:unbind(load)+execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
         "--scheme=history "
         "--no-sort "

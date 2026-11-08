@@ -7,7 +7,8 @@
 zmodload zsh/zutil
 
 # Replaces compadd in the forked process: prints each match as a complete
-# command line instead of adding it to the list of matches.
+# command line instead of adding it to the list of matches. Lines are
+# NUL-terminated for fzf --read0, since the buffer can span several lines.
 function _bayesh_compadd() {
     # these options are used for querying matches, not for adding them
     if [[ ${@[1,(i)(-|--)]} == *-(O|A|D)\ * ]]; then
@@ -39,7 +40,7 @@ function _bayesh_compadd() {
     local post=${RBUFFER#${(b)SUFFIX}${(b)ISUFFIX}}
     for hit in "${__bayesh_hits[@]}"; do
         (( dirsuf )) && [[ -d $hit ]] && dsuf=/ || dsuf=
-        print -r -- "$pre$QIPREFIX$IPREFIX$apre$hpre$hit$dsuf$hsuf$asuf$ISUFFIX$QISUFFIX$post"
+        print -rN -- "$pre$QIPREFIX$IPREFIX$apre$hpre$hit$dsuf$hsuf$asuf$ISUFFIX$QISUFFIX$post"
     done
     return 0
 }

@@ -496,3 +496,78 @@ assert_single_completion() {
 
     [[ ! -e "${TEST_DIR}/curl-calls" ]]
 }
+
+# run_loop <window>: runs a for loop typed over several lines
+run_loop() {
+    t send-keys -t "bayesh:$1.0" -l 'for f in x'
+    t send-keys -t "bayesh:$1.0" Enter
+    t send-keys -t "bayesh:$1.0" -l 'do true'
+    t send-keys -t "bayesh:$1.0" Enter
+    run_cmd "$1" 'done'
+}
+
+# last_event: the most recently recorded command
+last_event() {
+    sqlite3 "${TEST_DIR}/bayesh/bayesh.db" \
+        "select current_cmd from events order by last_modified desc limit 1" 2> /dev/null
+}
+
+last_event_is() {
+    [[ "$(last_event)" == "$1" ]]
+}
+
+@test "a multi-line suggestion is a single item" {
+    start_tmux
+    run_loop one
+    run_cmd one 'echo one'
+    run_loop one
+    events_are ' -> for f in x
+do true
+done
+for f in x
+do true
+done -> echo one
+echo one -> for f in x
+do true
+done'
+    # echo one follows the loop, so it is ranked first
+    open_bayesh one 'echo one'
+    pane_matches bayesh:one.1 'do true'
+
+    t send-keys -t bayesh:one.0 C-Down
+    t send-keys -t bayesh:one.0 C-Right
+    sleep 0.3
+    t send-keys -t bayesh:one.0 Enter
+
+    events_are ' -> for f in x
+do true
+done
+for f in x
+do true
+done -> echo one
+echo one -> for f in x
+do true
+done
+for f in x
+do true
+done -> for f in x
+do true
+done'
+}
+
+@test "Ctrl-Left offers completions for a multi-line buffer" {
+    start_tmux
+    open_bayesh one '│'
+    t send-keys -t bayesh:one.0 -l 'echo x'
+    t send-keys -t bayesh:one.0 M-Enter
+    t send-keys -t bayesh:one.0 -l 'fntool f'
+
+    t send-keys -t bayesh:one.0 C-Left
+    wait_for_pane bayesh:one.1 'fntool fn_one'
+    t send-keys -t bayesh:one.0 C-Right
+    sleep 0.3
+    t send-keys -t bayesh:one.0 C-e Enter
+
+    wait_until last_event_is 'echo x
+fntool fn_one'
+}

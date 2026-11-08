@@ -229,3 +229,14 @@ func isQuoted(w *syntax.Word) bool {
 func source(cmd string, node syntax.Node) string {
 	return cmd[node.Pos().Offset():node.End().Offset()]
 }
+
+// FormatSuggestions prints suggestions for fzf --read0: each is colored and
+// terminated by NUL, so a multi-line command is one item.
+func FormatSuggestions(cmds []string) string {
+	var b strings.Builder
+	for _, cmd := range cmds {
+		b.WriteString(AnsiColorTokens(cmd))
+		b.WriteByte(0)
+	}
+	return b.String()
+}

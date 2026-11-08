@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 
 	"github.com/urfave/cli/v3" // imports as package "cli"
 
@@ -88,7 +87,7 @@ func main() {
 				// commands are passed as typed: they may be empty, have surrounding
 				// whitespace or start with "-", which the flag parser would mangle
 				SkipFlagParsing: true,
-				Usage:           "Infer command",
+				Usage:           "Infer command; suggestions are NUL-terminated, for fzf --read0",
 				Arguments: []cli.Argument{
 					&cli.StringArg{
 						Name: "cwd",
@@ -104,7 +103,7 @@ func main() {
 					if err != nil {
 						return err
 					}
-					fmt.Println(bayesh.AnsiColorTokens(strings.Join(inferredCommands, "\n")))
+					fmt.Print(bayesh.FormatSuggestions(inferredCommands))
 					return nil
 				},
 			},
