@@ -49,6 +49,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 func (q *Queries) CreateSchema(ctx context.Context) error {
 	// In WAL mode readers never wait for a writer, so opening Bayesh is not
 	// blocked while record-event re-templates rows. The mode is stored in the database.
+	// The ranking queries of TemplateCounts each read only one covering index.
 	schema := `
     PRAGMA journal_mode = WAL;
     CREATE TABLE IF NOT EXISTS ` + eventsTable + ` (
@@ -58,12 +59,12 @@ func (q *Queries) CreateSchema(ctx context.Context) error {
         ` + colPreviousTemplate + ` TEXT,
         ` + colCurrentTemplate + ` TEXT,
         ` + colEventCounter + ` INTEGER CHECK(` + colEventCounter + ` >= 0),
-        ` + colLastModified + ` DATETIME,
+        ` + colLastModified + ` INTEGER, -- unix time
         PRIMARY KEY (` + colCwd + `, ` + colPreviousCmd + `, ` + colCurrentCmd + `)
     );
-    CREATE INDEX IF NOT EXISTS idx_event_counter ON ` + eventsTable + ` (` + colEventCounter + `);
-    CREATE INDEX IF NOT EXISTS idx_cwd_template ON ` + eventsTable + ` (` + colCwd + `, ` + colCurrentTemplate + `, ` + colEventCounter + `);
-    CREATE INDEX IF NOT EXISTS idx_previous_template ON ` + eventsTable + ` (` + colPreviousTemplate + `, ` + colCurrentTemplate + `, ` + colEventCounter + `);
+    CREATE INDEX IF NOT EXISTS idx_cwd ON ` + eventsTable + ` (` + colCwd + `, ` + colCurrentTemplate + `, ` + colEventCounter + `, ` + colLastModified + `);
+    CREATE INDEX IF NOT EXISTS idx_previous ON ` + eventsTable + ` (` + colPreviousTemplate + `, ` + colCurrentTemplate + `, ` + colEventCounter + `, ` + colLastModified + `);
+    CREATE INDEX IF NOT EXISTS idx_cwd_previous ON ` + eventsTable + ` (` + colCwd + `, ` + colPreviousTemplate + `, ` + colCurrentTemplate + `, ` + colEventCounter + `, ` + colLastModified + `);
     CREATE TABLE IF NOT EXISTS ` + slotsTable + ` (
         ` + colSlot + ` TEXT,
         ` + colValue + ` TEXT,
@@ -86,7 +87,7 @@ type Row struct {
 	PreviousTemplate string
 	CurrentTemplate  string
 	EventCounter     int
-	LastModified     time.Time
+	LastModified     time.Time // stored as unix time
 }
 
 func (q *Queries) InsertRow(ctx context.Context, arg Row) error {
@@ -94,7 +95,7 @@ func (q *Queries) InsertRow(ctx context.Context, arg Row) error {
     INSERT INTO ` + eventsTable + ` (
         ` + colCwd + `, ` + colPreviousCmd + `, ` + colCurrentCmd + `, ` + colPreviousTemplate + `, ` + colCurrentTemplate + `, ` + colEventCounter + `, ` + colLastModified + `
     ) VALUES (?, ?, ?, ?, ?, ?, ?)`
-	_, err := q.db.ExecContext(ctx, query, arg.Cwd, arg.PreviousCmd, arg.CurrentCmd, arg.PreviousTemplate, arg.CurrentTemplate, arg.EventCounter, arg.LastModified)
+	_, err := q.db.ExecContext(ctx, query, arg.Cwd, arg.PreviousCmd, arg.CurrentCmd, arg.PreviousTemplate, arg.CurrentTemplate, arg.EventCounter, arg.LastModified.Unix())
 	return err
 }
 
@@ -106,6 +107,7 @@ func (q *Queries) GetRow(ctx context.Context, cwd, previousCmd, currentCmd strin
 
 	row := q.db.QueryRowContext(ctx, query, cwd, previousCmd, currentCmd)
 	var i Row
+	var lastModified sql.NullInt64
 	err := row.Scan(
 		&i.Cwd,
 		&i.PreviousCmd,
@@ -113,8 +115,11 @@ func (q *Queries) GetRow(ctx context.Context, cwd, previousCmd, currentCmd strin
 		&i.PreviousTemplate,
 		&i.CurrentTemplate,
 		&i.EventCounter,
-		&i.LastModified,
+		&lastModified,
 	)
+	if lastModified.Valid {
+		i.LastModified = time.Unix(lastModified.Int64, 0)
+	}
 	return i, err
 }
 
@@ -123,7 +128,7 @@ func (q *Queries) UpdateRow(ctx context.Context, arg Row) error {
     UPDATE ` + eventsTable + `
     SET ` + colPreviousTemplate + ` = ?, ` + colCurrentTemplate + ` = ?, ` + colEventCounter + ` = ?, ` + colLastModified + ` = ?
     WHERE ` + colCwd + ` = ? AND ` + colPreviousCmd + ` = ? AND ` + colCurrentCmd + ` = ?`
-	_, err := q.db.ExecContext(ctx, query, arg.PreviousTemplate, arg.CurrentTemplate, arg.EventCounter, arg.LastModified, arg.Cwd, arg.PreviousCmd, arg.CurrentCmd)
+	_, err := q.db.ExecContext(ctx, query, arg.PreviousTemplate, arg.CurrentTemplate, arg.EventCounter, arg.LastModified.Unix(), arg.Cwd, arg.PreviousCmd, arg.CurrentCmd)
 	return err
 }
 
@@ -131,29 +136,7 @@ func (q *Queries) UpdateRow(ctx context.Context, arg Row) error {
 // and/or the previous template if not nil: the number of events weighted by how
 // long before now they were last recorded, like z (https://github.com/rupa/z).
 func (q *Queries) TemplateCounts(ctx context.Context, now time.Time, cwd *string, previousTemplate *string) (map[string]float64, error) {
-	// last_modified is stored as text with a time zone offset, so compare it as unix time
-	age := "unixepoch(" + colLastModified + ")"
-	frecency := "SUM(" + colEventCounter + " * CASE" +
-		" WHEN " + age + " >= ? THEN 4" +
-		" WHEN " + age + " >= ? THEN 2" +
-		" WHEN " + age + " >= ? THEN 0.5" +
-		" ELSE 0.25 END)"
-	args := []any{now.Add(-time.Hour).Unix(), now.Add(-24 * time.Hour).Unix(), now.Add(-7 * 24 * time.Hour).Unix()}
-	var conditions []string
-	if cwd != nil {
-		conditions = append(conditions, colCwd+" = ?")
-		args = append(args, *cwd)
-	}
-	if previousTemplate != nil {
-		conditions = append(conditions, colPreviousTemplate+" = ?")
-		args = append(args, *previousTemplate)
-	}
-	query := "SELECT " + colCurrentTemplate + ", " + frecency + " FROM " + eventsTable
-	if len(conditions) > 0 {
-		query += " WHERE " + strings.Join(conditions, " AND ")
-	}
-	query += " GROUP BY " + colCurrentTemplate
-
+	query, args := templateCountsQuery(now, cwd, previousTemplate)
 	rows, err := q.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -169,6 +152,30 @@ func (q *Queries) TemplateCounts(ctx context.Context, now time.Time, cwd *string
 		result[template] = count
 	}
 	return result, rows.Err()
+}
+
+// templateCountsQuery returns the query of TemplateCounts and its arguments.
+func templateCountsQuery(now time.Time, cwd *string, previousTemplate *string) (string, []any) {
+	frecency := "SUM(" + colEventCounter + " * CASE" +
+		" WHEN " + colLastModified + " >= ? THEN 4" +
+		" WHEN " + colLastModified + " >= ? THEN 2" +
+		" WHEN " + colLastModified + " >= ? THEN 0.5" +
+		" ELSE 0.25 END)"
+	args := []any{now.Add(-time.Hour).Unix(), now.Add(-24 * time.Hour).Unix(), now.Add(-7 * 24 * time.Hour).Unix()}
+	var conditions []string
+	if cwd != nil {
+		conditions = append(conditions, colCwd+" = ?")
+		args = append(args, *cwd)
+	}
+	if previousTemplate != nil {
+		conditions = append(conditions, colPreviousTemplate+" = ?")
+		args = append(args, *previousTemplate)
+	}
+	query := "SELECT " + colCurrentTemplate + ", " + frecency + " FROM " + eventsTable
+	if len(conditions) > 0 {
+		query += " WHERE " + strings.Join(conditions, " AND ")
+	}
+	return query + " GROUP BY " + colCurrentTemplate, args
 }
 
 // SlotDistinct returns the number of distinct values seen in slot.

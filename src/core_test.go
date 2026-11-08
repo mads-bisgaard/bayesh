@@ -86,6 +86,8 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 	currentCmd := "git status"
 
 	// Record the event for the first time
+	start := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	core.now = func() time.Time { return start }
 	if err := core.RecordEvent(ctx, cwd, previousCmd, currentCmd); err != nil {
 		t.Fatalf("First RecordEvent failed: %v", err)
 	}
@@ -101,14 +103,16 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 		}
 	}()
 
-	var initialTimestamp time.Time
+	var initialTimestamp int64
 	err = db.QueryRow("SELECT last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, previousCmd, currentCmd).Scan(&initialTimestamp)
 	if err != nil {
 		t.Fatalf("Failed to query for initial timestamp: %v", err)
 	}
 
-	// Wait a moment to ensure the timestamp will be different
-	time.Sleep(2 * time.Millisecond)
+	if initialTimestamp != start.Unix() {
+		t.Errorf("expected last_modified to be %d, got %d", start.Unix(), initialTimestamp)
+	}
+	core.now = func() time.Time { return start.Add(time.Minute) }
 
 	// Record the same event again
 	if err := core.RecordEvent(ctx, cwd, previousCmd, currentCmd); err != nil {
@@ -117,7 +121,7 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 
 	// Verify the event was updated
 	var updatedCounter int
-	var updatedTimestamp time.Time
+	var updatedTimestamp int64
 	err = db.QueryRow("SELECT event_counter, last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, previousCmd, currentCmd).Scan(&updatedCounter, &updatedTimestamp)
 	if err != nil {
 		t.Fatalf("Failed to query for updated event: %v", err)
@@ -126,8 +130,8 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 	if updatedCounter != 2 {
 		t.Errorf("expected event_counter to be 2, got %d", updatedCounter)
 	}
-	if !updatedTimestamp.After(initialTimestamp) {
-		t.Errorf("expected updated timestamp %v to be after initial timestamp %v", updatedTimestamp, initialTimestamp)
+	if want := start.Add(time.Minute).Unix(); updatedTimestamp != want {
+		t.Errorf("expected updated timestamp %d, got %d", want, updatedTimestamp)
 	}
 }
 

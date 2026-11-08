@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -86,12 +88,29 @@ func TestCreateDB(t *testing.T) {
 		}
 	}
 
-	// Check index exists
-	var idxName string
-	err = db.QueryRow("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_event_counter'").Scan(&idxName)
-	if err != nil {
-		t.Errorf("Index idx_event_counter does not exist: %v", err)
+	// One covering index per ranking query, see TestTemplateCountsUsesCoveringIndexes
+	if got, want := indexes(t, db), []string{"idx_cwd", "idx_cwd_previous", "idx_previous"}; !slices.Equal(got, want) {
+		t.Errorf("indexes = %q, want %q", got, want)
 	}
+}
+
+// indexes returns the names of the indexes created on the events table.
+func indexes(t *testing.T, db *sql.DB) []string {
+	t.Helper()
+	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = ? AND sql IS NOT NULL ORDER BY name", eventsTable)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var names []string
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			t.Fatal(err)
+		}
+		names = append(names, name)
+	}
+	return names
 }
 
 func TestInsertRow(t *testing.T) {
@@ -128,12 +147,11 @@ func TestInsertRow(t *testing.T) {
 	}
 
 	var fetchedRow Row
-	err = db.QueryRow("SELECT cwd, previous_cmd, current_cmd, event_counter, last_modified FROM "+eventsTable).Scan(
+	err = db.QueryRow("SELECT cwd, previous_cmd, current_cmd, event_counter FROM "+eventsTable).Scan(
 		&fetchedRow.Cwd,
 		&fetchedRow.PreviousCmd,
 		&fetchedRow.CurrentCmd,
 		&fetchedRow.EventCounter,
-		&fetchedRow.LastModified,
 	)
 	if err != nil {
 		t.Fatalf("Failed to fetch inserted row: %v", err)
@@ -329,7 +347,7 @@ func TestTemplateCountsFrecency(t *testing.T) {
 	queries, _ := setupTestDB(t)
 	ctx := context.Background()
 	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
-	// Stored with another offset than now, so the cutoffs must not compare text
+	// Recorded in another time zone than now, which unix time is independent of
 	zone := time.FixedZone("UTC+5", 5*60*60)
 	for i, r := range []struct {
 		age time.Duration
@@ -360,6 +378,37 @@ func TestTemplateCountsFrecency(t *testing.T) {
 	}
 	if want := map[string]float64{"ls": 4 + 4 + 4 + 2 + 2 + 1 + 1 + 2 + 1}; !maps.Equal(got, want) {
 		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+// TestTemplateCountsUsesCoveringIndexes checks that each ranking query reads
+// only the index rows of its matching events, so opening Bayesh stays fast.
+func TestTemplateCountsUsesCoveringIndexes(t *testing.T) {
+	_, db := setupTestDB(t)
+	a, ls := "/a", "ls"
+	for _, tt := range []struct {
+		cwd, previous *string
+		index         string
+	}{{&a, nil, "idx_cwd"}, {nil, &ls, "idx_previous"}, {&a, &ls, "idx_cwd_previous"}} {
+		query, args := templateCountsQuery(time.Now(), tt.cwd, tt.previous)
+		rows, err := db.Query("EXPLAIN QUERY PLAN "+query, args...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var steps []string
+		for rows.Next() {
+			var id, parent, notused int
+			var step string
+			if err := rows.Scan(&id, &parent, &notused, &step); err != nil {
+				t.Fatal(err)
+			}
+			steps = append(steps, step)
+		}
+		rows.Close()
+		detail := strings.Join(steps, "; ")
+		if want := "USING COVERING INDEX " + tt.index + " "; !strings.Contains(detail, want) || strings.Contains(detail, "TEMP B-TREE") {
+			t.Errorf("plan %q, want %q without sorting", detail, want)
+		}
 	}
 }
 
