@@ -100,8 +100,11 @@ func main() {
 				},
 			},
 			{
-				Name:  "infer-cmd",
-				Usage: "Infer command",
+				Name: "infer-cmd",
+				// commands are passed as typed: they may be empty, have surrounding
+				// whitespace or start with "-", which the flag parser would mangle
+				SkipFlagParsing: true,
+				Usage:           "Infer command",
 				Arguments: []cli.Argument{
 					&cli.StringArg{
 						Name: "cwd",
@@ -122,8 +125,11 @@ func main() {
 				},
 			},
 			{
-				Name:  "record-event",
-				Usage: "Record a command event",
+				Name: "record-event",
+				// commands are passed as typed: they may be empty, have surrounding
+				// whitespace or start with "-", which the flag parser would mangle
+				SkipFlagParsing: true,
+				Usage:           "Record a command event",
 				Arguments: []cli.Argument{
 					&cli.StringArg{
 						Name: "cwd",

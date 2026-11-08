@@ -1,8 +1,32 @@
 #!/usr/bin/env zsh
 
 autoload -Uz add-zsh-hook
-# add hook for updating bayesh db
-add-zsh-hook precmd _bayesh_update
+
+# Commands are captured in preexec and recorded in precmd. preexec gets the
+# command line as typed (with real newlines, unlike fc) and only runs when a
+# command does, so empty lines and other shells' commands (share_history) are
+# never recorded. The state is kept in shell variables, not exported, since it
+# belongs to this shell only.
+typeset -g _BAYESH_PREVIOUS_CMD=""  # the last recorded command, which suggestions follow
+typeset -g _BAYESH_RAN_CMD _BAYESH_RAN_PWD  # the command run since the last prompt, and where
+
+function _bayesh_preexec() {
+    _BAYESH_RAN_CMD="$1"
+    _BAYESH_RAN_PWD="$PWD"
+}
+
+function _bayesh_record() {
+    emulate -L zsh
+    setopt extended_glob
+    local cmd="${${_BAYESH_RAN_CMD##[[:space:]]#}%%[[:space:]]#}"
+    _BAYESH_RAN_CMD=""
+    [[ -n "$cmd" ]] || return 0
+    bayesh record-event "$_BAYESH_RAN_PWD" "$_BAYESH_PREVIOUS_CMD" "$cmd" &!
+    _BAYESH_PREVIOUS_CMD="$cmd"
+}
+
+add-zsh-hook preexec _bayesh_preexec
+add-zsh-hook precmd _bayesh_record
 
 if [[ ! -n "$TMUX" ]]; then
 
@@ -12,7 +36,7 @@ if [[ ! -n "$TMUX" ]]; then
         local point
         
         cur="${CURSOR}"
-        result=$(_bayesh_infer_cmd)
+        result=$(_bayesh_infer_cmd "$_BAYESH_PREVIOUS_CMD")
         line=$(echo "${result}" | tail -n 1);point=$(echo "${result}" | head -n 1)
         LBUFFER="${LBUFFER}${line}${RBUFFER}"
         zle reset-prompt
@@ -75,7 +99,7 @@ function zle-line-init() {
     if _bayesh_is_active; then
         _fzf_tmux_server_post "$BAYESH_SERVER_CONFIG" "first"
         _bayesh_begin_reload
-        bayesh infer-cmd "$PWD" "${BAYESH_CMD}" > "$_BAYESH_FIFO" &!
+        bayesh infer-cmd "$PWD" "$_BAYESH_PREVIOUS_CMD" > "$_BAYESH_FIFO" &!
         _BAYESH_WRITER_PID=$!
     fi
 }

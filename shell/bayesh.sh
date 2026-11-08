@@ -1,29 +1,11 @@
 #!/bin/sh
 
-_bayesh_update() {
-
-    cmd=$(fc -ln -1 | awk '{$1=$1};1')
-    last_hist=$(history | tail -1 | md5sum)
-
-    if [ "${last_hist}" = "${BAYESH_LAST_HIST}" ]; then
-        return
-    fi
-
-    ( bayesh record-event "${BAYESH_PWD}" "${BAYESH_CMD}" "${cmd}" & )
-
-    BAYESH_PWD=$(pwd)
-    export BAYESH_PWD
-    BAYESH_CMD=${cmd}
-    export BAYESH_CMD
-    BAYESH_LAST_HIST=${last_hist}
-    export BAYESH_LAST_HIST
-}
-
+# Lets the user pick a suggestion for the command following $1 with fzf, and
+# prints the cursor position followed by the chosen command without tokens.
 _bayesh_infer_cmd() {
-    
     token_regex="<ARG>"
     chosen_cmd=$( 
-    inferred_cmds=$(bayesh infer-cmd "$(pwd)" "${BAYESH_CMD}")
+    inferred_cmds=$(bayesh infer-cmd "$(pwd)" "$1")
     
     if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "${inferred_cmds}" | awk '{$1=$1};1')" ]; then
         exit 1
@@ -55,10 +37,3 @@ _bayesh_infer_cmd() {
     echo "${position}"
     echo "${chosen_cmd}" | sed -E "s/(${token_regex})//g"
 }
-
-BAYESH_PWD=$(pwd)
-export BAYESH_PWD
-BAYESH_CMD=""
-export BAYESH_CMD
-BAYESH_LAST_HIST=""
-export BAYESH_LAST_HIST

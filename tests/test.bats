@@ -102,9 +102,8 @@ teardown() {
 
     # setup
     cd "${cwd}" 
-    export BAYESH_CMD="${previous_cmd}"
     export FZF_DEFAULT_OPTS="--filter=\"${current_cmd}\"" 
-    run _bayesh_infer_cmd </dev/null
+    run _bayesh_infer_cmd "${previous_cmd}" </dev/null
     [ "$status" -eq 0 ]
     assert_output "${#current_cmd}
 ${current_cmd}"
@@ -143,4 +142,30 @@ ${current_cmd}"
     _bayesh_is_active;
     '
     [ "$status" -eq 0 ]    
+}
+@test "record-event stores its arguments as given" {
+    db=$(bayesh settings | jq -r .BAYESH_DATABASE)
+
+    # an empty previous command, as for the first command of a shell
+    run bayesh record-event /work "" "echo one"
+    [ "$status" -eq 0 ]
+    # commands which look like flags, are empty or have surrounding whitespace
+    run bayesh record-event /work "--help" " -n x "
+    [ "$status" -eq 0 ]
+
+    run sqlite3 "${db}" "select quote(cwd), quote(previous_cmd), quote(current_cmd) from events order by last_modified"
+    assert_output "'/work'|''|'echo one'
+'/work'|'--help'|' -n x '"
+}
+
+@test "infer-cmd takes an empty or flag-like previous command" {
+    bayesh record-event /work "" "echo one"
+    bayesh record-event /work "-x" "echo two"
+
+    run bayesh infer-cmd /work ""
+    [ "$status" -eq 0 ]
+    assert_output --partial "echo one"
+    run bayesh infer-cmd /work "-x"
+    [ "$status" -eq 0 ]
+    assert_line --index 0 "echo two"
 }
