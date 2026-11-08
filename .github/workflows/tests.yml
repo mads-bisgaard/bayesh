@@ -43,7 +43,7 @@ jobs:
     name: Bats tests
     runs-on: ubuntu-latest
     needs: [build]
-    container: madsbis/bayesh-bats-testing:v6
+    container: madsbis/bayesh-bats-testing:v7
     steps:
       - name: Check out code
         uses: actions/checkout@v4
