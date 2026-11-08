@@ -24,7 +24,6 @@ compadd alpha beta
 EOF
     cat > "${TEST_DIR}/zdot/rc-common" <<'EOF'
 HISTSIZE=1000
-unsetopt HIST_IGNORE_DUPS
 PROMPT='%% '
 source <(bayesh --zsh)
 EOF
@@ -171,6 +170,27 @@ b'"
  -> echo a
 echo a -> echo b
 echo first -> echo after'
+}
+
+@test "repeated commands are recorded with hist_ignore_dups" {
+    echo "setopt hist_ignore_all_dups" >> "${TEST_DIR}/zdot/rc-common"
+    start_tmux
+    run_cmd one 'echo one'
+    run_cmd one 'echo one'
+
+    events_are ' -> echo one
+echo one -> echo one'
+}
+
+@test "commands kept out of history with hist_ignore_space are not recorded" {
+    echo "setopt hist_ignore_space" >> "${TEST_DIR}/zdot/rc-common"
+    start_tmux
+    run_cmd one 'echo one'
+    run_cmd one ' echo secret'
+    run_cmd one 'echo two'
+
+    events_are ' -> echo one
+echo one -> echo two'
 }
 
 @test "the recording state is not exported to child processes" {

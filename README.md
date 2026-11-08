@@ -62,20 +62,4 @@ Feel free to open an issue if you have questions or need guidance. Let's make Ba
 
 
 ## Gotchas 
-- Bayesh relies on your shell’s history behavior. To get the best experience:  
-
-  - **For Bash Users:**  
-    Add this to your `~/.bashrc`:  
-    ```bash
-    export HISTCONTROL=
-    ```  
-
-  - **For Zsh Users:**  
-    Add this to your `~/.zshrc`:  
-    ```bash
-    unsetopt HIST_IGNORE_DUPS
-    ```  
-
-  Test your setup by running `history -1` twice. If the two lines are different (timestamps or event numbers), you’re good to go!  
-
 -  Bayesh is built with `CGO_ENABLED=1`, so it relies on glibc being available at run time. 

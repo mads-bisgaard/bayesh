@@ -13,14 +13,8 @@ import (
 	bayesh "github.com/mads-bisgaard/bayesh/src"
 )
 
-//go:embed shell/bayesh.bash
-var bayeshBash string
-
 //go:embed shell/bayesh.zsh
 var bayeshZsh string
-
-//go:embed shell/bayesh.sh
-var bayeshSh string
 
 //go:embed shell/fzf_tmux_server.zsh
 var fzfTmuxServerZsh string
@@ -51,7 +45,6 @@ func main() {
 		}
 	}()
 
-	var bash bool
 	var zsh bool
 
 	cmd := &cli.Command{
@@ -60,22 +53,13 @@ func main() {
 		Version: version,
 		Flags: []cli.Flag{
 			&cli.BoolFlag{
-				Name:        "bash",
-				Usage:       "Print the bash shell integration script",
-				Destination: &bash,
-			},
-			&cli.BoolFlag{
 				Name:        "zsh",
 				Usage:       "Print the zsh shell integration script",
 				Destination: &zsh,
 			},
 		},
 		Action: func(ctx context.Context, cmd *cli.Command) error {
-			if bash {
-				fmt.Print(bayeshSh)
-				fmt.Print(bayeshBash)
-			} else if zsh {
-				fmt.Print(bayeshSh)
+			if zsh {
 				fmt.Print(fzfTmuxServerZsh)
 				fmt.Print(captureZsh)
 				fmt.Print(bayeshZsh)
