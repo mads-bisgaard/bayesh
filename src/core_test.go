@@ -182,6 +182,35 @@ func TestInferCommandsTemplates(t *testing.T) {
 	}
 }
 
+func TestInferCommandsFrecency(t *testing.T) {
+	core, _ := setupCoreWithTempDB(t)
+	ctx := context.Background()
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	record := func(age time.Duration, current string, n int) {
+		core.now = func() time.Time { return now.Add(-age) }
+		for range n {
+			if err := core.RecordEvent(ctx, "/a", "git status", current); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	day := 24 * time.Hour
+	record(30*day, "make", 2)
+	record(30*day, "htop", 3)
+	record(2*day, "ls", 2)
+	record(time.Minute, "pwd", 2)
+	core.now = func() time.Time { return now }
+	// Of equal counts, the more recent ranks first: pwd 2*4, ls 2*0.5, make 2*0.25.
+	// The recent ls also overtakes the somewhat more frequent old htop: 3*0.25.
+	got, err := core.InferCommands(ctx, "/a", "git status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"pwd", "ls", "htop", "make"}; !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
 // TestRecordEventKeepsTemplatesUpToDate checks that the templates and slot
 // statistics stored while recording equal those learned from all events at once.
 func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {
