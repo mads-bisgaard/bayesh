@@ -3,6 +3,7 @@ package bayesh
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"maps"
 	"os"
 	"testing"
@@ -287,11 +288,13 @@ func TestUpdateRow(t *testing.T) {
 func TestTemplateCounts(t *testing.T) {
 	queries, _ := setupTestDB(t)
 	ctx := context.Background()
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	recent := now.Add(-time.Minute)
 	for _, row := range []Row{
-		{Cwd: "/a", PreviousCmd: "cd x", CurrentCmd: "ls", PreviousTemplate: "cd <ARG>", CurrentTemplate: "ls", EventCounter: 2},
-		{Cwd: "/a", PreviousCmd: "vim y", CurrentCmd: "cd y", PreviousTemplate: "vim <ARG>", CurrentTemplate: "cd <ARG>", EventCounter: 1},
-		{Cwd: "/a", PreviousCmd: "vim z", CurrentCmd: "cd z", PreviousTemplate: "vim <ARG>", CurrentTemplate: "cd <ARG>", EventCounter: 1},
-		{Cwd: "/b", PreviousCmd: "cd w", CurrentCmd: "ls", PreviousTemplate: "cd <ARG>", CurrentTemplate: "ls", EventCounter: 1},
+		{Cwd: "/a", PreviousCmd: "cd x", CurrentCmd: "ls", PreviousTemplate: "cd <ARG>", CurrentTemplate: "ls", EventCounter: 2, LastModified: recent},
+		{Cwd: "/a", PreviousCmd: "vim y", CurrentCmd: "cd y", PreviousTemplate: "vim <ARG>", CurrentTemplate: "cd <ARG>", EventCounter: 1, LastModified: recent},
+		{Cwd: "/a", PreviousCmd: "vim z", CurrentCmd: "cd z", PreviousTemplate: "vim <ARG>", CurrentTemplate: "cd <ARG>", EventCounter: 1, LastModified: recent},
+		{Cwd: "/b", PreviousCmd: "cd w", CurrentCmd: "ls", PreviousTemplate: "cd <ARG>", CurrentTemplate: "ls", EventCounter: 1, LastModified: recent},
 	} {
 		if err := queries.InsertRow(ctx, row); err != nil {
 			t.Fatalf("Failed to insert row: %v", err)
@@ -302,21 +305,61 @@ func TestTemplateCounts(t *testing.T) {
 		name     string
 		cwd      *string
 		previous *string
-		want     map[string]int
+		want     map[string]float64
 	}{
-		{"by cwd", &a, nil, map[string]int{"ls": 2, "cd <ARG>": 2}},
-		{"by previous", nil, &cd, map[string]int{"ls": 3}},
-		{"by both", &a, &vim, map[string]int{"cd <ARG>": 2}},
-		{"no events", &a, &cd, map[string]int{"ls": 2}},
+		{"by cwd", &a, nil, map[string]float64{"ls": 8, "cd <ARG>": 8}},
+		{"by previous", nil, &cd, map[string]float64{"ls": 12}},
+		{"by both", &a, &vim, map[string]float64{"cd <ARG>": 8}},
+		{"no events", &a, &cd, map[string]float64{"ls": 8}},
 	}
 	for _, tt := range tests {
-		got, err := queries.TemplateCounts(ctx, tt.cwd, tt.previous)
+		got, err := queries.TemplateCounts(ctx, now, tt.cwd, tt.previous)
 		if err != nil {
 			t.Fatalf("%s: %v", tt.name, err)
 		}
 		if !maps.Equal(got, tt.want) {
 			t.Errorf("%s: got %v, want %v", tt.name, got, tt.want)
 		}
+	}
+}
+
+// TestTemplateCountsFrecency checks that each row is weighted by the time
+// since it was last recorded, like z weights directories.
+func TestTemplateCountsFrecency(t *testing.T) {
+	queries, _ := setupTestDB(t)
+	ctx := context.Background()
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	// Stored with another offset than now, so the cutoffs must not compare text
+	zone := time.FixedZone("UTC+5", 5*60*60)
+	for i, r := range []struct {
+		age time.Duration
+		n   int
+	}{
+		{0, 1},                    // 4
+		{59 * time.Minute, 1},     // 4
+		{61 * time.Minute, 2},     // 2*2
+		{23 * time.Hour, 1},       // 2
+		{25 * time.Hour, 4},       // 4*0.5
+		{6 * 24 * time.Hour, 2},   // 2*0.5
+		{8 * 24 * time.Hour, 4},   // 4*0.25
+		{365 * 24 * time.Hour, 8}, // 8*0.25
+	} {
+		row := Row{Cwd: "/a", PreviousCmd: fmt.Sprint(i), CurrentCmd: "ls", CurrentTemplate: "ls", EventCounter: r.n, LastModified: now.Add(-r.age).In(zone)}
+		if err := queries.InsertRow(ctx, row); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// A row without a timestamp counts as old
+	if _, err := queries.db.ExecContext(ctx, "INSERT INTO "+eventsTable+" (cwd, previous_cmd, current_cmd, current_template, event_counter) VALUES ('/a', 'x', 'ls', 'ls', 4)"); err != nil {
+		t.Fatal(err)
+	}
+	a := "/a"
+	got, err := queries.TemplateCounts(ctx, now, &a, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := map[string]float64{"ls": 4 + 4 + 4 + 2 + 2 + 1 + 1 + 2 + 1}; !maps.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
 	}
 }
 

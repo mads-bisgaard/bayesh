@@ -127,11 +127,19 @@ func (q *Queries) UpdateRow(ctx context.Context, arg Row) error {
 	return err
 }
 
-// TemplateCounts returns the number of events of each current template, given
-// the cwd and/or the previous template if not nil.
-func (q *Queries) TemplateCounts(ctx context.Context, cwd *string, previousTemplate *string) (map[string]int, error) {
+// TemplateCounts returns the frecency of each current template, given the cwd
+// and/or the previous template if not nil: the number of events weighted by how
+// long before now they were last recorded, like z (https://github.com/rupa/z).
+func (q *Queries) TemplateCounts(ctx context.Context, now time.Time, cwd *string, previousTemplate *string) (map[string]float64, error) {
+	// last_modified is stored as text with a time zone offset, so compare it as unix time
+	age := "unixepoch(" + colLastModified + ")"
+	frecency := "SUM(" + colEventCounter + " * CASE" +
+		" WHEN " + age + " >= ? THEN 4" +
+		" WHEN " + age + " >= ? THEN 2" +
+		" WHEN " + age + " >= ? THEN 0.5" +
+		" ELSE 0.25 END)"
+	args := []any{now.Add(-time.Hour).Unix(), now.Add(-24 * time.Hour).Unix(), now.Add(-7 * 24 * time.Hour).Unix()}
 	var conditions []string
-	var args []any
 	if cwd != nil {
 		conditions = append(conditions, colCwd+" = ?")
 		args = append(args, *cwd)
@@ -140,7 +148,7 @@ func (q *Queries) TemplateCounts(ctx context.Context, cwd *string, previousTempl
 		conditions = append(conditions, colPreviousTemplate+" = ?")
 		args = append(args, *previousTemplate)
 	}
-	query := "SELECT " + colCurrentTemplate + ", SUM(" + colEventCounter + ") FROM " + eventsTable
+	query := "SELECT " + colCurrentTemplate + ", " + frecency + " FROM " + eventsTable
 	if len(conditions) > 0 {
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
@@ -151,10 +159,10 @@ func (q *Queries) TemplateCounts(ctx context.Context, cwd *string, previousTempl
 		return nil, err
 	}
 	defer closeRows(rows)
-	result := map[string]int{}
+	result := map[string]float64{}
 	for rows.Next() {
 		var template string
-		var count int
+		var count float64
 		if err := rows.Scan(&template, &count); err != nil {
 			return nil, err
 		}

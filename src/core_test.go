@@ -304,7 +304,7 @@ func TestInferCommandsDuringLargeWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer readerDB.Close()
-	reader := &Core{Settings: core.Settings, db: readerDB}
+	reader := &Core{Settings: core.Settings, db: readerDB, now: time.Now}
 	got, err := reader.InferCommands(ctx, "/a", "ls")
 	if err != nil {
 		t.Fatalf("InferCommands during a large write: %v", err)

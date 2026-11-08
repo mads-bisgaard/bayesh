@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 // benchHistory returns n generated commands. About half of them are distinct,
@@ -47,7 +48,7 @@ func newBenchCore(b *testing.B, cmds []string) *Core {
 	}
 	queries := New(core.db).WithTx(tx)
 	for i := 1; i < len(cmds); i++ {
-		if err := recordEvent(ctx, queries, fmt.Sprintf("/project/%d", i%50), cmds[i-1], cmds[i]); err != nil {
+		if err := recordEvent(ctx, queries, time.Now(), fmt.Sprintf("/project/%d", i%50), cmds[i-1], cmds[i]); err != nil {
 			b.Fatal(err)
 		}
 	}
