@@ -34,7 +34,7 @@ _fzf_tmux_server_start() {
         "--no-scrollbar"
         # Stripes every other item, so a multi-line command reads as one item.
         # Unlike --gap, this costs no lines.
-        "--color=alt-bg:235"
+        "--color=alt-bg:237,bg+:239"
     )
 
     tmux split-window -t "$TMUX_PANE" -h -l 35% -d "${script[*]}"

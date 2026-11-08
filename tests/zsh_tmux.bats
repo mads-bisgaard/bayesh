@@ -620,4 +620,9 @@ stripe_of() {
     [[ -z "$(stripe_of bayesh:one.1 'do true')" ]]
     [[ -z "$(stripe_of bayesh:one.1 'done')" ]]
     [[ -n "$(stripe_of bayesh:one.1 'echo one')" ]]
+
+    # The stripe stands out from the terminal background, and the current item
+    # stands out from the stripe
+    [[ "$(stripe_of bayesh:one.1 'echo one')" == '[48;5;237m' ]]
+    [[ "$(stripe_of bayesh:one.1 'echo two')" == '[48;5;239m' ]]
 }
