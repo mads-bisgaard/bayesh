@@ -94,25 +94,45 @@ ${current_cmd}"
     bayesh record-event /work "" "echo one"
     bayesh record-event /work "-x" "echo two"
 
-    run -0 bash -c 'bayesh infer-cmd /work "" | tr "\0" "\n"'
+    run -0 bayesh infer-cmd /work ""
     assert_output --partial "echo one"
-    run -0 bash -c 'bayesh infer-cmd /work "-x" | tr "\0" "\n"'
+    run -0 bayesh infer-cmd /work "-x"
     assert_line --index 0 "echo two"
 }
 
-@test "infer-cmd terminates each suggestion with NUL" {
+@test "infer-cmd prints one suggestion per line" {
+    bayesh record-event /work "" "echo one"
+    bayesh record-event /work "echo one" "echo two"
+
+    run -0 bash -c 'bayesh infer-cmd /work "" | tr "\n" "|"'
+    assert_output "echo one|echo two|"
+}
+
+@test "infer-cmd --print0 terminates each suggestion with NUL" {
     bayesh record-event /work "" $'for f in x\ndo\n  true\ndone'
     bayesh record-event /work $'for f in x\ndo\n  true\ndone' "echo one"
 
-    run -0 bash -c 'bayesh infer-cmd /work "" | tr "\0" "|"'
+    run -0 bash -c 'bayesh infer-cmd --print0 /work "" | tr "\0" "|"'
     assert_output "for f in x
 do
   true
 done|echo one|"
 }
 
+@test "infer-cmd --print0 takes an empty or flag-like previous command" {
+    bayesh record-event /work "" "echo one"
+    bayesh record-event /work "--print0" "echo two"
+
+    run -0 bash -c 'bayesh infer-cmd --print0 /work "" | tr "\0" "\n"'
+    assert_output --partial "echo one"
+    run -0 bash -c 'bayesh infer-cmd --print0 /work --print0 | tr "\0" "\n"'
+    assert_line --index 0 "echo two"
+}
+
 @test "infer-cmd prints nothing without suggestions" {
     run -0 bash -c 'bayesh infer-cmd /work "" | wc -c'
+    assert_output "0"
+    run -0 bash -c 'bayesh infer-cmd --print0 /work "" | wc -c'
     assert_output "0"
 }
 

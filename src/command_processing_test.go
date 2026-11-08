@@ -19,15 +19,17 @@ func TestFormatSuggestions(t *testing.T) {
 	tests := []struct {
 		name     string
 		cmds     []string
+		sep      string
 		expected string
 	}{
-		{"none", nil, ""},
-		{"each is NUL-terminated", []string{"ls", "cd <ARG>"}, "ls\x00cd \033[94m<ARG>\033[0m\x00"},
-		{"newlines are kept", []string{"for f in *\ndo echo $f\ndone"}, "for f in *\ndo echo $f\ndone\x00"},
+		{"none", nil, "\x00", ""},
+		{"each is terminated", []string{"ls", "cd <ARG>"}, "\n", "ls\ncd \033[94m<ARG>\033[0m\n"},
+		{"each is NUL-terminated", []string{"ls", "cd <ARG>"}, "\x00", "ls\x00cd \033[94m<ARG>\033[0m\x00"},
+		{"newlines are kept", []string{"for f in *\ndo echo $f\ndone"}, "\x00", "for f in *\ndo echo $f\ndone\x00"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if result := FormatSuggestions(tt.cmds); result != tt.expected {
+			if result := FormatSuggestions(tt.cmds, tt.sep); result != tt.expected {
 				t.Errorf("got %q, want %q", result, tt.expected)
 			}
 		})

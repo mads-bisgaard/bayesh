@@ -85,25 +85,22 @@ func main() {
 			{
 				Name: "infer-cmd",
 				// commands are passed as typed: they may be empty, have surrounding
-				// whitespace or start with "-", which the flag parser would mangle
+				// whitespace or start with "-", which the flag parser would mangle.
+				// So --print0 is only recognized before the cwd, which is absolute.
 				SkipFlagParsing: true,
-				Usage:           "Infer command; suggestions are NUL-terminated, for fzf --read0",
-				Arguments: []cli.Argument{
-					&cli.StringArg{
-						Name: "cwd",
-					},
-					&cli.StringArg{
-						Name: "previous-cmd",
-					},
-				},
+				Usage:           "Infer command; --print0 terminates suggestions with NUL instead of newline, for fzf --read0",
+				ArgsUsage:       "[--print0] <cwd> <previous-cmd>",
 				Action: func(ctx context.Context, cmd *cli.Command) error {
-					previous_cmd := cmd.StringArg("previous-cmd")
-					cwd := cmd.StringArg("cwd")
-					inferredCommands, err := core.InferCommands(ctx, cwd, previous_cmd)
+					args, sep := cmd.Args().Slice(), "\n"
+					if len(args) > 0 && args[0] == "--print0" {
+						args, sep = args[1:], "\x00"
+					}
+					args = append(args, "", "") // missing arguments are empty
+					inferredCommands, err := core.InferCommands(ctx, args[0], args[1])
 					if err != nil {
 						return err
 					}
-					fmt.Print(bayesh.FormatSuggestions(inferredCommands))
+					fmt.Print(bayesh.FormatSuggestions(inferredCommands, sep))
 					return nil
 				},
 			},

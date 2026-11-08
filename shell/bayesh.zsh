@@ -37,7 +37,7 @@ if [[ ! -n "$TMUX" ]]; then
     # Suggestions are NUL-terminated, since a command can span several lines.
     function _bayesh_infer_cmd() {
         local token='<ARG>' inferred_cmds chosen_cmd
-        inferred_cmds=$(bayesh infer-cmd "$PWD" "$1")
+        inferred_cmds=$(bayesh infer-cmd --print0 "$PWD" "$1")
         if [[ -n "${BAYESH_AVOID_IF_EMPTY+set}" && -z "${inferred_cmds//[[:space:]$'\0']/}" ]]; then
             return 1
         fi
@@ -131,7 +131,7 @@ function zle-line-init() {
     if _bayesh_is_active; then
         _fzf_tmux_server_post "$BAYESH_SERVER_CONFIG" "first"
         _bayesh_begin_reload
-        bayesh infer-cmd "$PWD" "$_BAYESH_PREVIOUS_CMD" > "$_BAYESH_FIFO" &!
+        bayesh infer-cmd --print0 "$PWD" "$_BAYESH_PREVIOUS_CMD" > "$_BAYESH_FIFO" &!
         _BAYESH_WRITER_PID=$!
     fi
 }

@@ -571,3 +571,22 @@ done'
     wait_until last_event_is 'echo x
 fntool fn_one'
 }
+
+@test "completing in the middle of a multi-line buffer keeps the other lines" {
+    start_tmux
+    open_bayesh one '│'
+    t send-keys -t bayesh:one.0 -l 'fntool f'
+    t send-keys -t bayesh:one.0 M-Enter
+    t send-keys -t bayesh:one.0 -l 'echo x'
+    # the cursor goes to the end of the first line
+    t send-keys -t bayesh:one.0 C-a Left
+
+    t send-keys -t bayesh:one.0 C-Left
+    wait_for_pane bayesh:one.1 'fntool fn_one'
+    t send-keys -t bayesh:one.0 C-Right
+    sleep 0.3
+    t send-keys -t bayesh:one.0 C-e Enter
+
+    wait_until last_event_is 'fntool fn_one
+echo x'
+}
