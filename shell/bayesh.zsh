@@ -34,22 +34,22 @@ if [[ ! -n "$TMUX" ]]; then
 
     # Lets the user pick a suggestion for the command following $1 with fzf, and
     # prints the cursor position followed by the chosen command without tokens.
+    # Suggestions are NUL-terminated, since a command can span several lines.
     function _bayesh_infer_cmd() {
-        token_regex="<ARG>"
-        chosen_cmd=$( 
-        inferred_cmds=$(bayesh infer-cmd "$(pwd)" "$1")
-    
-        if [ "${BAYESH_AVOID_IF_EMPTY+set}" ] && [ -z "$(echo "${inferred_cmds}" | awk '{$1=$1};1')" ]; then
-            exit 1
+        local token='<ARG>' inferred_cmds chosen_cmd
+        inferred_cmds=$(bayesh infer-cmd --print0 "$PWD" "$1")
+        if [[ -n "${BAYESH_AVOID_IF_EMPTY+set}" && -z "${inferred_cmds//[[:space:]$'\0']/}" ]]; then
+            return 1
         fi
-        echo "${inferred_cmds}" | fzf \
+        chosen_cmd=$(print -rn -- "$inferred_cmds" | fzf \
+            --read0 \
             --scheme=history \
             --no-sort \
             --exact \
             --bind="zero:print-query" \
             --bind="ctrl-q:print-query" \
             --ansi \
-            --preview="echo {} | sed -E 's/(${token_regex})//g'" \
+            --preview="printf '%s' {} | sed -E 's/${token}//g'" \
             --border=none \
             --preview-window=border-rounded,up:1:wrap \
             --header="Press Ctrl+q to select query" \
@@ -59,26 +59,19 @@ if [[ ! -n "$TMUX" ]]; then
             --margin=0 \
             --padding=0 \
             --height=30% \
+            --color=alt-bg:237,bg+:239 \
             --no-mouse
         ) || return
 
-        position="${#chosen_cmd}"
-        if echo "${chosen_cmd}" | grep -boq -E "${token_regex}"; then
-            position=$(echo "${chosen_cmd}" | grep -bo -E "${token_regex}" | cut -d: -f1 | head -n1)
-        fi
-        echo "${position}"
-        echo "${chosen_cmd}" | sed -E "s/(${token_regex})//g"
+        print -r -- $(( ${chosen_cmd[(i)${~token}*]} - 1 ))
+        print -r -- "${chosen_cmd//${~token}/}"
     }
 
     function bayesh_infer_cmd() {
-        local cur
-        local result
-        local point
-        
-        cur="${CURSOR}"
-        result=$(_bayesh_infer_cmd "$_BAYESH_PREVIOUS_CMD")
-        line=$(echo "${result}" | tail -n 1);point=$(echo "${result}" | head -n 1)
-        LBUFFER="${LBUFFER}${line}${RBUFFER}"
+        local cur="$CURSOR" result point
+        result=$(_bayesh_infer_cmd "$_BAYESH_PREVIOUS_CMD") || { zle reset-prompt; return 0; }
+        point="${result%%$'\n'*}"
+        LBUFFER+="${result#*$'\n'}"
         zle reset-prompt
         CURSOR=$(( cur + point ))
     }
@@ -139,7 +132,7 @@ function zle-line-init() {
     if _bayesh_is_active; then
         _fzf_tmux_server_post "$BAYESH_SERVER_CONFIG" "first"
         _bayesh_begin_reload
-        bayesh infer-cmd "$PWD" "$_BAYESH_PREVIOUS_CMD" > "$_BAYESH_FIFO" &!
+        bayesh infer-cmd --print0 "$PWD" "$_BAYESH_PREVIOUS_CMD" > "$_BAYESH_FIFO" &!
         _BAYESH_WRITER_PID=$!
     fi
 }

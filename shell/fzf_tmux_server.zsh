@@ -13,8 +13,9 @@ _fzf_tmux_server_start() {
     # before it has finished the initial load can get lost.
     # shellcheck disable=SC2016
     script=(
-        'echo "" | fzf '
+        'true | fzf '
         "--listen "
+        "--read0 "
         '--bind='\''load:unbind(load)+execute-silent(echo "{ \"url\" : \"http://localhost:$FZF_PORT\", \"tmux_pane_id\": \"$TMUX_PANE\" }" > '"$fifo"' & )'\''' 
         "--scheme=history "
         "--no-sort "
@@ -31,6 +32,9 @@ _fzf_tmux_server_start() {
         "--border=rounded"
         "--style=minimal"
         "--no-scrollbar"
+        # Stripes every other item, so a multi-line command reads as one item.
+        # Unlike --gap, this costs no lines.
+        "--color=alt-bg:237,bg+:239"
     )
 
     tmux split-window -t "$TMUX_PANE" -h -l 35% -d "${script[*]}"

@@ -15,6 +15,27 @@ func TestAnsiColorTokens(t *testing.T) {
 	}
 }
 
+func TestFormatSuggestions(t *testing.T) {
+	tests := []struct {
+		name     string
+		cmds     []string
+		sep      string
+		expected string
+	}{
+		{"none", nil, "\x00", ""},
+		{"each is terminated", []string{"ls", "cd <ARG>"}, "\n", "ls\ncd \033[94m<ARG>\033[0m\n"},
+		{"each is NUL-terminated", []string{"ls", "cd <ARG>"}, "\x00", "ls\x00cd \033[94m<ARG>\033[0m\x00"},
+		{"newlines are kept", []string{"for f in *\ndo echo $f\ndone"}, "\x00", "for f in *\ndo echo $f\ndone\x00"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if result := FormatSuggestions(tt.cmds, tt.sep); result != tt.expected {
+				t.Errorf("got %q, want %q", result, tt.expected)
+			}
+		})
+	}
+}
+
 func TestTemplate(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -43,6 +64,8 @@ func TestTemplate(t *testing.T) {
 		{"variable after =", map[string]int{"make U=1": 1, "make U=2": 1, "make U=3": 1}, "make U=4 all", "make U=<ARG> all"},
 		{"assignment", map[string]int{"P=1 serve": 1, "P=2 serve": 1, "P=3 serve": 1}, "P=4 serve", "P=<ARG> serve"},
 		{"pipeline", map[string]int{"cat a": 1, "cat b": 1, "cat c": 1}, "cat d | sort", "cat <ARG> | sort"},
+		{"multi-line command", map[string]int{"cat a": 1, "cat b": 1, "cat c": 1}, "for f in x\ndo\n  cat d\ndone", "for f in x\ndo\n  cat <ARG>\ndone"},
+		{"multi-line string", nil, "echo 'a\nb'", "echo '<ARG>'"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

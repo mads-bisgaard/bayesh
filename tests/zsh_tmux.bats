@@ -496,3 +496,133 @@ assert_single_completion() {
 
     [[ ! -e "${TEST_DIR}/curl-calls" ]]
 }
+
+# run_loop <window>: runs a for loop typed over several lines
+run_loop() {
+    t send-keys -t "bayesh:$1.0" -l 'for f in x'
+    t send-keys -t "bayesh:$1.0" Enter
+    t send-keys -t "bayesh:$1.0" -l 'do true'
+    t send-keys -t "bayesh:$1.0" Enter
+    run_cmd "$1" 'done'
+}
+
+# last_event: the most recently recorded command
+last_event() {
+    sqlite3 "${TEST_DIR}/bayesh/bayesh.db" \
+        "select current_cmd from events order by last_modified desc limit 1" 2> /dev/null
+}
+
+last_event_is() {
+    [[ "$(last_event)" == "$1" ]]
+}
+
+@test "a multi-line suggestion is a single item" {
+    start_tmux
+    run_loop one
+    run_cmd one 'echo one'
+    run_loop one
+    events_are ' -> for f in x
+do true
+done
+for f in x
+do true
+done -> echo one
+echo one -> for f in x
+do true
+done'
+    # echo one follows the loop, so it is ranked first
+    open_bayesh one 'echo one'
+    pane_matches bayesh:one.1 'do true'
+
+    t send-keys -t bayesh:one.0 C-Down
+    t send-keys -t bayesh:one.0 C-Right
+    sleep 0.3
+    t send-keys -t bayesh:one.0 Enter
+
+    events_are ' -> for f in x
+do true
+done
+for f in x
+do true
+done -> echo one
+echo one -> for f in x
+do true
+done
+for f in x
+do true
+done -> for f in x
+do true
+done'
+}
+
+@test "Ctrl-Left offers completions for a multi-line buffer" {
+    start_tmux
+    open_bayesh one '│'
+    t send-keys -t bayesh:one.0 -l 'echo x'
+    t send-keys -t bayesh:one.0 M-Enter
+    t send-keys -t bayesh:one.0 -l 'fntool f'
+
+    t send-keys -t bayesh:one.0 C-Left
+    wait_for_pane bayesh:one.1 'fntool fn_one'
+    t send-keys -t bayesh:one.0 C-Right
+    sleep 0.3
+    t send-keys -t bayesh:one.0 C-e Enter
+
+    wait_until last_event_is 'echo x
+fntool fn_one'
+}
+
+@test "completing in the middle of a multi-line buffer keeps the other lines" {
+    start_tmux
+    open_bayesh one '│'
+    t send-keys -t bayesh:one.0 -l 'fntool f'
+    t send-keys -t bayesh:one.0 M-Enter
+    t send-keys -t bayesh:one.0 -l 'echo x'
+    # the cursor goes to the end of the first line
+    t send-keys -t bayesh:one.0 C-a Left
+
+    t send-keys -t bayesh:one.0 C-Left
+    wait_for_pane bayesh:one.1 'fntool fn_one'
+    t send-keys -t bayesh:one.0 C-Right
+    sleep 0.3
+    t send-keys -t bayesh:one.0 C-e Enter
+
+    wait_until last_event_is 'fntool fn_one
+echo x'
+}
+
+# is_current <pane> <text>: the line showing <text> has fzf's pointer
+is_current() {
+    t capture-pane -p -t "$1" | grep -F -- "$2" | grep -q '▌'
+}
+
+# stripe_of <pane> <text>: the background escape of the line showing <text>,
+# or nothing when it has the default background
+stripe_of() {
+    t capture-pane -p -e -t "$1" | grep -F -- "$2" | grep -oE '\[48;5;[0-9]+m' | head -n 1
+}
+
+@test "every line of a multi-line suggestion shares one stripe" {
+    start_tmux
+    run_loop one
+    run_cmd one 'echo one'
+    run_loop one
+    run_cmd one 'echo two'
+    open_bayesh one 'echo two'
+    # Moves the highlight off the loop, the first item, to echo two, the third
+    t send-keys -t bayesh:one.0 C-Down
+    t send-keys -t bayesh:one.0 C-Down
+    wait_until is_current bayesh:one.1 'echo two'
+
+    # Items alternate between no stripe and a stripe, so the lines of the loop
+    # have none, where striping every line would give 'do true' one
+    [[ -z "$(stripe_of bayesh:one.1 'for f in x')" ]]
+    [[ -z "$(stripe_of bayesh:one.1 'do true')" ]]
+    [[ -z "$(stripe_of bayesh:one.1 'done')" ]]
+    [[ -n "$(stripe_of bayesh:one.1 'echo one')" ]]
+
+    # The stripe stands out from the terminal background, and the current item
+    # stands out from the stripe
+    [[ "$(stripe_of bayesh:one.1 'echo one')" == '[48;5;237m' ]]
+    [[ "$(stripe_of bayesh:one.1 'echo two')" == '[48;5;239m' ]]
+}

@@ -229,3 +229,14 @@ func isQuoted(w *syntax.Word) bool {
 func source(cmd string, node syntax.Node) string {
 	return cmd[node.Pos().Offset():node.End().Offset()]
 }
+
+// FormatSuggestions colors each suggestion and terminates it with sep. A sep
+// of "\x00" is for fzf --read0, so a multi-line command is one item.
+func FormatSuggestions(cmds []string, sep string) string {
+	var b strings.Builder
+	for _, cmd := range cmds {
+		b.WriteString(AnsiColorTokens(cmd))
+		b.WriteString(sep)
+	}
+	return b.String()
+}
