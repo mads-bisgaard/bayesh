@@ -37,7 +37,8 @@ func benchHistory(n int) []string {
 }
 
 // newBenchCore returns a core whose database holds the events of cmds, spread
-// over 50 directories. They are recorded in one transaction to save time.
+// over 50 directories and the past year. They are recorded in one transaction
+// to save time.
 func newBenchCore(b *testing.B, cmds []string) *Core {
 	b.Helper()
 	core, _ := setupCoreWithTempDB(b)
@@ -47,8 +48,11 @@ func newBenchCore(b *testing.B, cmds []string) *Core {
 		b.Fatal(err)
 	}
 	queries := New(core.db).WithTx(tx)
+	now := time.Now()
+	year := 365 * 24 * time.Hour
 	for i := 1; i < len(cmds); i++ {
-		if err := recordEvent(ctx, queries, time.Now(), fmt.Sprintf("/project/%d", i%50), cmds[i-1], cmds[i]); err != nil {
+		at := now.Add(-year + year*time.Duration(i)/time.Duration(len(cmds)))
+		if err := recordEvent(ctx, queries, at, fmt.Sprintf("/project/%d", i%50), cmds[i-1], cmds[i]); err != nil {
 			b.Fatal(err)
 		}
 	}
