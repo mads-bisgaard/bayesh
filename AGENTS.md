@@ -43,6 +43,17 @@ make manual-test-stop
 Give Bayesh a moment to respond before capturing a pane. To use the session
 interactively, run `tmux -L bayesh-manual-test attach`.
 
+## Commits
+
+Commit with the git identity configured in the environment, which is the
+developer's. Never set or override it (no `git config user.*`, no
+`git -c user.*`); if none is configured, ask the developer to configure it.
+Credit the agent with a trailer at the end of the commit message, e.g.:
+
+```
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 
 # Documentation of software arcitechture and design
 Under [bayesh-dev-notes](./bayesh-dev-notes) is an Obsidean vault with software design and architecture docs.

@@ -6,6 +6,9 @@
   },
   "updateRemoteUserUID": true,
   "remoteUser": "ubuntu",
+  "mounts": [
+    "source=${localEnv:HOME}/.gitconfig,target=/home/ubuntu/.gitconfig-host,type=bind,readonly"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [

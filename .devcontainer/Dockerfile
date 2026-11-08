@@ -61,7 +61,10 @@ RUN git clone --depth 1 https://github.com/ohmyzsh/ohmyzsh.git "${HOME}/.oh-my-z
 
 RUN curl -fsSL https://claude.ai/install.sh | bash
 
-RUN git config --global --add safe.directory /workspaces/bayesh
+# The developer's identity comes from their host ~/.gitconfig, which
+# devcontainer.json mounts at ~/.gitconfig-host. git skips a missing include.
+RUN git config --global --add safe.directory /workspaces/bayesh \
+    && git config --global include.path /home/ubuntu/.gitconfig-host
 
 WORKDIR /workspaces/bayesh
 CMD ["/bin/zsh"]
