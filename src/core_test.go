@@ -86,6 +86,8 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 	currentCmd := "git status"
 
 	// Record the event for the first time
+	start := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	core.now = func() time.Time { return start }
 	if err := core.RecordEvent(ctx, cwd, previousCmd, currentCmd); err != nil {
 		t.Fatalf("First RecordEvent failed: %v", err)
 	}
@@ -101,14 +103,16 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 		}
 	}()
 
-	var initialTimestamp time.Time
+	var initialTimestamp int64
 	err = db.QueryRow("SELECT last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, previousCmd, currentCmd).Scan(&initialTimestamp)
 	if err != nil {
 		t.Fatalf("Failed to query for initial timestamp: %v", err)
 	}
 
-	// Wait a moment to ensure the timestamp will be different
-	time.Sleep(2 * time.Millisecond)
+	if initialTimestamp != start.Unix() {
+		t.Errorf("expected last_modified to be %d, got %d", start.Unix(), initialTimestamp)
+	}
+	core.now = func() time.Time { return start.Add(time.Minute) }
 
 	// Record the same event again
 	if err := core.RecordEvent(ctx, cwd, previousCmd, currentCmd); err != nil {
@@ -117,7 +121,7 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 
 	// Verify the event was updated
 	var updatedCounter int
-	var updatedTimestamp time.Time
+	var updatedTimestamp int64
 	err = db.QueryRow("SELECT event_counter, last_modified FROM events WHERE cwd = ? AND previous_cmd = ? AND current_cmd = ?", cwd, previousCmd, currentCmd).Scan(&updatedCounter, &updatedTimestamp)
 	if err != nil {
 		t.Fatalf("Failed to query for updated event: %v", err)
@@ -126,8 +130,8 @@ func TestRecordEvent_ExistingEvent(t *testing.T) {
 	if updatedCounter != 2 {
 		t.Errorf("expected event_counter to be 2, got %d", updatedCounter)
 	}
-	if !updatedTimestamp.After(initialTimestamp) {
-		t.Errorf("expected updated timestamp %v to be after initial timestamp %v", updatedTimestamp, initialTimestamp)
+	if want := start.Add(time.Minute).Unix(); updatedTimestamp != want {
+		t.Errorf("expected updated timestamp %d, got %d", want, updatedTimestamp)
 	}
 }
 
@@ -178,6 +182,35 @@ func TestInferCommandsTemplates(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want := []string{"vim <ARG>"}; !slices.Equal(got, want) {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestInferCommandsFrecency(t *testing.T) {
+	core, _ := setupCoreWithTempDB(t)
+	ctx := context.Background()
+	now := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
+	record := func(age time.Duration, current string, n int) {
+		core.now = func() time.Time { return now.Add(-age) }
+		for range n {
+			if err := core.RecordEvent(ctx, "/a", "git status", current); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	day := 24 * time.Hour
+	record(30*day, "make", 2)
+	record(30*day, "htop", 3)
+	record(2*day, "ls", 2)
+	record(time.Minute, "pwd", 2)
+	core.now = func() time.Time { return now }
+	// Of equal counts, the more recent ranks first: pwd 2*4, ls 2*0.5, make 2*0.25.
+	// The recent ls also overtakes the somewhat more frequent old htop: 3*0.25.
+	got, err := core.InferCommands(ctx, "/a", "git status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"pwd", "ls", "htop", "make"}; !slices.Equal(got, want) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
@@ -304,7 +337,7 @@ func TestInferCommandsDuringLargeWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer readerDB.Close()
-	reader := &Core{Settings: core.Settings, db: readerDB}
+	reader := &Core{Settings: core.Settings, db: readerDB, now: time.Now}
 	got, err := reader.InferCommands(ctx, "/a", "ls")
 	if err != nil {
 		t.Fatalf("InferCommands during a large write: %v", err)

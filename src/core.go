@@ -31,6 +31,8 @@ func (OsFs) MkdirAll(path string, perm os.FileMode) error {
 type Core struct {
 	Settings *Settings
 	db       *sql.DB
+	// now returns the current time, which tests can set
+	now func() time.Time
 }
 
 func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
@@ -42,6 +44,7 @@ func NewCore(ctx context.Context, settings *Settings) (*Core, error) {
 	return &Core{
 		Settings: settings,
 		db:       db,
+		now:      time.Now,
 	}, nil
 }
 
@@ -55,19 +58,20 @@ func (c *Core) Close() error {
 
 func (c *Core) InferCommands(ctx context.Context, cwd string, previousCmd string) ([]string, error) {
 	queries := New(c.db)
+	now := c.now()
 	previous, err := c.template(ctx, previousCmd)
 	if err != nil {
 		return nil, err
 	}
-	byCwd, err := queries.TemplateCounts(ctx, &cwd, nil)
+	byCwd, err := queries.TemplateCounts(ctx, now, &cwd, nil)
 	if err != nil {
 		return nil, err
 	}
-	byPrevious, err := queries.TemplateCounts(ctx, nil, &previous)
+	byPrevious, err := queries.TemplateCounts(ctx, now, nil, &previous)
 	if err != nil {
 		return nil, err
 	}
-	byBoth, err := queries.TemplateCounts(ctx, &cwd, &previous)
+	byBoth, err := queries.TemplateCounts(ctx, now, &cwd, &previous)
 	if err != nil {
 		return nil, err
 	}
@@ -93,17 +97,16 @@ func (c *Core) RecordEvent(ctx context.Context, cwd string, previousCmd string, 
 			log.Fatalf("Error rolling back transaction: %v", err)
 		}
 	}()
-	if err := recordEvent(ctx, New(c.db).WithTx(tx), cwd, previousCmd, currentCmd); err != nil {
+	if err := recordEvent(ctx, New(c.db).WithTx(tx), c.now(), cwd, previousCmd, currentCmd); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-// recordEvent stores the commands as typed together with their templates. When
+// recordEvent stores the commands as typed, run at time now, together with their templates. When
 // the new run changes whether an argument slot is folded, the stored templates
 // of the commands with that slot are updated too.
-func recordEvent(ctx context.Context, queries *Queries, cwd string, previousCmd string, currentCmd string) error {
-	now := time.Now()
+func recordEvent(ctx context.Context, queries *Queries, now time.Time, cwd string, previousCmd string, currentCmd string) error {
 	t := newTemplater()
 	if err := loadSlots(ctx, queries, t, previousCmd, currentCmd); err != nil {
 		return err
