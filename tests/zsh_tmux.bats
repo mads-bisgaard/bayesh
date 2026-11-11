@@ -203,16 +203,16 @@ echo one -> echo two'
     assert_output "BAYESH_DIR=${TEST_DIR}/bayesh"
 }
 
-@test "the bayesh pane opens to the right of the shell" {
+@test "the bayesh pane opens below the shell" {
     start_tmux
     open_bayesh one '│'
 
-    run t display-message -p -t bayesh:one.1 '#{pane_at_right} #{pane_at_top} #{pane_at_bottom}'
+    run t display-message -p -t bayesh:one.1 '#{pane_at_bottom} #{pane_at_left} #{pane_at_right}'
     assert_output '1 1 1'
-    run t display-message -p -t bayesh:one.0 '#{pane_at_left} #{pane_at_right}'
+    run t display-message -p -t bayesh:one.0 '#{pane_at_top} #{pane_at_bottom}'
     assert_output '1 0'
-    # a side panel, narrower than the shell
-    (( $(t display-message -p -t bayesh:one.1 '#{pane_width}') * 100 <= 35 * $(t display-message -p -t bayesh:one '#{window_width}') ))
+    # a bottom panel, a quarter of the window high
+    (( $(t display-message -p -t bayesh:one.1 '#{pane_height}') * 100 <= 25 * $(t display-message -p -t bayesh:one '#{window_height}') ))
 }
 
 @test "selecting a suggestion puts it in the prompt" {

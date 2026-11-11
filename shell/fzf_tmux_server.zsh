@@ -37,7 +37,7 @@ _fzf_tmux_server_start() {
         "--color=alt-bg:237,bg+:239"
     )
 
-    tmux split-window -t "$TMUX_PANE" -h -l 35% -d "${script[*]}"
+    tmux split-window -t "$TMUX_PANE" -v -l 25% -d "${script[*]}"
 
     cat "$fifo"
     rm "$fifo"
