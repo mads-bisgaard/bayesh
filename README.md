@@ -30,7 +30,7 @@ Make sure to [integrate](#shell-integration) Bayesh into your shell.
   ```
 
 ## How to Use Bayesh 
-Once inside a [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) session (achieved by running `tmux` in your zsh shell), you open/close Bayesh by hitting `Ctrl-e` in your shell. Bayesh opens an fzf pane to the right of your shell. Once open, 
+Once inside a [tmux](https://github.com/tmux/tmux/wiki/Installing#installing-tmux) session (achieved by running `tmux` in your zsh shell), you open/close Bayesh by hitting `Ctrl-e` in your shell. Bayesh opens an fzf pane below your shell. Once open, 
 - move through the fzf pane with `Ctrl-<up arrow>` and `Ctrl-<down arrow>`.  
 - select a suggestion with `Ctrl-<right arrow>`. The fzf pane then shows your shell's native completions for the selected command, and selecting again continues from there.  
 - show your shell's native completions for the current command line, at the cursor, with `Ctrl-<left arrow>`.  
