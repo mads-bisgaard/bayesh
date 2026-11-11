@@ -441,15 +441,17 @@ func TestSlotStatistics(t *testing.T) {
 	if n, err := queries.SlotDistinct(ctx, "cd#1"); err != nil || n != 2 {
 		t.Errorf("SlotDistinct(cd#1) = %d, %v, want 2", n, err)
 	}
-	// last_modified is when a value was last run, so stale values can be cleaned up
+	// last_modified is when a value was last run (unix time, like in the events
+	// table), so stale values can be cleaned up
 	for _, v := range []struct {
 		slot, value string
-		want        time.Time
-	}{{"cd#1", "a", start.Add(2 * time.Hour)}, {"cd#1", "b", start.Add(time.Hour)}} {
-		var got time.Time
-		err := queries.db.QueryRowContext(ctx, "SELECT "+colLastModified+" FROM "+slotsTable+" WHERE "+colSlot+" = ? AND "+colValue+" = ?", v.slot, v.value).Scan(&got)
-		if err != nil || !got.Equal(v.want) {
-			t.Errorf("last_modified of %q in %q = %v, %v, want %v", v.value, v.slot, got, err, v.want)
+		want        int64
+	}{{"cd#1", "a", start.Add(2 * time.Hour).Unix()}, {"cd#1", "b", start.Add(time.Hour).Unix()}} {
+		var got int64
+		var typ string
+		err := queries.db.QueryRowContext(ctx, "SELECT "+colLastModified+", typeof("+colLastModified+") FROM "+slotsTable+" WHERE "+colSlot+" = ? AND "+colValue+" = ?", v.slot, v.value).Scan(&got, &typ)
+		if err != nil || got != v.want || typ != "integer" {
+			t.Errorf("last_modified of %q in %q = %v (%s), %v, want integer %v", v.value, v.slot, got, typ, err, v.want)
 		}
 	}
 }

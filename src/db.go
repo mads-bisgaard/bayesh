@@ -69,7 +69,7 @@ func (q *Queries) CreateSchema(ctx context.Context) error {
         ` + colSlot + ` TEXT,
         ` + colValue + ` TEXT,
         ` + colRuns + ` INTEGER,
-        ` + colLastModified + ` DATETIME,
+        ` + colLastModified + ` INTEGER, -- unix time
         PRIMARY KEY (` + colSlot + `, ` + colValue + `)
     );`
 
@@ -200,7 +200,7 @@ func (q *Queries) AddSlotRuns(ctx context.Context, slot, value string, n int, no
 	query := `
     INSERT INTO ` + slotsTable + ` (` + colSlot + `, ` + colValue + `, ` + colRuns + `, ` + colLastModified + `) VALUES (?, ?, ?, ?)
     ON CONFLICT (` + colSlot + `, ` + colValue + `) DO UPDATE SET ` + colRuns + ` = ` + colRuns + ` + excluded.` + colRuns + `, ` + colLastModified + ` = excluded.` + colLastModified
-	_, err := q.db.ExecContext(ctx, query, slot, value, n, now)
+	_, err := q.db.ExecContext(ctx, query, slot, value, n, now.Unix())
 	return err
 }
 
