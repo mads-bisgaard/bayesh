@@ -35,18 +35,26 @@ function _bayesh_compadd() {
         dirsuf=1
     fi
 
-    local hit dsuf
+    local hit dsuf line
     local pre=${LBUFFER%${(b)IPREFIX}${(b)PREFIX}}
     local post=${RBUFFER#${(b)SUFFIX}${(b)ISUFFIX}}
     for hit in "${__bayesh_hits[@]}"; do
         (( dirsuf )) && [[ -d $hit ]] && dsuf=/ || dsuf=
-        print -rN -- "$pre$QIPREFIX$IPREFIX$apre$hpre$hit$dsuf$hsuf$asuf$ISUFFIX$QISUFFIX$post"
+        # zsh lists a match once per group, but the pane is one list, in which
+        # matches added several times (e.g. git add's src/, for every file
+        # below it) would be duplicate lines
+        line="$pre$QIPREFIX$IPREFIX$apre$hpre$hit$dsuf$hsuf$asuf$ISUFFIX$QISUFFIX$post"
+        (( ${+_bayesh_printed[$line]} )) && continue
+        _bayesh_printed[$line]=
+        print -rN -- "$line"
     done
     return 0
 }
 
 function _bayesh_capture() {
     exec < /dev/null > "$_BAYESH_FIFO" 2> /dev/null
+    # the lines printed so far
+    typeset -A _bayesh_printed
     if (( ! ${+_comps} )); then
         autoload -Uz compinit
         compinit -u -D

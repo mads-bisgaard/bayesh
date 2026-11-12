@@ -35,6 +35,8 @@ _fntool() { compadd fn_one fn_two }
 compdef _fntool fntool
 _slowtool() { sleep 3; compadd slow_one }
 compdef _slowtool slowtool
+_duptool() { compadd -J first same; compadd -J second same }
+compdef _duptool duptool
 source $ZDOTDIR/rc-common
 EOF
 }
@@ -333,6 +335,11 @@ assert_single_completion() {
     touch "${TEST_DIR}/work/archive.tar"
     start_tmux
     assert_single_completion 'tar xf arch' 'tar xf archive.tar'
+}
+
+@test "a completion is listed once when it is added in several groups" {
+    start_tmux
+    assert_single_completion 'duptool s' 'duptool same'
 }
 
 @test "completion happens at the cursor, not at the end of the line" {
