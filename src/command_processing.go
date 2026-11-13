@@ -20,14 +20,23 @@ const (
 )
 
 // An argument slot is folded into <ARG> once it has seen minSlotValues
-// distinct values. Values run at least minLiteralCount times stay literal.
-// They are variables so the replay test (replay_test.go) can compare settings.
-// minLiteralCount = 6 was chosen from manual use: values become suggestable as
-// typed sooner, for a small cost in the replay's top-5 (see ARGUMENT_TEMPLATES.md).
+// distinct values. A value stays literal if it was run at least
+// minLiteralCount times plus minLiteralPercent percent of the runs of its
+// slot, so that in a slot taking many values only those making up a large
+// share are suggested as typed. For a new slot, minLiteralCount dominates.
+// They are variables so the replay test (replay_test.go) can compare settings
+// (see ARGUMENT_TEMPLATES.md).
 var (
-	minSlotValues   = 3
-	minLiteralCount = 6
+	minSlotValues     = 3
+	minLiteralCount   = 6
+	minLiteralPercent = 10
 )
+
+// literalRuns returns the number of runs a value needs to stay literal in a
+// slot with total runs. It is computed in integers, so that it is exact.
+func literalRuns(total int) int {
+	return minLiteralCount + (minLiteralPercent*total+99)/100
+}
 
 func AnsiColorTokens(cmds string) string {
 	return strings.ReplaceAll(cmds, string(ARG), string(CYAN+ARG+RESET))
@@ -44,6 +53,7 @@ type arg struct {
 // slotStats is what templating needs to know about an argument slot.
 type slotStats struct {
 	distinct int            // the number of distinct values seen
+	total    int            // the number of runs of all values
 	runs     map[string]int // the number of runs of each known value
 }
 
@@ -69,6 +79,8 @@ func newTemplater() *templater {
 
 // add counts n runs of cmd. It returns the names of the commands for which an
 // argument slot changed whether it is folded, i.e. the commands whose templates may change.
+// The runs of a slot raise the runs its other values need to stay literal, so
+// the values which may lose that must be known, see loadThresholdValues.
 func (t *templater) add(cmd string, n int) []string {
 	var changed []string
 	for _, a := range t.parse(cmd) {
@@ -80,18 +92,31 @@ func (t *templater) add(cmd string, n int) []string {
 			s = &slotStats{runs: map[string]int{}}
 			t.slots[a.slot] = s
 		}
-		wasVariable, wasLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= minLiteralCount
+		before := literalRuns(s.total)
+		wasVariable, wasLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= before
 		if s.runs[a.value] == 0 {
 			s.distinct++
 		}
 		s.runs[a.value] += n
-		isVariable, isLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= minLiteralCount
-		if (wasVariable != isVariable || (isVariable && wasLiteral != isLiteral)) && !slices.Contains(changed, a.name) {
+		s.total += n
+		after := literalRuns(s.total)
+		isVariable, isLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= after
+		if (wasVariable != isVariable || (isVariable && (wasLiteral != isLiteral || before < after && s.hasOtherRuns(a.value, before, after)))) && !slices.Contains(changed, a.name) {
 			changed = append(changed, a.name)
 		}
 	}
 	clear(t.templates)
 	return changed
+}
+
+// hasOtherRuns reports whether a known value other than value has at least lo and fewer than hi runs.
+func (s *slotStats) hasOtherRuns(value string, lo, hi int) bool {
+	for v, runs := range s.runs {
+		if lo <= runs && runs < hi && v != value {
+			return true
+		}
+	}
+	return false
 }
 
 func (t *templater) Template(cmd string) string {
@@ -118,7 +143,7 @@ func (t *templater) fold(a arg) bool {
 		return true
 	}
 	s := t.slots[a.slot]
-	return s != nil && s.distinct >= minSlotValues && s.runs[a.value] < minLiteralCount
+	return s != nil && s.distinct >= minSlotValues && s.runs[a.value] < literalRuns(s.total)
 }
 
 func (t *templater) parse(cmd string) []arg {

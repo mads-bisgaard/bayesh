@@ -1,7 +1,10 @@
 package bayesh
 
 import (
+	"math/rand"
 	"slices"
+	"strconv"
+	"strings"
 	"testing"
 
 	"mvdan.cc/sh/v3/syntax"
@@ -53,9 +56,12 @@ func TestTemplate(t *testing.T) {
 		{"slot with few values", map[string]int{"cd a": 1, "cd b": 1}, "cd c", "cd c"},
 		{"variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd d", "cd <ARG>"},
 		{"seen value in variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd a", "cd <ARG>"},
-		{"frequent value stays literal", map[string]int{"make build": 6, "make x": 1, "make y": 1}, "make build", "make build"},
-		{"less frequent value is folded", map[string]int{"make build": 5, "make x": 1, "make y": 1}, "make build", "make <ARG>"},
-		{"rare value is folded", map[string]int{"make build": 6, "make x": 1, "make y": 1}, "make z", "make <ARG>"},
+		// A value stays literal with at least 6 runs plus 10% of its slot's runs
+		{"frequent value stays literal", map[string]int{"make build": 7, "make x": 1, "make y": 1}, "make build", "make build"},  // 7 >= 6 + 10% of 9
+		{"less frequent value is folded", map[string]int{"make build": 6, "make x": 1, "make y": 1}, "make build", "make <ARG>"}, // 6 < 6 + 10% of 8
+		{"rare value is folded", map[string]int{"make build": 8, "make x": 1, "make y": 1}, "make z", "make <ARG>"},
+		{"value with a small share is folded", withValues(map[string]int{"git add a": 9}, "git add f", 30), "git add a", "git add <ARG>"},  // 9 < 6 + 10% of 39
+		{"value with a large share stays literal", withValues(map[string]int{"git add a": 10}, "git add f", 30), "git add a", "git add a"}, // 10 >= 6 + 10% of 40
 		{"value contained in other words", map[string]int{"ls a": 1, "ls b": 1, "ls c": 1}, "ls s", "ls <ARG>"},
 		{"slots are per position", map[string]int{"cp a x": 1, "cp b x": 1, "cp c x": 1}, "cp d x", "cp <ARG> x"},
 		{"flags are never folded", map[string]int{"ls -a": 1, "ls -b": 1, "ls -c": 1}, "ls -d", "ls -d"},
@@ -80,6 +86,14 @@ func TestTemplate(t *testing.T) {
 	}
 }
 
+// withValues adds runs of n distinct commands prefix0, prefix1, ... to history.
+func withValues(history map[string]int, prefix string, n int) map[string]int {
+	for i := range n {
+		history[prefix+strconv.Itoa(i)] = 1
+	}
+	return history
+}
+
 func TestAddReportsChangedFolding(t *testing.T) {
 	templater := newTemplater()
 	steps := []struct {
@@ -98,16 +112,59 @@ func TestAddReportsChangedFolding(t *testing.T) {
 			t.Errorf("add(%q) = %q, want %q", s.cmd, got, s.want)
 		}
 	}
-	for range minLiteralCount - 2 {
+	// cd a needs 6 runs plus 10% of the runs of cd#1, which has 5 runs
+	for range 6 {
 		if got := templater.add("cd a", 1); got != nil {
 			t.Fatalf("add(%q) = %q before cd a is frequent", "cd a", got)
 		}
 	}
-	if got := templater.add("cd a", 1); !slices.Equal(got, []string{"cd"}) {
+	if got := templater.add("cd a", 1); !slices.Equal(got, []string{"cd"}) { // 8 >= 6 + 10% of 12
 		t.Errorf("add(%q) = %q when it becomes frequent, want [cd]", "cd a", got)
 	}
 	if got := templater.Template("cd a"); got != "cd a" {
 		t.Errorf("Template(%q) = %q after add", "cd a", got)
+	}
+	// Runs of other values lower the share of cd a until it is folded again
+	for i := range 8 { // 8 >= 6 + 10% of 20
+		if got := templater.add("cd b"+strconv.Itoa(i), 1); got != nil {
+			t.Fatalf("add(%q) = %q while cd a is frequent", "cd b"+strconv.Itoa(i), got)
+		}
+	}
+	if got := templater.add("cd b8", 1); !slices.Equal(got, []string{"cd"}) { // 8 < 6 + 10% of 21
+		t.Errorf("add(%q) = %q when cd a becomes rare, want [cd]", "cd b8", got)
+	}
+	if got := templater.Template("cd a"); got != "cd <ARG>" {
+		t.Errorf("Template(%q) = %q after other values were added", "cd a", got)
+	}
+}
+
+// TestAddReportsAllChangedFolding checks on random commands that add reports
+// exactly the names of the commands whose templates changed.
+func TestAddReportsAllChangedFolding(t *testing.T) {
+	rng := rand.New(rand.NewSource(1))
+	templater := newTemplater()
+	var seen []string
+	for range 2000 {
+		cmd := []string{"cd ", "make ", "git checkout "}[rng.Intn(3)] + strconv.Itoa(int(rng.ExpFloat64()*3))
+		before := map[string]string{}
+		for _, c := range seen {
+			before[c] = templater.Template(c)
+		}
+		got := templater.add(cmd, 1)
+		var want []string
+		for _, c := range seen {
+			if name, _, _ := strings.Cut(c, " "); templater.Template(c) != before[c] && !slices.Contains(want, name) {
+				want = append(want, name)
+			}
+		}
+		if !slices.Contains(seen, cmd) {
+			seen = append(seen, cmd)
+		}
+		slices.Sort(got)
+		slices.Sort(want)
+		if !slices.Equal(got, want) {
+			t.Fatalf("add(%q) = %q, want %q", cmd, got, want)
+		}
 	}
 }
 
