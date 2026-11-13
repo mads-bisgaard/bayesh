@@ -415,8 +415,8 @@ func TestTemplateCountsUsesCoveringIndexes(t *testing.T) {
 func TestSlotStatistics(t *testing.T) {
 	queries, _ := setupTestDB(t)
 	ctx := context.Background()
-	if n, err := queries.SlotDistinct(ctx, "cd#1"); err != nil || n != 0 {
-		t.Fatalf("SlotDistinct of an unseen slot = %d, %v", n, err)
+	if distinct, total, err := queries.SlotStats(ctx, "cd#1"); err != nil || distinct != 0 || total != 0 {
+		t.Fatalf("SlotStats of an unseen slot = %d, %d, %v", distinct, total, err)
 	}
 	if n, err := queries.SlotRuns(ctx, "cd#1", "a"); err != nil || n != 0 {
 		t.Fatalf("SlotRuns of an unseen value = %d, %v", n, err)
@@ -438,8 +438,16 @@ func TestSlotStatistics(t *testing.T) {
 			t.Errorf("SlotRuns(%q, %q) = %d, %v, want %d", v.slot, v.value, n, err, v.want)
 		}
 	}
-	if n, err := queries.SlotDistinct(ctx, "cd#1"); err != nil || n != 2 {
-		t.Errorf("SlotDistinct(cd#1) = %d, %v, want 2", n, err)
+	if distinct, total, err := queries.SlotStats(ctx, "cd#1"); err != nil || distinct != 2 || total != 4 {
+		t.Errorf("SlotStats(cd#1) = %d, %d, %v, want 2, 4", distinct, total, err)
+	}
+	for _, v := range []struct {
+		lo, hi int
+		want   map[string]int
+	}{{1, 3, map[string]int{"b": 1}}, {1, 4, map[string]int{"a": 3, "b": 1}}, {2, 3, map[string]int{}}} {
+		if got, err := queries.SlotValuesWithRuns(ctx, "cd#1", v.lo, v.hi); err != nil || !maps.Equal(got, v.want) {
+			t.Errorf("SlotValuesWithRuns(cd#1, %d, %d) = %v, %v, want %v", v.lo, v.hi, got, err, v.want)
+		}
 	}
 	// last_modified is when a value was last run (unix time, like in the events
 	// table), so stale values can be cleaned up
@@ -452,6 +460,23 @@ func TestSlotStatistics(t *testing.T) {
 		err := queries.db.QueryRowContext(ctx, "SELECT "+colLastModified+", typeof("+colLastModified+") FROM "+slotsTable+" WHERE "+colSlot+" = ? AND "+colValue+" = ?", v.slot, v.value).Scan(&got, &typ)
 		if err != nil || got != v.want || typ != "integer" {
 			t.Errorf("last_modified of %q in %q = %v (%s), %v, want integer %v", v.value, v.slot, got, typ, err, v.want)
+		}
+	}
+}
+
+// TestSlotQueriesUseIndex checks that the slot queries made for every
+// recorded command read only the slot's entries in an index, and never its
+// rows, since a slot such as cd#1 can have many values.
+func TestSlotQueriesUseIndex(t *testing.T) {
+	_, db := setupTestDB(t)
+	for query, args := range map[string][]any{slotStatsQuery: {"cd#1"}, slotValuesWithRunsQuery: {"cd#1", 1, 2}} {
+		var id, parent, notused int
+		var detail string
+		if err := db.QueryRow("EXPLAIN QUERY PLAN "+query, args...).Scan(&id, &parent, &notused, &detail); err != nil {
+			t.Fatal(err)
+		}
+		if want := "USING COVERING INDEX idx_slot_runs (slot="; !strings.Contains(detail, want) {
+			t.Errorf("plan of %q is %q, want %q", query, detail, want)
 		}
 	}
 }

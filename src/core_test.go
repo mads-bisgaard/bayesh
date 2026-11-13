@@ -215,6 +215,45 @@ func TestInferCommandsFrecency(t *testing.T) {
 	}
 }
 
+// TestRecordEventFoldsValuesLosingTheirShare checks that runs of other values
+// fold a value whose share of its slot became too small, although it is not
+// part of the recorded commands.
+func TestRecordEventFoldsValuesLosingTheirShare(t *testing.T) {
+	core, _ := setupCoreWithTempDB(t)
+	ctx := context.Background()
+	record := func(cmd string, n int) {
+		for range n {
+			if err := core.RecordEvent(ctx, "/a", "ls", cmd); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	stored := func() string {
+		var template string
+		if err := core.db.QueryRow("SELECT current_template FROM events WHERE current_cmd = 'cd a'").Scan(&template); err != nil {
+			t.Fatal(err)
+		}
+		return template
+	}
+	record("cd x", 1)
+	record("cd y", 1)
+	record("cd z", 1)
+	record("cd a", 8) // 8 >= 6 + 10% of 11
+	if got := stored(); got != "cd a" {
+		t.Fatalf("stored template of cd a = %q, want it literal", got)
+	}
+	for i := range 9 { // 8 >= 6 + 10% of 20
+		record(fmt.Sprintf("cd b%d", i), 1)
+	}
+	if got := stored(); got != "cd a" {
+		t.Fatalf("stored template of cd a = %q, want it literal", got)
+	}
+	record("cd b9", 1) // 8 < 6 + 10% of 21
+	if got := stored(); got != "cd <ARG>" {
+		t.Errorf("stored template of cd a = %q, want it folded", got)
+	}
+}
+
 // TestRecordEventKeepsTemplatesUpToDate checks that the templates and slot
 // statistics stored while recording equal those learned from all events at once.
 func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {

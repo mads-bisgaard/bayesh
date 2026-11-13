@@ -2,11 +2,13 @@ package bayesh
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"os"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 const replayHistoryEnvVar = "BAYESH_REPLAY_HISTORY"
@@ -18,7 +20,8 @@ const replayHistoryEnvVar = "BAYESH_REPLAY_HISTORY"
 //	BAYESH_REPLAY_HISTORY=~/.zsh_history go test ./src -run TestReplay -v
 //
 // The file holds one command per line, optionally in zsh's extended history format.
-// Since a history has no working directories, all commands share one.
+// Since a history has no working directories, all commands share one, and
+// since it may have no times, all are recorded at the same time.
 func TestReplay(t *testing.T) {
 	path := os.Getenv(replayHistoryEnvVar)
 	if path == "" {
@@ -41,29 +44,34 @@ func TestReplay(t *testing.T) {
 		t.Fatal("the history needs at least two commands")
 	}
 
-	defer func(slotValues, literalCount int) {
-		minSlotValues, minLiteralCount = slotValues, literalCount
-	}(minSlotValues, minLiteralCount)
+	defer func(slotValues, literalCount, literalPercent int) {
+		minSlotValues, minLiteralCount, minLiteralPercent = slotValues, literalCount, literalPercent
+	}(minSlotValues, minLiteralCount, minLiteralPercent)
 
 	t.Logf("%d commands", len(cmds))
-	t.Logf("%-24s %7s %7s %7s %7s %10s", "setting", "top-1", "top-5", "MRR", "exact-5", "suggested")
+	t.Logf("%-28s %7s %7s %7s %7s %10s", "setting", "top-1", "top-5", "MRR", "exact-5", "suggested")
 	for _, s := range []struct {
-		name                     string
-		slotValues, literalCount int
+		slotValues, literalCount, literalPercent int
 	}{
-		{"no <ARG> folding", math.MaxInt, 0},
-		{"slot 3, literal 2", 3, 2},
-		{"slot 2, literal 2", 2, 2},
-		{"slot 5, literal 2", 5, 2},
-		{"slot 3, literal 3", 3, 3},
-		{"slot 3, literal 5", 3, 5},
-		{"slot 3, literal 6", 3, 6},
-		{"slot 3, literal 8", 3, 8},
-		{"slot 3, literal 10", 3, 10},
+		{math.MaxInt, 0, 0}, // no <ARG> folding
+		{3, 6, 0},
+		{3, 8, 0},
+		{3, 0, 15},
+		{3, 2, 10},
+		{3, 4, 10},
+		{3, 6, 10},
+		{3, 4, 15},
+		{3, 6, 15},
+		{3, 8, 15},
+		{3, 6, 20},
 	} {
-		minSlotValues, minLiteralCount = s.slotValues, s.literalCount
+		name := "no <ARG> folding"
+		if s.slotValues != math.MaxInt {
+			name = fmt.Sprintf("slot %d, literal %d + %d%%", s.slotValues, s.literalCount, s.literalPercent)
+		}
+		minSlotValues, minLiteralCount, minLiteralPercent = s.slotValues, s.literalCount, s.literalPercent
 		r := replay(t, cmds)
-		t.Logf("%-24s %6.1f%% %6.1f%% %7.3f %6.1f%% %9.1f%%", s.name, r.top1, r.top5, r.mrr, r.exact5, r.suggested)
+		t.Logf("%-28s %6.1f%% %6.1f%% %7.3f %6.1f%% %9.1f%%", name, r.top1, r.top5, r.mrr, r.exact5, r.suggested)
 	}
 }
 
@@ -75,6 +83,10 @@ type replayResult struct {
 // replay records cmds in a new database and ranks the suggestions at up to 500 points.
 func replay(t *testing.T, cmds []string) replayResult {
 	core, _ := setupCoreWithTempDB(t)
+	// The history's times are not used: all events are recorded and ranked at
+	// the same time, so they have the same frecency weight.
+	now := time.Now()
+	core.now = func() time.Time { return now }
 	// A single connection, so the pragma applies to all queries. The database is thrown away.
 	core.db.SetMaxOpenConns(1)
 	if _, err := core.db.Exec("PRAGMA synchronous = OFF"); err != nil {

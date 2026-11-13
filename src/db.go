@@ -71,7 +71,8 @@ func (q *Queries) CreateSchema(ctx context.Context) error {
         ` + colRuns + ` INTEGER,
         ` + colLastModified + ` INTEGER, -- unix time
         PRIMARY KEY (` + colSlot + `, ` + colValue + `)
-    );`
+    );
+    CREATE INDEX IF NOT EXISTS idx_slot_runs ON ` + slotsTable + ` (` + colSlot + `, ` + colRuns + `, ` + colValue + `);`
 
 	_, err := q.db.ExecContext(ctx, schema)
 	if err != nil {
@@ -178,11 +179,35 @@ func templateCountsQuery(now time.Time, cwd *string, previousTemplate *string) (
 	return query + " GROUP BY " + colCurrentTemplate, args
 }
 
-// SlotDistinct returns the number of distinct values seen in slot.
-func (q *Queries) SlotDistinct(ctx context.Context, slot string) (int, error) {
-	var n int
-	err := q.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+slotsTable+" WHERE "+colSlot+" = ?", slot).Scan(&n)
-	return n, err
+var (
+	slotStatsQuery          = "SELECT COUNT(*), TOTAL(" + colRuns + ") FROM " + slotsTable + " WHERE " + colSlot + " = ?"
+	slotValuesWithRunsQuery = "SELECT " + colValue + ", " + colRuns + " FROM " + slotsTable + " WHERE " + colSlot + " = ? AND " + colRuns + " >= ? AND " + colRuns + " < ?"
+)
+
+// SlotStats returns the number of distinct values seen in slot and their total number of runs.
+func (q *Queries) SlotStats(ctx context.Context, slot string) (distinct, total int, err error) {
+	var runs float64 // TOTAL is a float, and 0 for no rows
+	err = q.db.QueryRowContext(ctx, slotStatsQuery, slot).Scan(&distinct, &runs)
+	return distinct, int(runs), err
+}
+
+// SlotValuesWithRuns returns the values of slot with at least lo and fewer than hi runs.
+func (q *Queries) SlotValuesWithRuns(ctx context.Context, slot string, lo, hi int) (map[string]int, error) {
+	rows, err := q.db.QueryContext(ctx, slotValuesWithRunsQuery, slot, lo, hi)
+	if err != nil {
+		return nil, err
+	}
+	defer closeRows(rows)
+	values := map[string]int{}
+	for rows.Next() {
+		var value string
+		var runs int
+		if err := rows.Scan(&value, &runs); err != nil {
+			return nil, err
+		}
+		values[value] = runs
+	}
+	return values, rows.Err()
 }
 
 // SlotRuns returns the number of runs of value in slot.
