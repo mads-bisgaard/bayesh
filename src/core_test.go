@@ -334,6 +334,15 @@ func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {
 		if !maps.Equal(stored[slot], s.runs) || len(stored[slot]) != s.distinct {
 			t.Errorf("slot %q: stored %v, want %+v", slot, stored[slot], s)
 		}
+		// The totals are stored separately, so they must be kept in step
+		var distinct, total int
+		if err := core.db.QueryRow("SELECT distinct_values, runs FROM slot_totals WHERE slot = ?", slot).Scan(&distinct, &total); err != nil || distinct != s.distinct || total != s.total {
+			t.Errorf("slot %q: stored totals %d, %d, %v, want %d, %d", slot, distinct, total, err, s.distinct, s.total)
+		}
+	}
+	var totals int
+	if err := core.db.QueryRow("SELECT COUNT(*) FROM slot_totals").Scan(&totals); err != nil || totals != len(want.slots) {
+		t.Errorf("stored totals of %d slots, %v, want %d", totals, err, len(want.slots))
 	}
 }
 

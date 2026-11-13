@@ -465,18 +465,26 @@ func TestSlotStatistics(t *testing.T) {
 }
 
 // TestSlotQueriesUseIndex checks that the slot queries made for every
-// recorded command read only the slot's entries in an index, and never its
-// rows, since a slot such as cd#1 can have many values.
+// recorded command never scan the values of a slot, since a slot such as cd#1
+// can have many: its totals are looked up by key, and the values with some
+// runs read from an index.
 func TestSlotQueriesUseIndex(t *testing.T) {
 	_, db := setupTestDB(t)
-	for query, args := range map[string][]any{slotStatsQuery: {"cd#1"}, slotValuesWithRunsQuery: {"cd#1", 1, 2}} {
+	for _, tt := range []struct {
+		query string
+		args  []any
+		want  string
+	}{
+		{slotStatsQuery, []any{"cd#1"}, "SEARCH " + slotTotalsTable + " USING INDEX sqlite_autoindex_" + slotTotalsTable + "_1 (slot=?)"},
+		{slotValuesWithRunsQuery, []any{"cd#1", 1, 2}, "SEARCH " + slotsTable + " USING COVERING INDEX idx_slot_runs (slot=? AND runs>? AND runs<?)"},
+	} {
 		var id, parent, notused int
 		var detail string
-		if err := db.QueryRow("EXPLAIN QUERY PLAN "+query, args...).Scan(&id, &parent, &notused, &detail); err != nil {
+		if err := db.QueryRow("EXPLAIN QUERY PLAN "+tt.query, tt.args...).Scan(&id, &parent, &notused, &detail); err != nil {
 			t.Fatal(err)
 		}
-		if want := "USING COVERING INDEX idx_slot_runs (slot="; !strings.Contains(detail, want) {
-			t.Errorf("plan of %q is %q, want %q", query, detail, want)
+		if detail != tt.want {
+			t.Errorf("plan of %q is %q, want %q", tt.query, detail, tt.want)
 		}
 	}
 }
