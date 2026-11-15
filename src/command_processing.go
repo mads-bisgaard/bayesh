@@ -1,6 +1,7 @@
 package bayesh
 
 import (
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,21 +22,22 @@ const (
 
 // An argument slot is folded into <ARG> once it has seen minSlotValues
 // distinct values. A value stays literal if it was run at least
-// minLiteralCount times plus minLiteralPercent percent of the runs of its
-// slot, so that in a slot taking many values only those making up a large
-// share are suggested as typed. For a new slot, minLiteralCount dominates.
+// minLiteralCount times plus minLiteralProbability of the runs of its slot,
+// so that in a slot taking many values only those making up a large share are
+// suggested as typed. For a new slot, minLiteralCount dominates.
 // They are variables so the replay test (replay_test.go) can compare settings
 // (see ARGUMENT_TEMPLATES.md).
 var (
-	minSlotValues     = 3
-	minLiteralCount   = 6
-	minLiteralPercent = 10
+	minSlotValues         = 3
+	minLiteralCount       = 6
+	minLiteralProbability = 0.1
 )
 
 // literalRuns returns the number of runs a value needs to stay literal in a
-// slot with total runs. It is computed in integers, so that it is exact.
+// slot with total runs: the least integer runs with
+// runs >= minLiteralCount + minLiteralProbability*total.
 func literalRuns(total int) int {
-	return minLiteralCount + (minLiteralPercent*total+99)/100
+	return minLiteralCount + int(math.Ceil(minLiteralProbability*float64(total)))
 }
 
 func AnsiColorTokens(cmds string) string {

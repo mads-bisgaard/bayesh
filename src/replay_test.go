@@ -44,32 +44,33 @@ func TestReplay(t *testing.T) {
 		t.Fatal("the history needs at least two commands")
 	}
 
-	defer func(slotValues, literalCount, literalPercent int) {
-		minSlotValues, minLiteralCount, minLiteralPercent = slotValues, literalCount, literalPercent
-	}(minSlotValues, minLiteralCount, minLiteralPercent)
+	defer func(slotValues, literalCount int, literalProbability float64) {
+		minSlotValues, minLiteralCount, minLiteralProbability = slotValues, literalCount, literalProbability
+	}(minSlotValues, minLiteralCount, minLiteralProbability)
 
 	t.Logf("%d commands", len(cmds))
 	t.Logf("%-28s %7s %7s %7s %7s %10s", "setting", "top-1", "top-5", "MRR", "exact-5", "suggested")
 	for _, s := range []struct {
-		slotValues, literalCount, literalPercent int
+		slotValues, literalCount int
+		literalProbability       float64
 	}{
 		{math.MaxInt, 0, 0}, // no <ARG> folding
 		{3, 6, 0},
 		{3, 8, 0},
-		{3, 0, 15},
-		{3, 2, 10},
-		{3, 4, 10},
-		{3, 6, 10},
-		{3, 4, 15},
-		{3, 6, 15},
-		{3, 8, 15},
-		{3, 6, 20},
+		{3, 0, 0.15},
+		{3, 2, 0.1},
+		{3, 4, 0.1},
+		{3, 6, 0.1},
+		{3, 4, 0.15},
+		{3, 6, 0.15},
+		{3, 8, 0.15},
+		{3, 6, 0.2},
 	} {
 		name := "no <ARG> folding"
 		if s.slotValues != math.MaxInt {
-			name = fmt.Sprintf("slot %d, literal %d + %d%%", s.slotValues, s.literalCount, s.literalPercent)
+			name = fmt.Sprintf("slot %d, literal %d + %g", s.slotValues, s.literalCount, s.literalProbability)
 		}
-		minSlotValues, minLiteralCount, minLiteralPercent = s.slotValues, s.literalCount, s.literalPercent
+		minSlotValues, minLiteralCount, minLiteralProbability = s.slotValues, s.literalCount, s.literalProbability
 		r := replay(t, cmds)
 		t.Logf("%-28s %6.1f%% %6.1f%% %7.3f %6.1f%% %9.1f%%", name, r.top1, r.top5, r.mrr, r.exact5, r.suggested)
 	}

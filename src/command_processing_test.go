@@ -18,6 +18,20 @@ func TestAnsiColorTokens(t *testing.T) {
 	}
 }
 
+// A value stays literal if its runs reach minLiteralCount plus
+// minLiteralProbability of its slot's runs; a fractional share rounds up.
+func TestLiteralRuns(t *testing.T) {
+	defer func(count int, probability float64) {
+		minLiteralCount, minLiteralProbability = count, probability
+	}(minLiteralCount, minLiteralProbability)
+	minLiteralCount, minLiteralProbability = 6, 0.1
+	for total, want := range map[int]int{0: 6, 1: 7, 8: 7, 10: 7, 11: 8, 30: 9, 39: 10, 40: 10} {
+		if got := literalRuns(total); got != want {
+			t.Errorf("literalRuns(%d) = %d, want %d", total, got, want)
+		}
+	}
+}
+
 func TestFormatSuggestions(t *testing.T) {
 	tests := []struct {
 		name     string
