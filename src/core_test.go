@@ -215,6 +215,45 @@ func TestInferCommandsFrecency(t *testing.T) {
 	}
 }
 
+// TestRecordEventFoldsValuesLosingTheirShare checks that runs of other values
+// fold a value whose share of its slot became too small, although it is not
+// part of the recorded commands.
+func TestRecordEventFoldsValuesLosingTheirShare(t *testing.T) {
+	core, _ := setupCoreWithTempDB(t)
+	ctx := context.Background()
+	record := func(cmd string, n int) {
+		for range n {
+			if err := core.RecordEvent(ctx, "/a", "ls", cmd); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	stored := func() string {
+		var template string
+		if err := core.db.QueryRow("SELECT current_template FROM events WHERE current_cmd = 'cd a'").Scan(&template); err != nil {
+			t.Fatal(err)
+		}
+		return template
+	}
+	record("cd x", 1)
+	record("cd y", 1)
+	record("cd z", 1)
+	record("cd a", 8) // 8 >= 6 + 10% of 11
+	if got := stored(); got != "cd a" {
+		t.Fatalf("stored template of cd a = %q, want it literal", got)
+	}
+	for i := range 9 { // 8 >= 6 + 10% of 20
+		record(fmt.Sprintf("cd b%d", i), 1)
+	}
+	if got := stored(); got != "cd a" {
+		t.Fatalf("stored template of cd a = %q, want it literal", got)
+	}
+	record("cd b9", 1) // 8 < 6 + 10% of 21
+	if got := stored(); got != "cd <ARG>" {
+		t.Errorf("stored template of cd a = %q, want it folded", got)
+	}
+}
+
 // TestRecordEventKeepsTemplatesUpToDate checks that the templates and slot
 // statistics stored while recording equal those learned from all events at once.
 func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {
@@ -295,6 +334,15 @@ func TestRecordEventKeepsTemplatesUpToDate(t *testing.T) {
 		if !maps.Equal(stored[slot], s.runs) || len(stored[slot]) != s.distinct {
 			t.Errorf("slot %q: stored %v, want %+v", slot, stored[slot], s)
 		}
+		// The totals are stored separately, so they must be kept in step
+		var distinct, total int
+		if err := core.db.QueryRow("SELECT distinct_values, runs FROM slot_totals WHERE slot = ?", slot).Scan(&distinct, &total); err != nil || distinct != s.distinct || total != s.total {
+			t.Errorf("slot %q: stored totals %d, %d, %v, want %d, %d", slot, distinct, total, err, s.distinct, s.total)
+		}
+	}
+	var totals int
+	if err := core.db.QueryRow("SELECT COUNT(*) FROM slot_totals").Scan(&totals); err != nil || totals != len(want.slots) {
+		t.Errorf("stored totals of %d slots, %v, want %d", totals, err, len(want.slots))
 	}
 }
 

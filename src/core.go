@@ -111,6 +111,9 @@ func recordEvent(ctx context.Context, queries *Queries, now time.Time, cwd strin
 	if err := loadSlots(ctx, queries, t, previousCmd, currentCmd); err != nil {
 		return err
 	}
+	if err := loadThresholdValues(ctx, queries, t, currentCmd); err != nil {
+		return err
+	}
 	changed := t.add(currentCmd, 1)
 	for _, a := range t.parse(currentCmd) {
 		if a.slot == "" {
@@ -168,11 +171,11 @@ func loadSlots(ctx context.Context, queries *Queries, t *templater, cmds ...stri
 			}
 			s, ok := t.slots[a.slot]
 			if !ok {
-				distinct, err := queries.SlotDistinct(ctx, a.slot)
+				distinct, total, err := queries.SlotStats(ctx, a.slot)
 				if err != nil {
 					return err
 				}
-				s = &slotStats{distinct: distinct, runs: map[string]int{}}
+				s = &slotStats{distinct: distinct, total: total, runs: map[string]int{}}
 				t.slots[a.slot] = s
 			}
 			if _, ok := s.runs[a.value]; !ok {
@@ -182,6 +185,35 @@ func loadSlots(ctx context.Context, queries *Queries, t *templater, cmds ...stri
 				}
 				s.runs[a.value] = runs
 			}
+		}
+	}
+	return nil
+}
+
+// loadThresholdValues loads the values which stop being literal when cmd is
+// run once more, so that templater.add can report it. A run raises the runs
+// the values of each slot of cmd need to stay literal (see literalRuns), and
+// those with runs in between lose it. Most runs raise it by none, so no query
+// is made. The slots of cmd must be loaded.
+func loadThresholdValues(ctx context.Context, queries *Queries, t *templater, cmd string) error {
+	added := map[string]int{}
+	for _, a := range t.parse(cmd) {
+		if a.slot != "" {
+			added[a.slot]++
+		}
+	}
+	for slot, n := range added {
+		s := t.slots[slot]
+		lo, hi := literalRuns(s.total), literalRuns(s.total+n)
+		if lo == hi {
+			continue
+		}
+		values, err := queries.SlotValuesWithRuns(ctx, slot, lo, hi)
+		if err != nil {
+			return err
+		}
+		for value, runs := range values {
+			s.runs[value] = runs
 		}
 	}
 	return nil

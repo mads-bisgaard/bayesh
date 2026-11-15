@@ -26,6 +26,11 @@ const (
 	colSlot    = "slot"
 	colValue   = "value"
 	colRuns    = "runs"
+
+	// The number of distinct values and runs of each argument slot, kept in
+	// step with the slots table, so that they are looked up in constant time
+	slotTotalsTable   = "slot_totals"
+	colDistinctValues = "distinct_values"
 )
 
 type DBTX interface {
@@ -71,6 +76,12 @@ func (q *Queries) CreateSchema(ctx context.Context) error {
         ` + colRuns + ` INTEGER,
         ` + colLastModified + ` INTEGER, -- unix time
         PRIMARY KEY (` + colSlot + `, ` + colValue + `)
+    );
+    CREATE INDEX IF NOT EXISTS idx_slot_runs ON ` + slotsTable + ` (` + colSlot + `, ` + colRuns + `, ` + colValue + `);
+    CREATE TABLE IF NOT EXISTS ` + slotTotalsTable + ` (
+        ` + colSlot + ` TEXT PRIMARY KEY,
+        ` + colDistinctValues + ` INTEGER,
+        ` + colRuns + ` INTEGER
     );`
 
 	_, err := q.db.ExecContext(ctx, schema)
@@ -178,11 +189,37 @@ func templateCountsQuery(now time.Time, cwd *string, previousTemplate *string) (
 	return query + " GROUP BY " + colCurrentTemplate, args
 }
 
-// SlotDistinct returns the number of distinct values seen in slot.
-func (q *Queries) SlotDistinct(ctx context.Context, slot string) (int, error) {
-	var n int
-	err := q.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+slotsTable+" WHERE "+colSlot+" = ?", slot).Scan(&n)
-	return n, err
+var (
+	slotStatsQuery          = "SELECT " + colDistinctValues + ", " + colRuns + " FROM " + slotTotalsTable + " WHERE " + colSlot + " = ?"
+	slotValuesWithRunsQuery = "SELECT " + colValue + ", " + colRuns + " FROM " + slotsTable + " WHERE " + colSlot + " = ? AND " + colRuns + " >= ? AND " + colRuns + " < ?"
+)
+
+// SlotStats returns the number of distinct values seen in slot and their total number of runs.
+func (q *Queries) SlotStats(ctx context.Context, slot string) (distinct, total int, err error) {
+	err = q.db.QueryRowContext(ctx, slotStatsQuery, slot).Scan(&distinct, &total)
+	if err == sql.ErrNoRows {
+		return 0, 0, nil
+	}
+	return distinct, total, err
+}
+
+// SlotValuesWithRuns returns the values of slot with at least lo and fewer than hi runs.
+func (q *Queries) SlotValuesWithRuns(ctx context.Context, slot string, lo, hi int) (map[string]int, error) {
+	rows, err := q.db.QueryContext(ctx, slotValuesWithRunsQuery, slot, lo, hi)
+	if err != nil {
+		return nil, err
+	}
+	defer closeRows(rows)
+	values := map[string]int{}
+	for rows.Next() {
+		var value string
+		var runs int
+		if err := rows.Scan(&value, &runs); err != nil {
+			return nil, err
+		}
+		values[value] = runs
+	}
+	return values, rows.Err()
 }
 
 // SlotRuns returns the number of runs of value in slot.
@@ -195,12 +232,25 @@ func (q *Queries) SlotRuns(ctx context.Context, slot, value string) (int, error)
 	return n, err
 }
 
-// AddSlotRuns adds n runs of value in slot, run at time now.
+// AddSlotRuns adds n > 0 runs of value in slot, run at time now, and updates
+// the slot's totals. Call it in a transaction, so that they stay in step.
 func (q *Queries) AddSlotRuns(ctx context.Context, slot, value string, n int, now time.Time) error {
-	query := `
+	addRuns := `
     INSERT INTO ` + slotsTable + ` (` + colSlot + `, ` + colValue + `, ` + colRuns + `, ` + colLastModified + `) VALUES (?, ?, ?, ?)
-    ON CONFLICT (` + colSlot + `, ` + colValue + `) DO UPDATE SET ` + colRuns + ` = ` + colRuns + ` + excluded.` + colRuns + `, ` + colLastModified + ` = excluded.` + colLastModified
-	_, err := q.db.ExecContext(ctx, query, slot, value, n, now.Unix())
+    ON CONFLICT (` + colSlot + `, ` + colValue + `) DO UPDATE SET ` + colRuns + ` = ` + colRuns + ` + excluded.` + colRuns + `, ` + colLastModified + ` = excluded.` + colLastModified + `
+    RETURNING ` + colRuns
+	var runs int
+	if err := q.db.QueryRowContext(ctx, addRuns, slot, value, n, now.Unix()).Scan(&runs); err != nil {
+		return err
+	}
+	isNew := 0
+	if runs == n {
+		isNew = 1
+	}
+	addTotals := `
+    INSERT INTO ` + slotTotalsTable + ` (` + colSlot + `, ` + colDistinctValues + `, ` + colRuns + `) VALUES (?, ?, ?)
+    ON CONFLICT (` + colSlot + `) DO UPDATE SET ` + colDistinctValues + ` = ` + colDistinctValues + ` + excluded.` + colDistinctValues + `, ` + colRuns + ` = ` + colRuns + ` + excluded.` + colRuns
+	_, err := q.db.ExecContext(ctx, addTotals, slot, isNew, n)
 	return err
 }
 
