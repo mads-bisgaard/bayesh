@@ -22,22 +22,27 @@ const (
 
 // An argument slot is folded into <ARG> once it has seen minSlotValues
 // distinct values. A value stays literal if it was run at least
-// minLiteralCount times plus minLiteralProbability of the runs of its slot,
-// so that in a slot taking many values only those making up a large share are
-// suggested as typed. For a new slot, minLiteralCount dominates.
+// minLiteralCount times plus minLiteralNewValueRatio times the distinct values
+// of its slot. By the Witten–Bell estimate, the next value of a slot is new
+// with probability d/(N+d) and v with probability runs(v)/(N+d), for N runs
+// of d distinct values; the second term keeps v literal while it is at least
+// minLiteralNewValueRatio times as likely as a new value. So a slot which
+// rarely gets new values, such as subcommands, keeps rare values literal,
+// while one which often does, such as files, folds all but the most frequent.
+// For a new slot, minLiteralCount dominates.
 // They are variables so the replay test (replay_test.go) can compare settings
 // (see ARGUMENT_TEMPLATES.md).
 var (
-	minSlotValues         = 3
-	minLiteralCount       = 6
-	minLiteralProbability = 0.1
+	minSlotValues           = 3
+	minLiteralCount         = 6
+	minLiteralNewValueRatio = 0.25
 )
 
 // literalRuns returns the number of runs a value needs to stay literal in a
-// slot with total runs: the least integer runs with
-// runs >= minLiteralCount + minLiteralProbability*total.
-func literalRuns(total int) int {
-	return minLiteralCount + int(math.Ceil(minLiteralProbability*float64(total)))
+// slot with distinct values: the least integer runs with
+// runs >= minLiteralCount + minLiteralNewValueRatio*distinct.
+func literalRuns(distinct int) int {
+	return minLiteralCount + int(math.Ceil(minLiteralNewValueRatio*float64(distinct)))
 }
 
 func AnsiColorTokens(cmds string) string {
@@ -81,8 +86,8 @@ func newTemplater() *templater {
 
 // add counts n runs of cmd. It returns the names of the commands for which an
 // argument slot changed whether it is folded, i.e. the commands whose templates may change.
-// The runs of a slot raise the runs its other values need to stay literal, so
-// the values which may lose that must be known, see loadThresholdValues.
+// A new value of a slot raises the runs its other values need to stay literal,
+// so the values which may lose that must be known, see loadThresholdValues.
 func (t *templater) add(cmd string, n int) []string {
 	var changed []string
 	for _, a := range t.parse(cmd) {
@@ -94,14 +99,14 @@ func (t *templater) add(cmd string, n int) []string {
 			s = &slotStats{runs: map[string]int{}}
 			t.slots[a.slot] = s
 		}
-		before := literalRuns(s.total)
+		before := literalRuns(s.distinct)
 		wasVariable, wasLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= before
 		if s.runs[a.value] == 0 {
 			s.distinct++
 		}
 		s.runs[a.value] += n
 		s.total += n
-		after := literalRuns(s.total)
+		after := literalRuns(s.distinct)
 		isVariable, isLiteral := s.distinct >= minSlotValues, s.runs[a.value] >= after
 		if (wasVariable != isVariable || (isVariable && (wasLiteral != isLiteral || before < after && s.hasOtherRuns(a.value, before, after)))) && !slices.Contains(changed, a.name) {
 			changed = append(changed, a.name)
@@ -145,7 +150,7 @@ func (t *templater) fold(a arg) bool {
 		return true
 	}
 	s := t.slots[a.slot]
-	return s != nil && s.distinct >= minSlotValues && s.runs[a.value] < literalRuns(s.total)
+	return s != nil && s.distinct >= minSlotValues && s.runs[a.value] < literalRuns(s.distinct)
 }
 
 func (t *templater) parse(cmd string) []arg {

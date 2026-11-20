@@ -19,15 +19,15 @@ func TestAnsiColorTokens(t *testing.T) {
 }
 
 // A value stays literal if its runs reach minLiteralCount plus
-// minLiteralProbability of its slot's runs; a fractional share rounds up.
+// minLiteralNewValueRatio times the distinct values of its slot; a fraction rounds up.
 func TestLiteralRuns(t *testing.T) {
-	defer func(count int, probability float64) {
-		minLiteralCount, minLiteralProbability = count, probability
-	}(minLiteralCount, minLiteralProbability)
-	minLiteralCount, minLiteralProbability = 6, 0.1
-	for total, want := range map[int]int{0: 6, 1: 7, 8: 7, 10: 7, 11: 8, 30: 9, 39: 10, 40: 10} {
-		if got := literalRuns(total); got != want {
-			t.Errorf("literalRuns(%d) = %d, want %d", total, got, want)
+	defer func(count int, ratio float64) {
+		minLiteralCount, minLiteralNewValueRatio = count, ratio
+	}(minLiteralCount, minLiteralNewValueRatio)
+	minLiteralCount, minLiteralNewValueRatio = 6, 0.25
+	for distinct, want := range map[int]int{0: 6, 1: 7, 3: 7, 4: 7, 5: 8, 8: 8, 31: 14, 35: 15} {
+		if got := literalRuns(distinct); got != want {
+			t.Errorf("literalRuns(%d) = %d, want %d", distinct, got, want)
 		}
 	}
 }
@@ -70,12 +70,16 @@ func TestTemplate(t *testing.T) {
 		{"slot with few values", map[string]int{"cd a": 1, "cd b": 1}, "cd c", "cd c"},
 		{"variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd d", "cd <ARG>"},
 		{"seen value in variable slot", map[string]int{"cd a": 1, "cd b": 1, "cd c": 1}, "cd a", "cd <ARG>"},
-		// A value stays literal with at least 6 runs plus 10% of its slot's runs
-		{"frequent value stays literal", map[string]int{"make build": 7, "make x": 1, "make y": 1}, "make build", "make build"},  // 7 >= 6 + 10% of 9
-		{"less frequent value is folded", map[string]int{"make build": 6, "make x": 1, "make y": 1}, "make build", "make <ARG>"}, // 6 < 6 + 10% of 8
+		// A value stays literal with at least 6 runs plus 0.25 times the distinct values of its slot
+		{"frequent value stays literal", map[string]int{"make build": 7, "make x": 1, "make y": 1}, "make build", "make build"},  // 7 >= 6 + 0.25*3
+		{"less frequent value is folded", map[string]int{"make build": 6, "make x": 1, "make y": 1}, "make build", "make <ARG>"}, // 6 < 6 + 0.25*3
 		{"rare value is folded", map[string]int{"make build": 8, "make x": 1, "make y": 1}, "make z", "make <ARG>"},
-		{"value with a small share is folded", withValues(map[string]int{"git add a": 9}, "git add f", 30), "git add a", "git add <ARG>"},  // 9 < 6 + 10% of 39
-		{"value with a large share stays literal", withValues(map[string]int{"git add a": 10}, "git add f", 30), "git add a", "git add a"}, // 10 >= 6 + 10% of 40
+		{"value in an open slot is folded", withValues(map[string]int{"git add a": 13}, "git add f", 30), "git add a", "git add <ARG>"},          // 13 < 6 + 0.25*31
+		{"frequent value in an open slot stays literal", withValues(map[string]int{"git add a": 14}, "git add f", 30), "git add a", "git add a"}, // 14 >= 6 + 0.25*31
+		{"files run a few times each are folded", withRuns(map[string]int{}, "git add f", 30, 5), "git add f0", "git add <ARG>"},                 // 5 < 6 + 0.25*30
+		// A closed slot rarely gets a new value, so a value with a small share of its runs stays literal
+		{"rare value in a closed slot stays literal", map[string]int{"git status": 100, "git add": 60, "git commit": 50, "git push": 40, "git pull": 10}, "git pull", "git pull"}, // 10 >= 6 + 0.25*5
+		{"runs of known values don't fold others", map[string]int{"cd a": 8, "cd b": 1, "cd c": 1, "cd d": 1000}, "cd a", "cd a"},                                                 // 8 >= 6 + 0.25*4
 		{"value contained in other words", map[string]int{"ls a": 1, "ls b": 1, "ls c": 1}, "ls s", "ls <ARG>"},
 		{"slots are per position", map[string]int{"cp a x": 1, "cp b x": 1, "cp c x": 1}, "cp d x", "cp <ARG> x"},
 		{"flags are never folded", map[string]int{"ls -a": 1, "ls -b": 1, "ls -c": 1}, "ls -d", "ls -d"},
@@ -100,10 +104,15 @@ func TestTemplate(t *testing.T) {
 	}
 }
 
-// withValues adds runs of n distinct commands prefix0, prefix1, ... to history.
+// withValues adds one run of n distinct commands prefix0, prefix1, ... to history.
 func withValues(history map[string]int, prefix string, n int) map[string]int {
+	return withRuns(history, prefix, n, 1)
+}
+
+// withRuns adds runs runs of n distinct commands prefix0, prefix1, ... to history.
+func withRuns(history map[string]int, prefix string, n, runs int) map[string]int {
 	for i := range n {
-		history[prefix+strconv.Itoa(i)] = 1
+		history[prefix+strconv.Itoa(i)] = runs
 	}
 	return history
 }
@@ -126,26 +135,32 @@ func TestAddReportsChangedFolding(t *testing.T) {
 			t.Errorf("add(%q) = %q, want %q", s.cmd, got, s.want)
 		}
 	}
-	// cd a needs 6 runs plus 10% of the runs of cd#1, which has 5 runs
+	// cd a needs 6 runs plus 0.25 times the 5 distinct values of cd#1
 	for range 6 {
 		if got := templater.add("cd a", 1); got != nil {
 			t.Fatalf("add(%q) = %q before cd a is frequent", "cd a", got)
 		}
 	}
-	if got := templater.add("cd a", 1); !slices.Equal(got, []string{"cd"}) { // 8 >= 6 + 10% of 12
+	if got := templater.add("cd a", 1); !slices.Equal(got, []string{"cd"}) { // 8 >= 6 + 0.25*5
 		t.Errorf("add(%q) = %q when it becomes frequent, want [cd]", "cd a", got)
 	}
 	if got := templater.Template("cd a"); got != "cd a" {
 		t.Errorf("Template(%q) = %q after add", "cd a", got)
 	}
-	// Runs of other values lower the share of cd a until it is folded again
-	for i := range 8 { // 8 >= 6 + 10% of 20
+	// Runs of known values don't raise the runs cd a needs (cd b stays below 8 runs)
+	for range 6 {
+		if got := templater.add("cd b", 1); got != nil {
+			t.Fatalf("add(%q) = %q while cd a is frequent", "cd b", got)
+		}
+	}
+	// New values do, until cd a is folded again
+	for i := range 3 { // 8 >= 6 + 0.25*8
 		if got := templater.add("cd b"+strconv.Itoa(i), 1); got != nil {
 			t.Fatalf("add(%q) = %q while cd a is frequent", "cd b"+strconv.Itoa(i), got)
 		}
 	}
-	if got := templater.add("cd b8", 1); !slices.Equal(got, []string{"cd"}) { // 8 < 6 + 10% of 21
-		t.Errorf("add(%q) = %q when cd a becomes rare, want [cd]", "cd b8", got)
+	if got := templater.add("cd b3", 1); !slices.Equal(got, []string{"cd"}) { // 8 < 6 + 0.25*9
+		t.Errorf("add(%q) = %q when cd a becomes rare, want [cd]", "cd b3", got)
 	}
 	if got := templater.Template("cd a"); got != "cd <ARG>" {
 		t.Errorf("Template(%q) = %q after other values were added", "cd a", got)

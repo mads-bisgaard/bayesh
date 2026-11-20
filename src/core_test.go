@@ -215,10 +215,10 @@ func TestInferCommandsFrecency(t *testing.T) {
 	}
 }
 
-// TestRecordEventFoldsValuesLosingTheirShare checks that runs of other values
-// fold a value whose share of its slot became too small, although it is not
-// part of the recorded commands.
-func TestRecordEventFoldsValuesLosingTheirShare(t *testing.T) {
+// TestRecordEventFoldsValuesWhenNewValuesAppear checks that new values in a
+// slot fold a value which became too rare, although it is not part of the
+// recorded commands, while more runs of known values don't.
+func TestRecordEventFoldsValuesWhenNewValuesAppear(t *testing.T) {
 	core, _ := setupCoreWithTempDB(t)
 	ctx := context.Background()
 	record := func(cmd string, n int) {
@@ -238,17 +238,18 @@ func TestRecordEventFoldsValuesLosingTheirShare(t *testing.T) {
 	record("cd x", 1)
 	record("cd y", 1)
 	record("cd z", 1)
-	record("cd a", 8) // 8 >= 6 + 10% of 11
+	record("cd a", 8) // 8 >= 6 + 0.25*4
 	if got := stored(); got != "cd a" {
 		t.Fatalf("stored template of cd a = %q, want it literal", got)
 	}
-	for i := range 9 { // 8 >= 6 + 10% of 20
+	record("cd x", 30)
+	for i := range 4 { // 8 >= 6 + 0.25*8
 		record(fmt.Sprintf("cd b%d", i), 1)
 	}
 	if got := stored(); got != "cd a" {
 		t.Fatalf("stored template of cd a = %q, want it literal", got)
 	}
-	record("cd b9", 1) // 8 < 6 + 10% of 21
+	record("cd b4", 1) // 8 < 6 + 0.25*9
 	if got := stored(); got != "cd <ARG>" {
 		t.Errorf("stored template of cd a = %q, want it folded", got)
 	}

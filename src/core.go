@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"slices"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -191,20 +192,20 @@ func loadSlots(ctx context.Context, queries *Queries, t *templater, cmds ...stri
 }
 
 // loadThresholdValues loads the values which stop being literal when cmd is
-// run once more, so that templater.add can report it. A run raises the runs
-// the values of each slot of cmd need to stay literal (see literalRuns), and
-// those with runs in between lose it. Most runs raise it by none, so no query
-// is made. The slots of cmd must be loaded.
+// run once more, so that templater.add can report it. A new value raises the
+// runs the values of its slot need to stay literal (see literalRuns), and
+// those with runs in between lose it. Most runs add no new value, so no query
+// is made. The slots of cmd, and the runs of its values, must be loaded.
 func loadThresholdValues(ctx context.Context, queries *Queries, t *templater, cmd string) error {
-	added := map[string]int{}
+	added := map[string][]string{} // slot -> its new values in cmd
 	for _, a := range t.parse(cmd) {
-		if a.slot != "" {
-			added[a.slot]++
+		if a.slot != "" && t.slots[a.slot].runs[a.value] == 0 && !slices.Contains(added[a.slot], a.value) {
+			added[a.slot] = append(added[a.slot], a.value)
 		}
 	}
-	for slot, n := range added {
+	for slot, values := range added {
 		s := t.slots[slot]
-		lo, hi := literalRuns(s.total), literalRuns(s.total+n)
+		lo, hi := literalRuns(s.distinct), literalRuns(s.distinct+len(values))
 		if lo == hi {
 			continue
 		}
